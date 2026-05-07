@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>TED DIET ADMIN v3.7.4</title>
+    <title>TED DIET ADMIN v3.7.5</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -29,6 +29,7 @@
         .table-badge { background: #1a1a1a; padding: 4px 10px; border-radius: 15px; font-size: 0.65rem; color: var(--bp-pink); border: 1px solid #333; margin: 2px; display: inline-block; }
         .update-bar { display: none; gap: 10px; margin-bottom: 15px; padding: 10px; background: rgba(255, 63, 126, 0.1); border: 1px solid var(--neon-pink); border-radius: 12px; }
         .label-small { font-size: 0.65rem; color: #666; margin-bottom: 2px; display: block; font-weight: 700; }
+        .guide-box { background: rgba(232, 142, 163, 0.05); border: 1px solid rgba(232, 142, 163, 0.2); border-radius: 12px; padding: 10px; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -47,10 +48,16 @@
                 <div class="hub-card">
                     <div class="d-flex justify-content-between mb-2"><span class="small fw-bold">TABLE LIST</span><div class="form-check"><input class="form-check-input" type="checkbox" id="all-check" onchange="toggleAllCheck(this)"><label class="form-check-label small" for="all-check">전체 선택</label></div></div>
                     <div id="table-select-list" class="row g-2 mb-3"></div>
-                    <div class="row g-2 mb-3" style="border-top: 1px solid #333; padding-top: 15px;"><div class="col-6"><label class="label-small text-dim mb-1">시작 날짜</label><input type="date" id="export-start-date" class="form-control form-control-sm bg-dark text-white border-secondary"></div><div class="col-6"><label class="label-small text-dim mb-1">종료 날짜</label><input type="date" id="export-end-date" class="form-control form-control-sm bg-dark text-white border-secondary"></div></div>
+                    <div class="row g-2 mb-3" style="border-top: 1px solid #333; padding-top: 15px;"><div class="col-6"><label class="label-small text-dim mb-1">시작 날짜</label><input type="date" id="export-start-date" class="form-control form-control-sm bg-dark text-white border-secondary" value="2026-04-13"></div><div class="col-6"><label class="label-small text-dim mb-1">종료 날짜</label><input type="date" id="export-end-date" class="form-control form-control-sm bg-dark text-white border-secondary"></div></div>
                     <div class="d-flex flex-wrap gap-2 mb-3"><button class="btn-outline" onclick="processExport('col')">칼럼명 추출</button><button class="btn-outline" onclick="processExport('data')">데이터 추출</button><button class="btn-outline" onclick="processExport('both')">칼럼&데이터 추출</button></div>
                     <textarea id="export-csv-output" class="form-control csv-box mb-2" rows="12" placeholder="추출 결과가 여기에 표시됩니다." readonly></textarea>
-                    <button class="btn-action w-100" onclick="copyResult()">복사하기 (Clipboard)</button>
+                    <button class="btn-action w-100 mb-3" onclick="copyResult()">CSV 결과 복사</button>
+                    
+                    <div id="luka-guide-area" class="guide-box" style="display:none;">
+                        <label class="label-small text-pink mb-2" style="color:var(--bp-pink)">LUCA REQUEST GUIDE</label>
+                        <div id="luka-guide-text" class="small mb-3" style="font-size: 0.7rem; color: #aaa; line-height: 1.4;"></div>
+                        <button class="btn-outline w-100" onclick="copyLukaGuide()">루카 가이드 복사</button>
+                    </div>
                 </div>
             </div>
 
@@ -107,7 +114,7 @@
         }
 
         function initExtractUI() {
-            document.getElementById('table-select-list').innerHTML = DIET_TABLES.map(t => `<div class="col-6"><div class="form-check"><input class="form-check-input chk-item" type="checkbox" value="${t.id}" id="e-${t.id}" data-schema="${t.schema}"><label class="form-check-label small text-truncate" for="e-${t.id}">${t.name}</label></div></div>`).join('');
+            document.getElementById('table-select-list').innerHTML = DIET_TABLES.map(t => `<div class="col-6"><div class="form-check"><input class="form-check-input chk-item" type="checkbox" value="${t.id}" id="e-${t.id}" data-schema="${t.schema}" data-name="${t.name}"><label class="form-check-label small text-truncate" for="e-${t.id}">${t.name}</label></div></div>`).join('');
         }
         function toggleAllCheck(el) { document.querySelectorAll('.chk-item').forEach(c => c.checked = el.checked); }
 
@@ -118,22 +125,44 @@
             let endDate = document.getElementById('export-end-date').value;
             let adjustedEnd = endDate ? endDate + 'T23:59:59.999Z' : endDate;
             let finalCsv = "";
+            let guideInfo = [];
+
             for(const item of checkedItems) {
                 const tableId = item.value; const schemaName = item.getAttribute('data-schema');
+                const tableName = item.getAttribute('data-name');
                 const tInfo = DIET_TABLES.find(t => t.id === tableId && t.schema === schemaName);
                 let query = _db.schema(schemaName).from(tableId).select('*');
                 if (tInfo.dateCol) { if (startDate) query = query.gte(tInfo.dateCol, startDate); if (endDate) query = query.lte(tInfo.dateCol, adjustedEnd); }
                 const { data } = await query.order('id', { ascending: true });
+                
                 finalCsv += `[${tInfo.name}]\n`;
                 if(data?.length) {
-                    const cols = Object.keys(data[0]); if(mode !== 'data') finalCsv += cols.join(',') + '\n';
+                    const cols = Object.keys(data[0]);
+                    guideInfo.push({ name: tInfo.name, cols: cols.filter(c => c !== 'id' && c !== 'created_at' && c !== 'updated_at') });
+                    if(mode !== 'data') finalCsv += cols.join(',') + '\n';
                     if(mode !== 'col') data.forEach(row => { finalCsv += cols.map(c => { let v = row[c] === null ? "" : row[c]; let strV = String(v); return (strV.includes(',') || strV.includes('\n')) ? `"${strV.replace(/"/g, '""')}"` : strV; }).join(',') + '\n'; });
                 } else finalCsv += "(데이터 없음)\n";
                 finalCsv += '\n';
             }
             document.getElementById('export-csv-output').value = finalCsv.trim();
+            
+            if(guideInfo.length > 0) {
+                let guideText = `루카, 오늘 기록을 아래 양식에 맞춰서 CSV로 작성해줘. 테이블 제목은 [숫자. 이름] 형식을 지켜줘.\n\n`;
+                guideInfo.forEach(g => { guideText += `[${g.name}]\n${g.cols.join(',')}\n(데이터 입력)\n\n`; });
+                document.getElementById('luka-guide-text').innerText = guideText.trim();
+                document.getElementById('luka-guide-area').style.display = 'block';
+            }
         }
         function copyResult() { const box = document.getElementById('export-csv-output'); if(!box.value) return alert("추출된 데이터가 없습니다."); box.select(); document.execCommand('copy'); alert("CSV 데이터가 복사되었습니다! 🖤💖"); }
+        function copyLukaGuide() {
+            const guide = document.getElementById('luka-guide-text').innerText;
+            const temp = document.createElement('textarea');
+            document.body.appendChild(temp);
+            temp.value = guide; temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            alert("루카용 요청 가이드가 복사되었습니다! 🤖");
+        }
 
         function initViewUI() { document.getElementById('view-table-select').innerHTML = DIET_TABLES.map(t => `<option value="${t.id}" data-schema="${t.schema}">${t.name}</option>`).join(''); }
         function resetDateFilter() { document.getElementById('view-date').value = ""; loadTableData(); }
@@ -153,7 +182,7 @@
             PENDING_UPDATES = {}; document.getElementById('update-btn-bar').style.display = 'none';
             let query = _db.schema(schemaName).from(tid).select('*');
             if(tInfo.dateCol && dateVal) query = query.eq(tInfo.dateCol, dateVal);
-            const { data, error } = await query.order('id', { ascending: true });
+            const { data } = await query.order('id', { ascending: true });
             renderTable(data || [], schemaName, tid);
         }
 
@@ -174,7 +203,7 @@
 
         function createNewRow() {
             const tbody = document.getElementById('main-tbody');
-            if(!tbody) { // 테이블 자체가 비어있을 경우 강제 생성
+            if(!tbody) {
                 const area = document.getElementById('table-data-area');
                 area.innerHTML = `<table><thead><tr><th class="sticky-col">id</th><th>plan_date</th><th>workout_available_min</th><th>is_alcohol_possible</th><th>is_alcohol_confirmed</th><th>description</th></tr></thead><tbody id="main-tbody"></tbody></table>`;
             }
@@ -183,10 +212,8 @@
             const newTr = document.createElement('tr');
             newTr.id = `tr-${tempId}`;
             newTr.style.background = "rgba(255, 63, 126, 0.15)";
-            
             const cols = ['id', 'plan_date', 'workout_available_min', 'is_alcohol_possible', 'is_alcohol_confirmed', 'description'];
             const schema = 'diet'; const table = 'project_schedules';
-
             cols.forEach(k => {
                 const td = document.createElement('td');
                 let defaultVal = '';
@@ -194,7 +221,6 @@
                 else if(k.includes('possible') || k.includes('confirmed')) defaultVal = 'false';
                 else if(k.includes('min')) defaultVal = '0';
                 else if(k === 'plan_date') defaultVal = new Date().toISOString().split('T')[0];
-                
                 if(k !== 'id') {
                     td.onclick = function() { makeEditable(this, schema, table, tempId, k); };
                     td.innerText = defaultVal;
@@ -251,15 +277,26 @@
                 for(let i=0; i<headers.length; i++) {
                     const tInfo = DIET_TABLES.find(t => headers[i].includes(t.name.split('.')[1]?.trim() || t.name.split(' ')[1]?.trim()));
                     if(!tInfo) continue;
-                    const lines = sections[i+1].trim().split('\n'); const cols = lines[0].split(',').map(c => c.trim());
-                    const data = lines.slice(1).map(l => {
-                        const cells = l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); let obj = {};
-                        cols.forEach((c, idx) => { if(c !== 'id' && c !== 'created_at' && c !== 'updated_at') { let v = cells[idx]?.trim() || null; if(v && v.startsWith('"') && v.endsWith('"')) v = v.substring(1, v.length-1).replace(/""/g, '"'); obj[c] = v; }});
-                        return obj;
+                    const lines = sections[i+1].trim().split('\n');
+                    if(lines.length < 2) continue;
+                    const csvCols = lines[0].split(',').map(c => c.trim());
+                    const csvData = lines.slice(1).map(l => {
+                        const cells = l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                        let rowObj = {};
+                        csvCols.forEach((colName, idx) => {
+                            if(!['id', 'created_at', 'updated_at'].includes(colName)) {
+                                let cellValue = cells[idx]?.trim() || null;
+                                if(cellValue && cellValue.startsWith('"') && cellValue.endsWith('"')) { cellValue = cellValue.substring(1, cellValue.length-1).replace(/""/g, '"'); }
+                                if(cellValue === "") cellValue = null;
+                                rowObj[colName] = cellValue;
+                            }
+                        });
+                        return rowObj;
                     });
-                    const { error } = await _db.schema(tInfo.schema).from(tInfo.id).insert(data); if(error) throw error;
+                    const { error } = await _db.schema(tInfo.schema).from(tInfo.id).insert(csvData);
+                    if(error) throw error;
                 }
-                alert("완료! 🔥"); document.getElementById('import-input').value = ""; detectImportInfo();
+                alert("데이터 지능형 삽입 완료! 🔥"); document.getElementById('import-input').value = ""; detectImportInfo();
             } catch(e) { alert("오류: " + e.message); }
         }
     </script>
