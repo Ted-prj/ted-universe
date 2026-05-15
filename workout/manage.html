@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>MANAGE - WORKOUT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="common.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container-app">
+        <div class="mgmt-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 style="color:var(--bp-pink); font-weight:900; margin:0;">⚙️ 운동 마스터 관리</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="resetMgmtTab()">Refresh</button>
+            </div>
+
+            <div class="mgmt-input-group">
+                <label class="label-small">1. 운동 종목 선택 (수정 시)</label>
+                <select id="mgmt-ex-select" class="form-select mb-3" onchange="loadMgmtData(this.value)">
+                    <option value="">-- 신규 등록 --</option>
+                </select>
+
+                <label class="label-small">2. 종목명 입력</label>
+                <input type="text" id="mgmt-name" class="form-control mb-3" placeholder="기구이름 등">
+
+                <label class="label-small">3. 운동 종류 선택</label>
+                <select id="mgmt-type" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-type', 'type-add-text', 'EXERCISE_TYPE')"></select>
+                <input type="text" id="type-add-text" class="form-control input-add-text mb-3" placeholder="새로운 운동 종류 명칭">
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="chk-buwi" onchange="toggleMgmtSub('buwi')">
+                    <label class="label-small">운동 부위 관리</label>
+                </div>
+                <div id="area-buwi" class="sub-config-area">
+                    <select id="mgmt-buwi" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-buwi', 'buwi-add-text', 'BODY_PART')"></select>
+                    <input type="text" id="buwi-add-text" class="form-control input-add-text" placeholder="새로운 부위">
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="chk-equip" onchange="toggleMgmtSub('equip')">
+                    <label class="label-small">기구 타입 관리</label>
+                </div>
+                <div id="area-equip" class="sub-config-area">
+                    <select id="mgmt-equip" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-equip', 'equip-add-text', 'EQUIPMENT')"></select>
+                    <input type="text" id="equip-add-text" class="form-control input-add-text" placeholder="새로운 기구">
+                </div>
+
+                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="chk-wtype" onchange="toggleMgmtSub('wtype')"><label class="label-small">무게 타입 관리</label></div>
+                <div id="area-wtype" class="sub-config-area"><select id="mgmt-wtype" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-wtype', 'wtype-add-text', 'WEIGHT_SUB_TYPE')"></select><input type="text" id="wtype-add-text" class="form-control input-add-text"></div>
+
+                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="chk-grip" onchange="toggleMgmtSub('grip')"><label class="label-small">그립 타입 관리</label></div>
+                <div id="area-grip" class="sub-config-area"><select id="mgmt-grip" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-grip', 'grip-add-text', 'GRIP')"></select><input type="text" id="grip-add-text" class="form-control input-add-text"></div>
+
+                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="chk-lying" onchange="toggleMgmtSub('lying')"><label class="label-small">라잉 타입 관리</label></div>
+                <div id="area-lying" class="sub-config-area"><select id="mgmt-lying" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-lying', 'lying-add-text', 'LYING')"></select><input type="text" id="lying-add-text" class="form-control input-add-text"></div>
+
+                <hr style="border-color: #444;">
+                <div class="row g-2">
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-time-on"><label class="label-small">운동 시간</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-weight-on"><label class="label-small">무게</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-sets-on"><label class="label-small">세트 수</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-reps-on"><label class="label-small">수행 횟수</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-machine-on"><label class="label-small">머신 강도</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-speed-on"><label class="label-small">머신 속도</label></div></div>
+                </div>
+            </div>
+            <button class="btn-pink w-100" onclick="saveMasterData()">저장 / 업데이트</button>
+        </div>
+
+        <div class="nav-tabs-custom">
+            <a href="workout.html" class="nav-item-custom">WORKOUT</a>
+            <a href="manage.html" class="nav-item-custom active">MANAGE</a>
+            <a href="#" class="nav-item-custom" style="opacity:0.3;">LOGS</a>
+        </div>
+    </div>
+
+    <script src="supabase_config.js"></script>
+    <script>
+        checkAuth();
+        let EX_MASTER = [];
+        let SETTINGS_CODE = { 'EXERCISE_TYPE':[], 'BODY_PART':[], 'EQUIPMENT':[], 'WEIGHT_SUB_TYPE':[], 'GRIP':[], 'LYING':[] };
+
+        async function init() {
+            const { data: sData } = await _db.schema('workout').from('settings').select('*');
+            if(sData) {
+                Object.keys(SETTINGS_CODE).forEach(k => SETTINGS_CODE[k] = []);
+                sData.forEach(s => { if(SETTINGS_CODE[s.category]) SETTINGS_CODE[s.category].push(s.name); });
+            }
+            const { data: eData } = await _db.schema('workout').from('exercises').select('*').order('name');
+            EX_MASTER = eData || [];
+            initMgmtUI();
+        }
+
+        function initMgmtUI() {
+            const exSel = document.getElementById('mgmt-ex-select');
+            exSel.innerHTML = '<option value="">-- 신규 등록 --</option>' + EX_MASTER.map(e => `<option value="${e.id}">${e.name} (${e.body_part})</option>`).join('');
+            ['type','buwi','equip','wtype','grip','lying'].forEach(k => fillMgmtDropdown('mgmt-'+k, k==='type'?'EXERCISE_TYPE':k==='buwi'?'BODY_PART':k==='equip'?'EQUIPMENT':k==='wtype'?'WEIGHT_SUB_TYPE':k.toUpperCase()));
+        }
+
+        function fillMgmtDropdown(id, category, currentVal = '') {
+            const list = SETTINGS_CODE[category] || [];
+            let html = list.map(v => `<option value="${v}" ${v === currentVal ? 'selected' : ''}>${v}</option>`).join('');
+            html += '<option value="ADD">추가...</option>';
+            document.getElementById(id).innerHTML = html;
+        }
+
+        function toggleMgmtSub(type) {
+            const isChecked = document.getElementById(`chk-${type}`).checked;
+            document.getElementById(`area-${type}`).style.display = isChecked ? 'block' : 'none';
+        }
+
+        function handleDropdownAddCheck(selId, textId, category) {
+            const sel = document.getElementById(selId);
+            const txt = document.getElementById(textId);
+            if(sel.value === 'ADD') { txt.style.display = 'block'; txt.focus(); } 
+            else { txt.style.display = 'none'; if(selId === 'mgmt-type') fillMgmtDropdown('mgmt-buwi', 'BODY_PART'); }
+        }
+
+        function loadMgmtData(id) {
+            if(!id) return resetMgmtTab();
+            const e = EX_MASTER.find(x => x.id === id);
+            document.getElementById('mgmt-name').value = e.name;
+            fillMgmtDropdown('mgmt-type', 'EXERCISE_TYPE', e.exercise_type);
+            setMgmtField('buwi', e.body_part, 'BODY_PART');
+            setMgmtField('equip', e.equipment_type, 'EQUIPMENT', e.use_equipment);
+            setMgmtField('wtype', (e.weight_type !== '기타' ? e.weight_type : ''), 'WEIGHT_SUB_TYPE', (e.weight_type !== '기타'));
+            setMgmtField('grip', e.grip_type, 'GRIP', e.use_grip);
+            setMgmtField('lying', e.lying_type, 'LYING', e.use_lying);
+            document.getElementById('chk-time-on').checked = e.exercise_time;
+            document.getElementById('chk-weight-on').checked = e.set_no;
+            document.getElementById('chk-sets-on').checked = e.set_no;
+            document.getElementById('chk-reps-on').checked = e.set_no;
+            document.getElementById('chk-machine-on').checked = e.machine_lv;
+            document.getElementById('chk-speed-on').checked = e.use_machine_speed;
+        }
+
+        function setMgmtField(type, value, category, isUse = true) {
+            const chk = document.getElementById(`chk-${type}`);
+            chk.checked = !!value || isUse;
+            toggleMgmtSub(type);
+            fillMgmtDropdown(`mgmt-${type}`, category, value);
+        }
+
+        async function saveMasterData() {
+            const id = document.getElementById('mgmt-ex-select').value;
+            const name = document.getElementById('mgmt-name').value;
+            if(!name) return alert("종목명 필수");
+
+            const type = await getFinalMgmtValue('mgmt-type', 'type-add-text', 'EXERCISE_TYPE');
+            const buwi = document.getElementById('chk-buwi').checked ? await getFinalMgmtValue('mgmt-buwi', 'buwi-add-text', 'BODY_PART') : null;
+            const equip = document.getElementById('chk-equip').checked ? await getFinalMgmtValue('mgmt-equip', 'equip-add-text', 'EQUIPMENT') : null;
+            const wtype = document.getElementById('chk-wtype').checked ? await getFinalMgmtValue('mgmt-wtype', 'wtype-add-text', 'WEIGHT_SUB_TYPE') : '기타';
+            const grip = document.getElementById('chk-grip').checked ? await getFinalMgmtValue('mgmt-grip', 'grip-add-text', 'GRIP') : null;
+            const lying = document.getElementById('chk-lying').checked ? await getFinalMgmtValue('mgmt-lying', 'lying-add-text', 'LYING') : null;
+
+            const payload = {
+                name: name, exercise_type: type, body_part: buwi,
+                use_equipment: document.getElementById('chk-equip').checked, equipment_type: equip, weight_type: wtype,
+                use_grip: document.getElementById('chk-grip').checked, grip_type: grip,
+                use_lying: document.getElementById('chk-lying').checked, lying_type: lying,
+                exercise_time: document.getElementById('chk-time-on').checked,
+                set_no: (document.getElementById('chk-weight-on').checked || document.getElementById('chk-sets-on').checked || document.getElementById('chk-reps-on').checked),
+                machine_lv: document.getElementById('chk-machine-on').checked, use_machine_speed: document.getElementById('chk-speed-on').checked
+            };
+
+            if(id) await _db.schema('workout').from('exercises').update(payload).eq('id', id);
+            else { payload.id = 'ex_' + Date.now(); await _db.schema('workout').from('exercises').insert([payload]); }
+            
+            alert("저장완료");
+            await init();
+        }
+
+        async function getFinalMgmtValue(selId, textId, category) {
+            const sel = document.getElementById(selId);
+            if(sel.value === 'ADD') {
+                const newVal = document.getElementById(textId).value.trim();
+                await _db.schema('workout').from('settings').insert([{category, name: newVal}]);
+                return newVal;
+            }
+            return sel.value;
+        }
+
+        function resetMgmtTab() { location.reload(); }
+
+        init();
+    </script>
+</body>
+</html>

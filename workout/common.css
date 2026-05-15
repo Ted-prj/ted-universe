@@ -1,0 +1,74 @@
+:root {
+    --bp-pink: rgb(232, 142, 163);
+    --bp-black: #000;
+    --bp-dark-gray: #121212;
+    --neon-pink: #FF3F7E;
+    --deep-purple: #5D3FD3;
+    --text-dim: #888;
+}
+
+body { 
+    background-color: var(--bp-black); 
+    color: #fff; 
+    font-family: 'Pretendard', sans-serif; 
+    padding-bottom: 100px; 
+}
+
+.container-app { max-width: 800px; margin: 0 auto; }
+
+/* Navigation */
+.nav-tabs-custom { 
+    position: fixed; bottom: 0; left: 0; width: 100%; 
+    background: #111; display: flex; border-top: 1px solid #222; 
+    z-index: 2000; padding-bottom: env(safe-area-inset-bottom); 
+}
+.nav-item-custom { 
+    flex: 1; text-align: center; padding: 12px; 
+    color: #555; font-size: 0.75rem; font-weight: 800; 
+    cursor: pointer; transition: 0.3s; text-decoration: none;
+}
+.nav-item-custom.active { 
+    color: var(--bp-pink); border-top: 2px solid var(--bp-pink); 
+    background: rgba(232, 142, 163, 0.05); 
+}
+
+/* UI Components */
+.sticky-top-group { 
+    position: sticky; top: 0; z-index: 1000; 
+    background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); 
+    border-bottom: 1px solid #222; padding: 15px; 
+}
+.progress-mini-bar { width: 100%; height: 4px; background: #222; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--bp-pink); width: 0%; transition: width 0.3s ease; }
+
+.workout-card { background: var(--bp-dark-gray); border-radius: 24px; margin: 15px; border: 1px solid #252525; overflow: hidden; }
+.card-header { padding: 12px 20px; background: #1a1a1a; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.set-row { padding: 12px 20px; border-bottom: 1px solid #222; background: var(--bp-dark-gray); transition: transform 0.3s; position: relative; }
+.set-row.saved-row { background: #0a0a0a; opacity: 0.8; }
+
+.history-badge { 
+    font-size: 0.62rem; color: var(--text-dim); background: #1a1a1a; 
+    padding: 4px 8px; border-radius: 6px; display: inline-block; 
+    margin-bottom: 6px; border-left: 3px solid var(--deep-purple); width: 100%; 
+}
+.quick-add-area { margin: 15px; padding: 20px; border: 1px dashed var(--bp-pink); border-radius: 24px; background: rgba(232, 142, 163, 0.02); }
+.stats-box { background: #0a0a0a; border-radius: 12px; padding: 10px; margin-bottom: 15px; font-size: 0.7rem; border: 1px solid #1a1a1a; }
+.recent-config-item { display: inline-block; background: #1a1a1a; padding: 2px 6px; border-radius: 4px; margin-right: 4px; color: #aaa; margin-top: 4px; }
+
+/* Forms & Buttons */
+.form-control, .form-select { background-color: #080808 !important; border: 1.5px solid #252525 !important; color: #fff !important; border-radius: 12px; font-weight: 600; font-size: 0.85rem; }
+.btn-pink { background: var(--bp-pink); color: #000; border: none; border-radius: 14px; font-weight: 900; padding: 10px; }
+.btn-save { background: var(--neon-pink); color: #fff; border: none; border-radius: 10px; font-size: 0.72rem; width: 100%; height: 38px; font-weight: 900; transition: 0.2s; }
+.btn-save.st-saved { background: #333; color: #888; }
+.btn-save.st-update { background: var(--deep-purple); color: #fff; }
+
+.label-small { font-size: 0.65rem; color: #666; margin-bottom: 2px; display: block; font-weight: 700; }
+.border-chest { border-left: 5px solid #FF5E9B; }
+.border-back { border-left: 5px solid #FFBBDC; }
+.border-shoulder { border-left: 5px solid var(--neon-pink); }
+.border-leg { border-left: 5px solid var(--deep-purple); }
+
+.mgmt-card { background: #111; border-radius: 20px; padding: 20px; margin: 15px; border: 1px solid #222; }
+.mgmt-input-group { background: #080808; border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 1px solid #1a1a1a; }
+.sub-config-area { margin-top: 5px; padding: 10px; background: #121212; border-radius: 8px; display: none; }
+.input-add-text { display: none; margin-top: 8px; border-color: var(--neon-pink) !important; }
