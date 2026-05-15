@@ -217,3 +217,18 @@ body {
     color: #aaa;
 }
 .text-pink-dim { color: rgba(232, 142, 163, 0.7); }
+
+.session-card {
+    background: #000; border: 2px solid #222; border-radius: 24px; margin-bottom: 30px;
+    padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.session-header { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; cursor: pointer; }
+.session-edit-area { background: #111; border-radius: 15px; padding: 15px; display: none; }
+.ex-group-card { background: #151515; border-radius: 18px; margin-bottom: 20px; border: 1px solid #252525; overflow: hidden; }
+.ex-group-header { background: #1c1c1c; padding: 12px 15px; border-bottom: 1px solid #252525; display: flex; justify-content: space-between; align-items: center; }
+.set-item-card { background: transparent; border-bottom: 1px solid #222; padding: 10px 15px; position: relative; overflow: hidden; }
+.set-item-card:last-child { border-bottom: none; }
+.set-item-card.editing { background: #222; border-left: 3px solid var(--neon-pink); }
+.add-card-placeholder { background: rgba(232, 142, 163, 0.05); border: 1px dashed var(--bp-pink); border-radius: 12px; padding: 10px; margin: 10px; text-align: center; cursor: pointer; }
+.swipe-del-bg { position: absolute; right: -100%; top: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, #ff2d55); display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; color: white; font-weight: 900; z-index: 1; transition: 0.3s; }
+.swipe-content { position: relative; z-index: 2; background: inherit; transition: 0.3s; }

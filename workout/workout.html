@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.0.0</title>
+    <title>BLACKPINK WORKOUT v5.1.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -51,7 +51,9 @@
                 <div id="q-best-info" class="mb-1"></div>
                 <div id="q-recent-configs"></div>
             </div>
+            
             <div id="q-inputs" class="row g-2 mb-3"></div>
+            
             <div class="mb-3">
                 <label class="label-small">수퍼세트 설정</label>
                 <select id="q-superset" class="form-select form-select-sm"><option value="">N/A</option></select>
@@ -80,10 +82,8 @@
             if(sData) sData.forEach(s => { if(SETTINGS_CODE[s.category]) SETTINGS_CODE[s.category].push(s.name); });
             const { data: eData } = await _db.schema('workout').from('exercises').select('*').order('name');
             EX_MASTER = eData || [];
-
             document.getElementById('q-type').innerHTML = SETTINGS_CODE['EXERCISE_TYPE'].map(t => `<option value="${t}">${t}</option>`).join('');
             document.getElementById('q-buwi').innerHTML = SETTINGS_CODE['BODY_PART'].map(b => `<option value="${b}">${b}</option>`).join('');
-            
             handleBuwiChange(document.getElementById('q-buwi').value);
             await refreshActiveList();
         }
@@ -100,7 +100,14 @@
             const ex = EX_MASTER.find(e => e.id === exId);
             const { best, bestLog, recentConfigs } = await getDetailedStats(exId);
             document.getElementById('q-stats-area').style.display = 'block';
-            document.getElementById('q-best-info').innerHTML = `<b class="text-pink">🏆 BEST: ${best}</b> <small style="color:#666">(${bestLog.date})</small>${bestLog.note ? `<div style="font-size:0.6rem; color:var(--deep-purple)">📝 ${bestLog.note}</div>` : ''}`;
+            
+            // v5.1.1 수정: BEST 기록 아래에 노트(메모) 표시 로직 추가
+            document.getElementById('q-best-info').innerHTML = `
+                <b class="text-pink">🏆 BEST: ${best}</b> 
+                <small style="color:#666">(${bestLog.date})</small>
+                ${bestLog.note ? `<div style="font-size:0.65rem; color:var(--deep-purple); margin-top:3px; font-style:italic;">📝 ${bestLog.note}</div>` : ''}
+            `;
+            
             document.getElementById('q-recent-configs').innerHTML = recentConfigs.map(c => `<span class="recent-config-item">${c}</span>`).join('');
             renderQuickInputFields(ex, bestLog);
         }
@@ -110,19 +117,12 @@
             if(ex.use_equipment) html += makeQField('col-4', '기구', makeQSelect('q-val-equip', SETTINGS_CODE['EQUIPMENT'], best.equip));
             if(ex.use_grip) html += makeQField('col-4', '그립', makeQSelect('q-val-grip', SETTINGS_CODE['GRIP'], best.grip));
             if(ex.use_lying) html += makeQField('col-4', '라잉', makeQSelect('q-val-lying', SETTINGS_CODE['LYING'], best.lying));
-            
-            // v5.0.0: 세트별 시간(sec) 입력칸 추가 로직
-            if(ex.use_set_time) {
-                html += makeQField('col-4', '시간(s)', `<input type="number" id="q-val-set-time" class="form-control" value="${best.set_time||''}">`);
-            }
-            
-            if(ex.set_no) { 
-                html += makeQField('col-4', '무게(kg)', `<input type="number" id="q-val-weight" class="form-control" value="${best.weight||''}">`); 
-                if(!ex.use_set_time) { // 세트 시간이 없을 때만 횟수 표시 (테드 요청 반영)
-                    html += makeQField('col-4', '횟수', `<input type="number" id="q-val-reps" class="form-control" value="${best.reps||''}">`); 
-                }
-            }
-            if(ex.exercise_time) html += makeQField('col-4', '시간(m)', `<input type="number" id="q-val-time" class="form-control" value="${best.time||''}">`);
+            if(ex.use_weight) html += makeQField('col-4', '무게(kg)', `<input type="number" id="q-val-weight" class="form-control" value="${best.weight||''}">`);
+            if(ex.use_reps) html += makeQField('col-4', '횟수', `<input type="number" id="q-val-reps" class="form-control" value="${best.reps||''}">`);
+            if(ex.use_set_time) html += makeQField('col-4', '시간(s)', `<input type="number" id="q-val-set-time" class="form-control" value="${best.set_time||''}">`);
+            if(ex.use_exercise_time) html += makeQField('col-4', '전체시간(m)', `<input type="number" id="q-val-time" class="form-control" value="${best.time||''}">`);
+            if(ex.use_machine_lv) html += makeQField('col-4', '강도', `<input type="number" id="q-val-ml" class="form-control" value="${best.machine_lv||''}">`);
+            if(ex.use_machine_speed) html += makeQField('col-4', '속도', `<input type="number" id="val-ms" class="form-control" value="${best.machine_speed||''}">`);
             document.getElementById('q-inputs').innerHTML = html;
         }
 
@@ -133,15 +133,13 @@
             const payload = [];
             for(let i=1; i<=sets; i++) {
                 payload.push({ 
-                    exercise_id: exId, 
-                    display_name: ex.name, 
-                    body_part: ex.body_part, 
-                    set_no: i, 
-                    status: 'TEMP', 
+                    exercise_id: exId, display_name: ex.name, body_part: ex.body_part, set_no: i, status: 'TEMP', 
                     weight: document.getElementById('q-val-weight')?.value || 0, 
                     reps: document.getElementById('q-val-reps')?.value || 0, 
-                    set_time: document.getElementById('q-val-set-time')?.value || 0, // v5.0.0 추가
-                    workout_time: document.getElementById('q-val-time')?.value || 0, 
+                    set_time: document.getElementById('q-val-set-time')?.value || 0,
+                    workout_time: document.getElementById('q-val-time')?.value || 0,
+                    machine_lv: document.getElementById('q-val-ml')?.value || 0,
+                    machine_speed: document.getElementById('val-ms')?.value || 0,
                     equipment_type: document.getElementById('q-val-equip')?.value, 
                     grip_type: document.getElementById('q-val-grip')?.value, 
                     lying_type: document.getElementById('q-val-lying')?.value, 
@@ -191,36 +189,44 @@
             if(ex.use_equipment) selects += makeRowSelect(s.id, 'equip', SETTINGS_CODE['EQUIPMENT'], s.equipment_type);
             if(ex.use_grip) selects += makeRowSelect(s.id, 'grip', SETTINGS_CODE['GRIP'], s.grip_type);
             if(ex.use_lying) selects += makeRowSelect(s.id, 'lying', SETTINGS_CODE['LYING'], s.lying_type);
-
-            // v5.0.0: 세트 로우 입력창 동적 생성 (초 vs 횟수)
             let inputsHtml = '';
-            if(ex.use_set_time) {
-                inputsHtml += `<input type="number" id="st-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.set_time||''}" placeholder="sec">`;
-            }
-            
-            if(ex.set_no) {
-                inputsHtml += `<input type="number" id="w-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.weight||''}" placeholder="kg">`;
-                if(!ex.use_set_time) {
-                    inputsHtml += `<input type="number" id="r-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.reps||''}" placeholder="회">`;
-                }
-            } else if(ex.exercise_time) {
-                inputsHtml += `<input type="number" id="t-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.workout_time||''}" placeholder="분">`;
-            }
-
+            if(ex.use_weight) inputsHtml += `<input type="number" id="w-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.weight||''}" placeholder="kg">`;
+            if(ex.use_reps) inputsHtml += `<input type="number" id="r-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.reps||''}" placeholder="회">`;
+            if(ex.use_set_time) inputsHtml += `<input type="number" id="st-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.set_time||''}" placeholder="sec">`;
+            if(ex.use_exercise_time) inputsHtml += `<input type="number" id="t-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.workout_time||''}" placeholder="min">`;
+            if(ex.use_machine_lv) inputsHtml += `<input type="number" id="ml-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.machine_lv||''}" placeholder="Lv">`;
+            if(ex.use_machine_speed) inputsHtml += `<input type="number" id="ms-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.machine_speed||''}" placeholder="km/h">`;
             return `<div id="set-row-${s.id}" class="set-row ${isSaved?'saved-row' : ''}" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event, ${s.id}, '${s.display_name}')">
                 <div class="row align-items-center g-2">
                     <div class="col-2 fw-bold text-pink text-center set-no-label">${s.set_no}S</div>
                     <div class="col-7">
                         <div class="history-badge">⏮ Last: ${lastStr} ${lastNote ? ' | 📝 '+lastNote : ''}</div>
                         <div class="d-flex gap-1 mb-1">${selects}</div>
-                        <div class="d-flex gap-1 mb-1">
-                            ${inputsHtml}
-                        </div>
+                        <div class="d-flex gap-1 mb-1">${inputsHtml}</div>
                         <input type="text" id="n-${s.id}" class="form-control form-control-sm row-input-${s.id}" style="font-size:0.65rem;" value="${s.note||''}" placeholder="노트...">
                     </div>
                     <div class="col-3"><button id="save-btn-${s.id}" class="btn-save ${isSaved?'st-saved':''}" onclick="saveSetRow(${s.id})">${isSaved?'SAVED':'SAVE'}</button></div>
                 </div>
             </div>`;
+        }
+
+        async function saveSetRow(id) {
+            const btn = document.getElementById(`save-btn-${id}`);
+            const s = ACTIVE_SETS.find(x => x.id === id);
+            const ex = EX_MASTER.find(e => e.id === s.exercise_id);
+            const up = { status: 'SAVED', note: document.getElementById(`n-${id}`).value, equipment_type: document.getElementById(`sel-equip-${id}`)?.value, grip_type: document.getElementById(`sel-grip-${id}`)?.value, lying_type: document.getElementById(`sel-lying-${id}`)?.value };
+            if(ex.use_weight) up.weight = Number(document.getElementById(`w-${id}`).value);
+            if(ex.use_reps) up.reps = Number(document.getElementById(`r-${id}`).value);
+            if(ex.use_set_time) up.set_time = Number(document.getElementById(`st-${id}`).value);
+            if(ex.use_exercise_time) up.workout_time = Number(document.getElementById(`t-${id}`).value);
+            if(ex.use_machine_lv) up.machine_lv = Number(document.getElementById(`ml-${id}`).value);
+            if(ex.use_machine_speed) up.machine_speed = Number(document.getElementById(`ms-${id}`).value);
+            const { error } = await _db.schema('workout').from('active_workout').update(up).eq('id', id);
+            if(!error) {
+                btn.innerText = 'SAVED'; btn.classList.remove('st-update'); btn.classList.add('st-saved');
+                document.getElementById(`set-row-${id}`).classList.add('saved-row');
+                Object.assign(s, up); updateProgress();
+            }
         }
 
         function addSetEventListeners(id) {
@@ -233,82 +239,26 @@
                 });
             });
         }
-
-        async function saveSetRow(id) {
-            const btn = document.getElementById(`save-btn-${id}`);
-            const s = ACTIVE_SETS.find(x => x.id === id);
-            const ex = EX_MASTER.find(e => e.id === s.exercise_id);
-            const up = { 
-                status: 'SAVED', 
-                note: document.getElementById(`n-${id}`).value, 
-                equipment_type: document.getElementById(`sel-equip-${id}`)?.value, 
-                grip_type: document.getElementById(`sel-grip-${id}`)?.value, 
-                lying_type: document.getElementById(`sel-lying-${id}`)?.value 
-            };
-            
-            // v5.0.0: 세트 시간값 추출 로직
-            if(ex.use_set_time) up.set_time = Number(document.getElementById(`st-${id}`).value);
-
-            if(ex.set_no) { 
-                up.weight = Number(document.getElementById(`w-${id}`).value); 
-                if(!ex.use_set_time) up.reps = Number(document.getElementById(`r-${id}`).value); 
-            } else if(ex.exercise_time) { 
-                up.workout_time = Number(document.getElementById(`t-${id}`).value); 
-            }
-
-            const { error } = await _db.schema('workout').from('active_workout').update(up).eq('id', id);
-            if(!error) {
-                btn.innerText = 'SAVED'; btn.classList.remove('st-update'); btn.classList.add('st-saved');
-                document.getElementById(`set-row-${id}`).classList.add('saved-row');
-                Object.assign(s, up); updateProgress();
-            }
-        }
-
-        function handleTouchStart(e) { touchStartX = e.touches[0].clientX; }
-        async function handleTouchEnd(e, id, exName) {
-            if(touchStartX - e.changedTouches[0].clientX > 100) {
-                if(confirm("이 세트를 삭제할까요?")) {
-                    await _db.schema('workout').from('active_workout').delete().eq('id', id);
-                    const remainingSets = ACTIVE_SETS.filter(s => s.display_name === exName && s.id !== id).sort((a,b) => a.id - b.id);
-                    for(let i=0; i<remainingSets.length; i++) { await _db.schema('workout').from('active_workout').update({ set_no: i + 1 }).eq('id', remainingSets[i].id); }
-                    const { data: updatedSets } = await _db.schema('workout').from('active_workout').select('*').order('id');
-                    ACTIVE_SETS = updatedSets || [];
-                    await renderSingleExerciseCard(exName);
-                    updateProgress();
-                }
-            }
-        }
-
-        async function swipeDeleteEx(name) { 
-            if(confirm(`[${name}] 운동 전체를 삭제할까요?`)) { 
-                await _db.schema('workout').from('active_workout').delete().eq('display_name', name); 
-                const { data: updatedSets } = await _db.schema('workout').from('active_workout').select('*').order('id');
-                ACTIVE_SETS = updatedSets || [];
-                const card = document.getElementById(`ex-card-${name.replace(/\s+/g, '-')}`);
-                if(card) card.remove();
-                updateProgress(); 
-            } 
-        }
-
         function makeQField(col, label, input) { return `<div class="${col} mb-2"><label class="label-small">${label}</label>${input}</div>`; }
         function makeQSelect(id, list, def) { return `<select id="${id}" class="form-select">${list.map(v => `<option value="${v}" ${v===def?'selected':''}>${v}</option>`).join('')}</select>`; }
         function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v}" ${v===current?'selected':''}>${v}</option>`).join('')}</select>`; }
         function updateProgress() { const saved = ACTIVE_SETS.filter(s => s.status === 'SAVED').length; const pct = ACTIVE_SETS.length ? Math.round((saved/ACTIVE_SETS.length)*100) : 0; document.getElementById('progress-fill').style.width = pct + '%'; document.getElementById('progress-text').innerText = `${saved} / ${ACTIVE_SETS.length} SAVED (${pct}%)`; }
         function updateSupersetDropdown() { const names = [...new Set(ACTIVE_SETS.map(s => s.display_name))]; document.getElementById('q-superset').innerHTML = '<option value="">N/A</option>' + names.map(n => `<option value="${n}">${n}</option>`).join(''); }
         function toggleFinishArea() { const a = document.getElementById('session-input-area'); a.style.display = a.style.display==='none'?'block':'none'; }
-        
+        function handleTouchStart(e) { touchStartX = e.touches[0].clientX; }
+        async function handleTouchEnd(e, id, exName) { if(touchStartX - e.changedTouches[0].clientX > 100) { if(confirm("삭제?")) { await _db.schema('workout').from('active_workout').delete().eq('id', id); refreshActiveList(); } } }
+        async function swipeDeleteEx(name) { if(confirm(`${name} 삭제?`)) { await _db.schema('workout').from('active_workout').delete().eq('display_name', name); refreshActiveList(); } }
         async function processFinalSave() {
-            if(ACTIVE_SETS.some(s => s.status === 'TEMP')) return alert("저장되지 않은 세트가 있습니다!");
+            if(ACTIVE_SETS.some(s => s.status === 'TEMP')) return alert("저장 안 된 세트가 있음!");
             const smartDate = getSmartDate();
             const { data: ex } = await _db.schema('workout').from('session_logs').select('id').like('id', `${smartDate.idStr}_%`);
             const sId = `${smartDate.idStr}_S${(ex?.length||0)+1}`;
             await _db.schema('workout').from('session_logs').insert([{ id: sId, workout_date: smartDate.justDate, duration_min: Number(document.getElementById('s-duration').value), active_calories: Number(document.getElementById('s-active-cal').value), total_calories: Number(document.getElementById('s-total-cal').value), avg_heart_rate: Number(document.getElementById('s-avg-hr').value), min_heart_rate: Number(document.getElementById('s-min-hr').value), max_heart_rate: Number(document.getElementById('s-max-hr').value) }]);
-            const logs = ACTIVE_SETS.filter(s => s.status === 'SAVED').map(s => { const {id, ...rest} = s; return { ...rest, session_id: sId, status: 'FINAL', workout_date: smartDate.full }; });
+            const logs = ACTIVE_SETS.map(s => { const {id, ...rest} = s; return { ...rest, session_id: sId, status: 'FINAL', workout_date: smartDate.full }; });
             await _db.schema('workout').from('logs').insert(logs);
             await _db.schema('workout').from('active_workout').delete().neq('id', -1);
             location.reload();
         }
-
         init();
     </script>
 </body>

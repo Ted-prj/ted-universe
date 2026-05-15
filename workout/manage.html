@@ -3,16 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>MANAGE - WORKOUT</title>
+    <title>MANAGE - WORKOUT v5.1.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .config-section-title { font-size: 0.75rem; color: var(--bp-pink); font-weight: 800; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .use-switch-label { font-size: 0.85rem; font-weight: 700; color: #fff; cursor: pointer; }
+        .sub-config-area { margin-left: 28px; margin-top: 5px; margin-bottom: 15px; }
+    </style>
 </head>
 <body>
     <div class="container-app">
         <div class="mgmt-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 style="color:var(--bp-pink); font-weight:900; margin:0;">⚙️ 운동 마스터 관리</h5>
+                <h5 style="color:var(--bp-pink); font-weight:900; margin:0;">⚙️ 운동 마스터 관리 v5.1.0</h5>
                 <button class="btn btn-sm btn-outline-light" onclick="resetMgmtTab()">Refresh</button>
             </div>
 
@@ -25,46 +30,72 @@
                 <label class="label-small">2. 종목명 입력</label>
                 <input type="text" id="mgmt-name" class="form-control mb-3" placeholder="기구이름 등">
 
-                <label class="label-small">3. 운동 종류 선택</label>
-                <select id="mgmt-type" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-type', 'type-add-text', 'EXERCISE_TYPE')"></select>
-                <input type="text" id="type-add-text" class="form-control input-add-text mb-3" placeholder="새로운 운동 종류 명칭">
-
+                <div class="config-section-title">GROUP A. 항목 노출 및 기본값 설정</div>
+                
                 <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" id="chk-buwi" onchange="toggleMgmtSub('buwi')">
-                    <label class="label-small">운동 부위 관리</label>
+                    <input class="form-check-input" type="checkbox" id="use_exercise_type" onchange="toggleArea('exercise_type')">
+                    <label class="use-switch-label" for="use_exercise_type">운동 종류 (Type)</label>
                 </div>
-                <div id="area-buwi" class="sub-config-area">
-                    <select id="mgmt-buwi" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-buwi', 'buwi-add-text', 'BODY_PART')"></select>
-                    <input type="text" id="buwi-add-text" class="form-control input-add-text" placeholder="새로운 부위">
+                <div id="area-exercise_type" class="sub-config-area" style="display:none;">
+                    <select id="exercise_type" class="form-select mb-1" onchange="handleDropdownAddCheck('exercise_type', 'add-exercise_type', 'EXERCISE_TYPE')"></select>
+                    <input type="text" id="add-exercise_type" class="form-control input-add-text" placeholder="새 종류 추가">
                 </div>
 
                 <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" id="chk-equip" onchange="toggleMgmtSub('equip')">
-                    <label class="label-small">기구 타입 관리</label>
+                    <input class="form-check-input" type="checkbox" id="use_body_part" onchange="toggleArea('body_part')">
+                    <label class="use-switch-label" for="use_body_part">운동 부위 (Body Part)</label>
                 </div>
-                <div id="area-equip" class="sub-config-area">
-                    <select id="mgmt-equip" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-equip', 'equip-add-text', 'EQUIPMENT')"></select>
-                    <input type="text" id="equip-add-text" class="form-control input-add-text" placeholder="새로운 기구">
+                <div id="area-body_part" class="sub-config-area" style="display:none;">
+                    <select id="body_part" class="form-select mb-1" onchange="handleDropdownAddCheck('body_part', 'add-body_part', 'BODY_PART')"></select>
+                    <input type="text" id="add-body_part" class="form-control input-add-text" placeholder="새 부위 추가">
                 </div>
 
-                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="chk-wtype" onchange="toggleMgmtSub('wtype')"><label class="label-small">무게 타입 관리</label></div>
-                <div id="area-wtype" class="sub-config-area"><select id="mgmt-wtype" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-wtype', 'wtype-add-text', 'WEIGHT_SUB_TYPE')"></select><input type="text" id="wtype-add-text" class="form-control input-add-text"></div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="use_equipment" onchange="toggleArea('equipment')">
+                    <label class="use-switch-label" for="use_equipment">기구 타입 (Equipment)</label>
+                </div>
+                <div id="area-equipment" class="sub-config-area" style="display:none;">
+                    <select id="equipment_type" class="form-select mb-1" onchange="handleDropdownAddCheck('equipment_type', 'add-equipment', 'EQUIPMENT')"></select>
+                    <input type="text" id="add-equipment" class="form-control input-add-text" placeholder="새 기구 추가">
+                </div>
 
-                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="chk-grip" onchange="toggleMgmtSub('grip')"><label class="label-small">그립 타입 관리</label></div>
-                <div id="area-grip" class="sub-config-area"><select id="mgmt-grip" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-grip', 'grip-add-text', 'GRIP')"></select><input type="text" id="grip-add-text" class="form-control input-add-text"></div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="use_weight_type" onchange="toggleArea('weight_type')">
+                    <label class="use-switch-label" for="use_weight_type">무게 타입 (Weight Type)</label>
+                </div>
+                <div id="area-weight_type" class="sub-config-area" style="display:none;">
+                    <select id="weight_type" class="form-select mb-1" onchange="handleDropdownAddCheck('weight_type', 'add-weight_type', 'WEIGHT_SUB_TYPE')"></select>
+                    <input type="text" id="add-weight_type" class="form-control input-add-text" placeholder="새 무게타입 추가">
+                </div>
 
-                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="chk-lying" onchange="toggleMgmtSub('lying')"><label class="label-small">라잉 타입 관리</label></div>
-                <div id="area-lying" class="sub-config-area"><select id="mgmt-lying" class="form-select mb-1" onchange="handleDropdownAddCheck('mgmt-lying', 'lying-add-text', 'LYING')"></select><input type="text" id="lying-add-text" class="form-control input-add-text"></div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="use_grip" onchange="toggleArea('grip')">
+                    <label class="use-switch-label" for="use_grip">그립 타입 (Grip)</label>
+                </div>
+                <div id="area-grip" class="sub-config-area" style="display:none;">
+                    <select id="grip_type" class="form-select mb-1" onchange="handleDropdownAddCheck('grip_type', 'add-grip', 'GRIP')"></select>
+                    <input type="text" id="add-grip" class="form-control input-add-text" placeholder="새 그립 추가">
+                </div>
 
-                <hr style="border-color: #444;">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="use_lying" onchange="toggleArea('lying')">
+                    <label class="use-switch-label" for="use_lying">라잉 타입 (Lying)</label>
+                </div>
+                <div id="area-lying" class="sub-config-area" style="display:none;">
+                    <select id="lying_type" class="form-select mb-1" onchange="handleDropdownAddCheck('lying_type', 'add-lying', 'LYING')"></select>
+                    <input type="text" id="add-lying" class="form-control input-add-text" placeholder="새 라잉타입 추가">
+                </div>
+
+                <div class="config-section-title">GROUP B. 입력 필드 활성화 (ON/OFF)</div>
                 <div class="row g-2">
-                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-time-on"><label class="label-small">전체 운동 시간</label></div></div>
-                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-set-time-on"><label class="label-small">세트별 시간(sec)</label></div></div>
-                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-weight-on"><label class="label-small">무게</label></div></div>
-                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-sets-on"><label class="label-small">세트 수</label></div></div>
-                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-reps-on"><label class="label-small">수행 횟수</label></div></div>
-                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-machine-on"><label class="label-small">머신 강도</label></div></div>
-                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="chk-speed-on"><label class="label-small">머신 속도</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_exercise_time"><label class="use-switch-label" for="use_exercise_time">전체 운동 시간</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_weight"><label class="use-switch-label" for="use_weight">무게(kg)</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_set_no"><label class="use-switch-label" for="use_set_no">세트 수</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_reps"><label class="use-switch-label" for="use_reps">수행 횟수</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_set_time"><label class="use-switch-label" for="use_set_time">세트별 시간(s)</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_heart_rate"><label class="use-switch-label" for="use_heart_rate">심박수</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_machine_lv"><label class="use-switch-label" for="use_machine_lv">머신 강도</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_machine_speed"><label class="use-switch-label" for="use_machine_speed">머신 속도</label></div></div>
                 </div>
             </div>
             <button class="btn-pink w-100" onclick="saveMasterData()">저장 / 업데이트</button>
@@ -98,53 +129,60 @@
         function initMgmtUI() {
             const exSel = document.getElementById('mgmt-ex-select');
             exSel.innerHTML = '<option value="">-- 신규 등록 --</option>' + EX_MASTER.map(e => `<option value="${e.id}">${e.name} (${e.body_part})</option>`).join('');
-            ['type','buwi','equip','wtype','grip','lying'].forEach(k => fillMgmtDropdown('mgmt-'+k, k==='type'?'EXERCISE_TYPE':k==='buwi'?'BODY_PART':k==='equip'?'EQUIPMENT':k==='wtype'?'WEIGHT_SUB_TYPE':k.toUpperCase()));
+            
+            // 모든 드랍박스 초기화
+            fillDropdown('exercise_type', 'EXERCISE_TYPE');
+            fillDropdown('body_part', 'BODY_PART');
+            fillDropdown('equipment_type', 'EQUIPMENT');
+            fillDropdown('weight_type', 'WEIGHT_SUB_TYPE');
+            fillDropdown('grip_type', 'GRIP');
+            fillDropdown('lying_type', 'LYING');
         }
 
-        function fillMgmtDropdown(id, category, currentVal = '') {
+        function fillDropdown(id, category, currentVal = '') {
             const list = SETTINGS_CODE[category] || [];
             let html = list.map(v => `<option value="${v}" ${v === currentVal ? 'selected' : ''}>${v}</option>`).join('');
             html += '<option value="ADD">추가...</option>';
             document.getElementById(id).innerHTML = html;
         }
 
-        function toggleMgmtSub(type) {
-            const isChecked = document.getElementById(`chk-${type}`).checked;
-            document.getElementById(`area-${type}`).style.display = isChecked ? 'block' : 'none';
+        function toggleArea(type) {
+            const isChecked = document.getElementById(`use_${type}`).checked;
+            const area = document.getElementById(`area-${type}`);
+            if(area) area.style.display = isChecked ? 'block' : 'none';
         }
 
         function handleDropdownAddCheck(selId, textId, category) {
             const sel = document.getElementById(selId);
             const txt = document.getElementById(textId);
             if(sel.value === 'ADD') { txt.style.display = 'block'; txt.focus(); } 
-            else { txt.style.display = 'none'; if(selId === 'mgmt-type') fillMgmtDropdown('mgmt-buwi', 'BODY_PART'); }
+            else { txt.style.display = 'none'; }
         }
 
         function loadMgmtData(id) {
             if(!id) return resetMgmtTab();
             const e = EX_MASTER.find(x => x.id === id);
             document.getElementById('mgmt-name').value = e.name;
-            fillMgmtDropdown('mgmt-type', 'EXERCISE_TYPE', e.exercise_type);
-            setMgmtField('buwi', e.body_part, 'BODY_PART');
-            setMgmtField('equip', e.equipment_type, 'EQUIPMENT', e.use_equipment);
-            setMgmtField('wtype', (e.weight_type !== '기타' ? e.weight_type : ''), 'WEIGHT_SUB_TYPE', (e.weight_type !== '기타'));
-            setMgmtField('grip', e.grip_type, 'GRIP', e.use_grip);
-            setMgmtField('lying', e.lying_type, 'LYING', e.use_lying);
-            
-            document.getElementById('chk-time-on').checked = e.exercise_time;
-            document.getElementById('chk-set-time-on').checked = e.use_set_time || false; // v5.0.0 추가
-            document.getElementById('chk-weight-on').checked = e.set_no;
-            document.getElementById('chk-sets-on').checked = e.set_no;
-            document.getElementById('chk-reps-on').checked = e.set_no;
-            document.getElementById('chk-machine-on').checked = e.machine_lv;
-            document.getElementById('chk-speed-on').checked = e.use_machine_speed;
+
+            // Group A 연동
+            syncField('exercise_type', e.use_exercise_type, e.exercise_type, 'EXERCISE_TYPE');
+            syncField('body_part', e.use_body_part, e.body_part, 'BODY_PART');
+            syncField('equipment', e.use_equipment, e.equipment_type, 'EQUIPMENT');
+            syncField('weight_type', e.use_weight_type, e.weight_type, 'WEIGHT_SUB_TYPE');
+            syncField('grip', e.use_grip, e.grip_type, 'GRIP');
+            syncField('lying', e.use_lying, e.lying_type, 'LYING');
+
+            // Group B 연동
+            ['use_exercise_time', 'use_weight', 'use_set_no', 'use_reps', 'use_set_time', 'use_heart_rate', 'use_machine_lv', 'use_machine_speed'].forEach(f => {
+                document.getElementById(f).checked = e[f] || false;
+            });
         }
 
-        function setMgmtField(type, value, category, isUse = true) {
-            const chk = document.getElementById(`chk-${type}`);
-            chk.checked = !!value || isUse;
-            toggleMgmtSub(type);
-            fillMgmtDropdown(`mgmt-${type}`, category, value);
+        function syncField(type, use, value, category) {
+            document.getElementById(`use_${type}`).checked = use;
+            toggleArea(type);
+            const selectId = type === 'equipment' ? 'equipment_type' : type;
+            fillDropdown(selectId, category, value);
         }
 
         async function saveMasterData() {
@@ -152,60 +190,52 @@
             const name = document.getElementById('mgmt-name').value;
             if(!name) return alert("종목명을 입력하세요.");
 
-            const type = await getFinalMgmtValue('mgmt-type', 'type-add-text', 'EXERCISE_TYPE');
-            const buwi = document.getElementById('chk-buwi').checked ? await getFinalMgmtValue('mgmt-buwi', 'buwi-add-text', 'BODY_PART') : null;
-            const equip = document.getElementById('chk-equip').checked ? await getFinalMgmtValue('mgmt-equip', 'equip-add-text', 'EQUIPMENT') : null;
-            const wtype = document.getElementById('chk-wtype').checked ? await getFinalMgmtValue('mgmt-wtype', 'wtype-add-text', 'WEIGHT_SUB_TYPE') : '기타';
-            const grip = document.getElementById('chk-grip').checked ? await getFinalMgmtValue('mgmt-grip', 'grip-add-text', 'GRIP') : null;
-            const lying = document.getElementById('chk-lying').checked ? await getFinalMgmtValue('mgmt-lying', 'lying-add-text', 'LYING') : null;
-
             const payload = {
                 name: name,
-                exercise_type: type,
-                body_part: buwi,
                 body_part_category: 'BODY_PART',
-                unit: (type === '유산소' || name.includes('세션')) ? 'min' : 'kg',
-                weight_unit: 'kg',
-                use_equipment: document.getElementById('chk-equip').checked,
-                equipment_type: equip,
-                weight_type: wtype,
-                use_grip: document.getElementById('chk-grip').checked,
-                grip_type: grip,
-                use_lying: document.getElementById('chk-lying').checked,
-                lying_type: lying,
-                exercise_time: document.getElementById('chk-time-on').checked,
-                use_set_time: document.getElementById('chk-set-time-on').checked, // v5.0.0 추가
-                set_no: (document.getElementById('chk-weight-on').checked || document.getElementById('chk-sets-on').checked || document.getElementById('chk-reps-on').checked),
-                machine_lv: document.getElementById('chk-machine-on').checked,
-                use_machine_speed: document.getElementById('chk-speed-on').checked,
-                use_heart_rate: (type === '유산소')
+                unit: (document.getElementById('use_exercise_time').checked) ? 'min' : 'kg',
+                
+                // Group A: 사용여부 + 선택값
+                use_exercise_type: document.getElementById('use_exercise_type').checked,
+                exercise_type: await getVal('exercise_type', 'add-exercise_type', 'EXERCISE_TYPE'),
+                
+                use_body_part: document.getElementById('use_body_part').checked,
+                body_part: await getVal('body_part', 'add-body_part', 'BODY_PART'),
+                
+                use_equipment: document.getElementById('use_equipment').checked,
+                equipment_type: await getVal('equipment_type', 'add-equipment', 'EQUIPMENT'),
+                
+                use_weight_type: document.getElementById('use_weight_type').checked,
+                weight_type: await getVal('weight_type', 'add-weight_type', 'WEIGHT_SUB_TYPE'),
+                
+                use_grip: document.getElementById('use_grip').checked,
+                grip_type: await getVal('grip_type', 'add-grip', 'GRIP'),
+                
+                use_lying: document.getElementById('use_lying').checked,
+                lying_type: await getVal('lying_type', 'add-lying', 'LYING'),
+
+                // Group B: 사용여부 (Boolean 전용)
+                use_exercise_time: document.getElementById('use_exercise_time').checked,
+                use_weight: document.getElementById('use_weight').checked,
+                use_set_no: document.getElementById('use_set_no').checked,
+                use_reps: document.getElementById('use_reps').checked,
+                use_set_time: document.getElementById('use_set_time').checked,
+                use_heart_rate: document.getElementById('use_heart_rate').checked,
+                use_machine_lv: document.getElementById('use_machine_lv').checked,
+                use_machine_speed: document.getElementById('use_machine_speed').checked
             };
 
-            let res;
-            if(id) {
-                res = await _db.schema('workout').from('exercises').update(payload).eq('id', id);
-            } else {
-                payload.id = 'ex_' + Date.now();
-                res = await _db.schema('workout').from('exercises').insert([payload]);
-            }
+            let res = id ? await _db.schema('workout').from('exercises').update(payload).eq('id', id) : await _db.schema('workout').from('exercises').insert([{...payload, id: 'ex_' + Date.now()}]);
             
-            if(res.error) {
-                console.error(res.error);
-                alert("저장 실패: " + res.error.message);
-            } else {
-                alert("성공적으로 저장되었습니다.");
-                await init();
-                resetMgmtTab();
-            }
+            if(res.error) alert("저장 실패: " + res.error.message);
+            else { alert("성공적으로 저장되었습니다."); await init(); resetMgmtTab(); }
         }
 
-        async function getFinalMgmtValue(selId, textId, category) {
+        async function getVal(selId, textId, category) {
             const sel = document.getElementById(selId);
             if(sel.value === 'ADD') {
                 const newVal = document.getElementById(textId).value.trim();
-                if(!newVal) return null;
-                const { error } = await _db.schema('workout').from('settings').insert([{category, name: newVal}]);
-                if(error) console.error("Setting 추가 실패:", error);
+                if(newVal) await _db.schema('workout').from('settings').insert([{category, name: newVal}]);
                 return newVal;
             }
             return sel.value;
@@ -214,9 +244,9 @@
         function resetMgmtTab() {
             document.getElementById('mgmt-ex-select').value = "";
             document.getElementById('mgmt-name').value = "";
+            document.querySelectorAll('.form-check-input').forEach(c => c.checked = false);
             document.querySelectorAll('.sub-config-area').forEach(a => a.style.display = 'none');
             document.querySelectorAll('.input-add-text').forEach(t => t.style.display = 'none');
-            document.querySelectorAll('.form-check-input').forEach(c => c.checked = false);
             initMgmtUI();
         }
 
