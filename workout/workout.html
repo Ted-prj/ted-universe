@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.1.1</title>
+    <title>BLACKPINK WORKOUT v5.1.4</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -43,10 +43,20 @@
                 <div id="buwi-last-date" style="font-size:0.65rem; color:#888;"></div>
             </div>
             <div class="row g-2 mb-2">
-                <div class="col-4"><label class="label-small">종류</label><select id="q-type" class="form-select form-select-sm"></select></div>
-                <div class="col-4"><label class="label-small">부위</label><select id="q-buwi" class="form-select form-select-sm" onchange="handleBuwiChange(this.value)"></select></div>
-                <div class="col-4"><label class="label-small">종목</label><select id="q-ex" class="form-select form-select-sm" onchange="loadQuickExStats(this.value)"></select></div>
+                <div class="col-4">
+                    <label class="label-small">종류</label>
+                    <select id="q-type" class="form-select form-select-sm" onchange="handleTypeChange(this.value)"></select>
+                </div>
+                <div class="col-4" id="q-buwi-container">
+                    <label class="label-small">부위</label>
+                    <select id="q-buwi" class="form-select form-select-sm" onchange="handleBuwiChange(this.value)"></select>
+                </div>
+                <div class="col-4">
+                    <label class="label-small">종목</label>
+                    <select id="q-ex" class="form-select form-select-sm" onchange="loadQuickExStats(this.value)"></select>
+                </div>
             </div>
+
             <div id="q-stats-area" class="stats-box" style="display:none;">
                 <div id="q-best-info" class="mb-1"></div>
                 <div id="q-recent-configs"></div>
@@ -82,38 +92,57 @@
             if(sData) sData.forEach(s => { if(SETTINGS_CODE[s.category]) SETTINGS_CODE[s.category].push(s.name); });
             const { data: eData } = await _db.schema('workout').from('exercises').select('*').order('name');
             EX_MASTER = eData || [];
+
             document.getElementById('q-type').innerHTML = SETTINGS_CODE['EXERCISE_TYPE'].map(t => `<option value="${t}">${t}</option>`).join('');
             document.getElementById('q-buwi').innerHTML = SETTINGS_CODE['BODY_PART'].map(b => `<option value="${b}">${b}</option>`).join('');
-            handleBuwiChange(document.getElementById('q-buwi').value);
+            
+            handleTypeChange(document.getElementById('q-type').value);
             await refreshActiveList();
         }
 
+        function handleTypeChange(type) {
+            const buwiContainer = document.getElementById('q-buwi-container');
+            const exSelect = document.getElementById('q-ex');
+            if (type === '유산소') {
+                buwiContainer.style.visibility = 'hidden'; 
+                document.getElementById('buwi-last-date').innerText = '';
+                const filtered = EX_MASTER.filter(e => e.exercise_type === '유산소');
+                exSelect.innerHTML = filtered.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+                if(filtered.length > 0) loadQuickExStats(filtered[0].id);
+            } else {
+                buwiContainer.style.visibility = 'visible';
+                handleBuwiChange(document.getElementById('q-buwi').value);
+            }
+        }
+
         async function handleBuwiChange(buwi) {
+            const currentType = document.getElementById('q-type').value;
+            if(currentType === '유산소') return;
             const { data } = await _db.schema('workout').from('logs').select('workout_date').eq('body_part', buwi).order('workout_date', {ascending:false}).limit(1);
             document.getElementById('buwi-last-date').innerText = data?.[0] ? `최근 운동: ${data[0].workout_date.split('T')[0]}` : '이력 없음';
-            const filtered = EX_MASTER.filter(e => e.body_part === buwi);
+            const filtered = EX_MASTER.filter(e => e.body_part === buwi && e.exercise_type === currentType);
             document.getElementById('q-ex').innerHTML = filtered.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
             if(filtered.length > 0) loadQuickExStats(filtered[0].id);
+            else { document.getElementById('q-stats-area').style.display = 'none'; document.getElementById('q-inputs').innerHTML = ''; }
         }
 
         async function loadQuickExStats(exId) {
+            if(!exId) return;
             const ex = EX_MASTER.find(e => e.id === exId);
             const { best, bestLog, recentConfigs } = await getDetailedStats(exId);
             document.getElementById('q-stats-area').style.display = 'block';
-            
-            // v5.1.1 수정: BEST 기록 아래에 노트(메모) 표시 로직 추가
             document.getElementById('q-best-info').innerHTML = `
                 <b class="text-pink">🏆 BEST: ${best}</b> 
                 <small style="color:#666">(${bestLog.date})</small>
                 ${bestLog.note ? `<div style="font-size:0.65rem; color:var(--deep-purple); margin-top:3px; font-style:italic;">📝 ${bestLog.note}</div>` : ''}
             `;
-            
             document.getElementById('q-recent-configs').innerHTML = recentConfigs.map(c => `<span class="recent-config-item">${c}</span>`).join('');
             renderQuickInputFields(ex, bestLog);
         }
 
         function renderQuickInputFields(ex, best) {
-            let html = `<div class="col-3"><label class="label-small">세트수</label><input type="number" id="q-val-sets" class="form-control" value="3"></div>`;
+            let html = '';
+            if(ex.use_set_no) html += `<div class="col-3"><label class="label-small">세트수</label><input type="number" id="q-val-sets" class="form-control" value="3"></div>`;
             if(ex.use_equipment) html += makeQField('col-4', '기구', makeQSelect('q-val-equip', SETTINGS_CODE['EQUIPMENT'], best.equip));
             if(ex.use_grip) html += makeQField('col-4', '그립', makeQSelect('q-val-grip', SETTINGS_CODE['GRIP'], best.grip));
             if(ex.use_lying) html += makeQField('col-4', '라잉', makeQSelect('q-val-lying', SETTINGS_CODE['LYING'], best.lying));
@@ -126,28 +155,38 @@
             document.getElementById('q-inputs').innerHTML = html;
         }
 
+        // v5.1.4 수정: machine_lv -> level 로 컬럼명 수정 및 unit 추가
         async function addWorkoutFromQuick() {
             const exId = document.getElementById('q-ex').value;
+            if(!exId) return alert("종목을 선택하세요.");
             const ex = EX_MASTER.find(e => e.id === exId);
-            const sets = parseInt(document.getElementById('q-val-sets').value) || 1;
+            const setsInput = document.getElementById('q-val-sets');
+            const sets = setsInput ? (parseInt(setsInput.value) || 1) : 1;
+            
             const payload = [];
             for(let i=1; i<=sets; i++) {
                 payload.push({ 
-                    exercise_id: exId, display_name: ex.name, body_part: ex.body_part, set_no: i, status: 'TEMP', 
-                    weight: document.getElementById('q-val-weight')?.value || 0, 
-                    reps: document.getElementById('q-val-reps')?.value || 0, 
-                    set_time: document.getElementById('q-val-set-time')?.value || 0,
-                    workout_time: document.getElementById('q-val-time')?.value || 0,
-                    machine_lv: document.getElementById('q-val-ml')?.value || 0,
-                    machine_speed: document.getElementById('val-ms')?.value || 0,
+                    exercise_id: exId, 
+                    display_name: ex.name, 
+                    body_part: ex.body_part, 
+                    set_no: i, 
+                    status: 'TEMP', 
+                    unit: ex.unit || 'kg', // DB 정합성을 위해 추가
+                    weight: Number(document.getElementById('q-val-weight')?.value || 0), 
+                    reps: Number(document.getElementById('q-val-reps')?.value || 0), 
+                    set_time: Number(document.getElementById('q-val-set-time')?.value || 0),
+                    workout_time: Number(document.getElementById('q-val-time')?.value || 0),
+                    level: Number(document.getElementById('q-val-ml')?.value || 0), // machine_lv 대신 level 사용
+                    machine_speed: Number(document.getElementById('val-ms')?.value || 0),
                     equipment_type: document.getElementById('q-val-equip')?.value, 
                     grip_type: document.getElementById('q-val-grip')?.value, 
                     lying_type: document.getElementById('q-val-lying')?.value, 
                     program_id: document.getElementById('q-superset').value 
                 });
             }
-            await _db.schema('workout').from('active_workout').insert(payload);
-            await refreshActiveList();
+            const { error } = await _db.schema('workout').from('active_workout').insert(payload);
+            if(error) alert("추가 실패: " + error.message);
+            else await refreshActiveList();
         }
 
         async function refreshActiveList() {
@@ -181,6 +220,7 @@
             exSets.forEach(s => addSetEventListeners(s.id));
         }
 
+        // v5.1.4 수정: 세트 로우 렌더링 시에도 level 컬럼 적용
         async function renderSetRowHtml(s) {
             const ex = EX_MASTER.find(e => e.id === s.exercise_id);
             const { lastStr, lastNote } = await getDetailedStats(s.exercise_id, s.set_no);
@@ -189,13 +229,15 @@
             if(ex.use_equipment) selects += makeRowSelect(s.id, 'equip', SETTINGS_CODE['EQUIPMENT'], s.equipment_type);
             if(ex.use_grip) selects += makeRowSelect(s.id, 'grip', SETTINGS_CODE['GRIP'], s.grip_type);
             if(ex.use_lying) selects += makeRowSelect(s.id, 'lying', SETTINGS_CODE['LYING'], s.lying_type);
+
             let inputsHtml = '';
             if(ex.use_weight) inputsHtml += `<input type="number" id="w-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.weight||''}" placeholder="kg">`;
             if(ex.use_reps) inputsHtml += `<input type="number" id="r-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.reps||''}" placeholder="회">`;
             if(ex.use_set_time) inputsHtml += `<input type="number" id="st-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.set_time||''}" placeholder="sec">`;
             if(ex.use_exercise_time) inputsHtml += `<input type="number" id="t-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.workout_time||''}" placeholder="min">`;
-            if(ex.use_machine_lv) inputsHtml += `<input type="number" id="ml-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.machine_lv||''}" placeholder="Lv">`;
+            if(ex.use_machine_lv) inputsHtml += `<input type="number" id="ml-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.level||''}" placeholder="Lv">`;
             if(ex.use_machine_speed) inputsHtml += `<input type="number" id="ms-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.machine_speed||''}" placeholder="km/h">`;
+
             return `<div id="set-row-${s.id}" class="set-row ${isSaved?'saved-row' : ''}" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event, ${s.id}, '${s.display_name}')">
                 <div class="row align-items-center g-2">
                     <div class="col-2 fw-bold text-pink text-center set-no-label">${s.set_no}S</div>
@@ -210,6 +252,7 @@
             </div>`;
         }
 
+        // v5.1.4 수정: 저장 시에도 level 컬럼 적용
         async function saveSetRow(id) {
             const btn = document.getElementById(`save-btn-${id}`);
             const s = ACTIVE_SETS.find(x => x.id === id);
@@ -219,7 +262,7 @@
             if(ex.use_reps) up.reps = Number(document.getElementById(`r-${id}`).value);
             if(ex.use_set_time) up.set_time = Number(document.getElementById(`st-${id}`).value);
             if(ex.use_exercise_time) up.workout_time = Number(document.getElementById(`t-${id}`).value);
-            if(ex.use_machine_lv) up.machine_lv = Number(document.getElementById(`ml-${id}`).value);
+            if(ex.use_machine_lv) up.level = Number(document.getElementById(`ml-${id}`).value); // level 컬럼으로 수정
             if(ex.use_machine_speed) up.machine_speed = Number(document.getElementById(`ms-${id}`).value);
             const { error } = await _db.schema('workout').from('active_workout').update(up).eq('id', id);
             if(!error) {
@@ -229,16 +272,8 @@
             }
         }
 
-        function addSetEventListeners(id) {
-            const row = document.getElementById(`set-row-${id}`);
-            if(!row) return;
-            row.querySelectorAll(`.row-input-${id}, select`).forEach(el => {
-                el.addEventListener('input', () => {
-                    const btn = document.getElementById(`save-btn-${id}`);
-                    if(btn && btn.innerText === 'SAVED') { btn.innerText = 'UPDATE'; btn.classList.add('st-update'); }
-                });
-            });
-        }
+        // 보조 함수들
+        function addSetEventListeners(id) { const row = document.getElementById(`set-row-${id}`); if(!row) return; row.querySelectorAll(`.row-input-${id}, select`).forEach(el => { el.addEventListener('input', () => { const btn = document.getElementById(`save-btn-${id}`); if(btn && btn.innerText === 'SAVED') { btn.innerText = 'UPDATE'; btn.classList.add('st-update'); } }); }); }
         function makeQField(col, label, input) { return `<div class="${col} mb-2"><label class="label-small">${label}</label>${input}</div>`; }
         function makeQSelect(id, list, def) { return `<select id="${id}" class="form-select">${list.map(v => `<option value="${v}" ${v===def?'selected':''}>${v}</option>`).join('')}</select>`; }
         function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v}" ${v===current?'selected':''}>${v}</option>`).join('')}</select>`; }

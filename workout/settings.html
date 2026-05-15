@@ -8,138 +8,122 @@
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
+<body style="background-color: var(--bp-black); color: white;">
     <div class="container-app">
         <div class="mgmt-card">
-            <h5 style="color:var(--bp-pink); font-weight:900; mb-4;">⚙️ 공통 설정 관리 (Tab 3)</h5>
-            
-            <div class="mgmt-input-group">
-                <label class="label-small">1. 카테고리 선택/관리</label>
-                <div class="d-flex gap-2 mb-2">
-                    <select id="set-category-select" class="form-select" onchange="loadCategoryNames(this.value)">
-                        <option value="">-- 카테고리 선택 --</option>
-                    </select>
-                    <button class="btn btn-sm btn-outline-pink" onclick="addNewCategory()" style="min-width:60px;">+추가</button>
-                </div>
-                <div id="category-action-area" class="mt-2" style="display:none;">
-                    <div class="d-flex gap-2">
-                        <input type="text" id="edit-cat-name" class="form-control form-control-sm">
-                        <button class="btn btn-sm btn-dark" onclick="updateCategory()">수정</button>
-                        <button id="btn-del-cat" class="btn btn-sm btn-danger" onclick="deleteCategory()">삭제</button>
-                    </div>
-                    <small id="cat-lock-msg" class="text-secondary" style="font-size:0.6rem; display:none;">⚠️ 시스템 필수 카테고리는 삭제/수정할 수 없습니다.</small>
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 style="color:var(--bp-pink); font-weight:900; margin:0;">⚙️ 공통 설정 관리 (Tab 3)</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="loadSettings()">Refresh</button>
             </div>
 
-            <div id="name-mgmt-area" class="mgmt-input-group" style="display:none;">
-                <label class="label-small">2. 명칭(Name) 리스트 관리</label>
-                <div class="d-flex gap-2 mb-3">
-                    <input type="text" id="new-name-input" class="form-control" placeholder="새 명칭 (콤마로 벌크 추가 가능)">
-                    <button class="btn btn-pink" onclick="saveNewNames()" style="min-width:60px;">등록</button>
+            <div class="mb-4">
+                <label class="label-small">1. 카테고리 선택/관리</label>
+                <div class="d-flex gap-2 mb-2">
+                    <select id="category-select" class="form-select" onchange="loadSettings()">
+                        <option value="BODY_PART">BODY_PART</option>
+                        <option value="EXERCISE_TYPE">EXERCISE_TYPE</option>
+                        <option value="EQUIPMENT">EQUIPMENT</option>
+                        <option value="WEIGHT_SUB_TYPE">WEIGHT_SUB_TYPE</option>
+                        <option value="GRIP">GRIP</option>
+                        <option value="LYING">LYING</option>
+                    </select>
                 </div>
-                
-                <div id="name-list-container" class="list-group">
+                <p class="text-secondary" style="font-size:0.65rem;">⚠️ 시스템 필수 카테고리는 삭제/수정할 수 없습니다.</p>
+            </div>
+
+            <hr style="border-color: #333;">
+
+            <div class="mb-4">
+                <label class="label-small">2. 명칭(Name) 리스트 관리</label>
+                <div class="input-group mb-3">
+                    <input type="text" id="new-name-input" class="form-control" 
+                           placeholder="새 명칭 (콤마로 벌크 추가 가능)" 
+                           style="background:#1e1e1e; border:1px solid #333; color:white;">
+                    <button class="btn-pink px-4" onclick="addSetting()" style="border-radius: 0 10px 10px 0;">등록</button>
+                </div>
+
+                <div id="setting-list-container" class="mt-3">
                     </div>
             </div>
         </div>
 
         <div class="nav-tabs-custom">
-            <a href="workout.html" class="nav-item-custom active">WORKOUT</a>
+            <a href="workout.html" class="nav-item-custom">WORKOUT</a>
             <a href="manage.html" class="nav-item-custom">MANAGE</a>
-            <a href="settings.html" class="nav-item-custom">SETTINGS</a>
+            <a href="settings.html" class="nav-item-custom active">SETTINGS</a>
             <a href="logs.html" class="nav-item-custom">LOGS</a>
         </div>
     </div>
 
     <script src="supabase_config.js"></script>
     <script>
-        checkAuth();
-        let CATEGORIES = [];
-        const SYSTEM_CATS = ['EXERCISE_TYPE', 'BODY_PART', 'EQUIPMENT', 'WEIGHT_SUB_TYPE', 'GRIP', 'LYING'];
-
+        // 초기화 시 인증 확인 및 데이터 로드
         async function init() {
-            const { data } = await _db.schema('workout').from('settings').select('category').order('category');
-            CATEGORIES = [...new Set(data.map(d => d.category))];
-            
-            const sel = document.getElementById('set-category-select');
-            sel.innerHTML = '<option value="">-- 카테고리 선택 --</option>' + 
-                            CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+            await checkAuth(); // 인증 상태 확인
+            loadSettings();
         }
 
-        async function loadCategoryNames(cat) {
-            const area = document.getElementById('category-action-area');
-            const nameArea = document.getElementById('name-mgmt-area');
-            const editInput = document.getElementById('edit-cat-name');
-            const lockMsg = document.getElementById('cat-lock-msg');
-            const delBtn = document.getElementById('btn-del-cat');
+        // 설정 데이터 불러오기
+        async function loadSettings() {
+            const category = document.getElementById('category-select').value;
+            const container = document.getElementById('setting-list-container');
+            container.innerHTML = '<div class="text-center py-3 text-secondary">불러오는 중...</div>';
 
-            if(!cat) { area.style.display = 'none'; nameArea.style.display = 'none'; return; }
+            const { data, error } = await _db.schema('workout').from('settings')
+                .select('*')
+                .eq('category', category)
+                .order('name');
 
-            area.style.display = 'block';
-            nameArea.style.display = 'block';
-            editInput.value = cat;
+            if(error) {
+                if(error.status === 401) alert("인증이 만료되었습니다. 다시 로그인해주세요.");
+                return console.error(error);
+            }
 
-            // 시스템 보호 로직 (탭 3.a)
-            const isLocked = SYSTEM_CATS.includes(cat);
-            editInput.disabled = isLocked;
-            delBtn.style.display = isLocked ? 'none' : 'block';
-            lockMsg.style.display = isLocked ? 'block' : 'none';
-
-            const { data } = await _db.schema('workout').from('settings').select('*').eq('category', cat).order('name');
-            const listContainer = document.getElementById('name-list-container');
-            listContainer.innerHTML = data.map(item => `
-                <div class="list-group-item bg-dark text-white d-flex justify-content-between align-items-center border-secondary mb-1 rounded">
-                    <span>${item.name}</span>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteName('${item.id}', '${item.name}', '${cat}')">삭제</button>
+            container.innerHTML = data.map(item => `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2" 
+                     style="background:rgba(255,255,255,0.05); border-radius:10px; border:1px solid #222;">
+                    <span style="font-size:0.9rem;">${item.name}</span>
+                    <button class="btn btn-sm btn-outline-danger" 
+                            style="font-size:0.7rem; padding:2px 8px; border-color:rgba(220,53,69,0.5);" 
+                            onclick="deleteSetting(${item.id})">삭제</button>
                 </div>
             `).join('');
         }
 
-        async function saveNewNames() {
-            const cat = document.getElementById('set-category-select').value;
+        // 새 설정 추가
+        async function addSetting() {
             const input = document.getElementById('new-name-input');
-            const names = input.value.split(',').map(n => n.trim()).filter(n => n);
-            
-            if(names.length === 0) return;
-            const payload = names.map(n => ({ category: cat, name: n }));
-            
-            await _db.schema('workout').from('settings').insert(payload);
-            input.value = '';
-            loadCategoryNames(cat);
-        }
+            const category = document.getElementById('category-select').value;
+            const names = input.value.split(',').map(n => n.trim()).filter(n => n !== "");
 
-        // 정합성 체크 삭제 로직 (탭 3.b)
-        async function deleteName(id, name, cat) {
-            // 1. 데이터 사용처 확인 (Integrity Check)
-            let table = 'exercises';
-            let column = '';
-            if(cat === 'BODY_PART') column = 'body_part';
-            else if(cat === 'EQUIPMENT') column = 'equipment_type';
-            else if(cat === 'GRIP') column = 'grip_type';
-            else if(cat === 'LYING') column = 'lying_type';
+            if (names.length === 0) return alert("추가할 명칭을 입력하세요.");
 
-            if(column) {
-                const { count } = await _db.schema('workout').from('exercises')
-                                    .select('*', { count: 'exact', head: true }).eq(column, name);
-                if(count > 0) {
-                    return alert(`⚠️ 삭제 불가: 이 설정('${name}')을 사용하는 운동 종목이 ${count}개 있습니다. 마스터 관리에서 먼저 수정하세요.`);
+            const payload = names.map(name => ({ category, name }));
+
+            // v5.0.0 401 에러 방지: 인증 상태 재확인 후 인서트
+            const { error } = await _db.schema('workout').from('settings').insert(payload);
+
+            if (error) {
+                if(error.status === 401) {
+                    alert("인증 에러: 로그인이 필요하거나 세션이 만료되었습니다.");
+                } else {
+                    alert("등록 실패: " + error.message);
                 }
+                return;
             }
 
-            if(confirm(`'${name}' 명칭을 삭제할까요?`)) {
-                await _db.schema('workout').from('settings').delete().eq('id', id);
-                loadCategoryNames(cat);
-            }
+            input.value = "";
+            loadSettings();
         }
 
-        async function addNewCategory() {
-            const newCat = prompt("새로운 카테고리명을 입력하세요 (대문자 추천):");
-            if(newCat) {
-                await _db.schema('workout').from('settings').insert([{ category: newCat, name: '초기항목' }]);
-                await init();
-                document.getElementById('set-category-select').value = newCat;
-                loadCategoryNames(newCat);
-            }
+        // 설정 삭제
+        async function deleteSetting(id) {
+            if(!confirm("정말 삭제하시겠습니까?")) return;
+
+            const { error } = await _db.schema('workout').from('settings').delete().eq('id', id);
+
+            if (error) return alert("삭제 실패: " + error.message);
+            loadSettings();
         }
 
         init();

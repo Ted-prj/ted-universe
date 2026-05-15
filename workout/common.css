@@ -232,3 +232,10 @@ body {
 .add-card-placeholder { background: rgba(232, 142, 163, 0.05); border: 1px dashed var(--bp-pink); border-radius: 12px; padding: 10px; margin: 10px; text-align: center; cursor: pointer; }
 .swipe-del-bg { position: absolute; right: -100%; top: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, #ff2d55); display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; color: white; font-weight: 900; z-index: 1; transition: 0.3s; }
 .swipe-content { position: relative; z-index: 2; background: inherit; transition: 0.3s; }
+
+.config-section-title { font-size: 0.75rem; color: var(--bp-pink); font-weight: 800; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+.use-switch-label { font-size: 0.85rem; font-weight: 700; color: #fff; cursor: pointer; }
+.sub-config-area { margin-left: 28px; margin-top: 5px; margin-bottom: 15px; }
+/* 삭제 전용 스타일 */
+.btn-delete { background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 0.75rem; font-weight: 800; padding: 5px 12px; display: none; }
+.migration-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; align-items: center; justify-content: center; padding: 20px; }
