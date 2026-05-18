@@ -1,6 +1,6 @@
 /* =========================================================================
    [독한녀들 Book Club - 공통 블랙핑크 테마 CSS]
-   설명: 모든 탭 및 로그인 화면의 UI/UX 일관성을 위해 통합한 스타일시트
+   설명: 모든 탭 및 로그인 화면의 UI/UX 일관성과 시인성 개선을 위한 통합 스타일시트
    ========================================================================= */
 
 :root {
@@ -10,7 +10,7 @@
     --bp-pink: #FF69B4;
     --neon-pink: #FF007F;
     --text-white: #FFFFFF;
-    --text-muted: #B0B0B0;
+    --text-muted: #FFD1E6; /* 어두운 배경에서도 확 튀는 부드러운 핑크빛 화이트로 변경 */
 }
 
 /* 기본 바디 스타일 */
@@ -36,6 +36,12 @@ body {
 
 .dashboard-header h1 span {
     color: var(--bp-pink);
+}
+
+/* 부트스트랩 기본 text-muted 강제 오버라이딩 (가독성 확보) */
+.text-muted {
+    color: var(--text-muted) !important;
+    font-weight: 400;
 }
 
 /* 공통 카드 컴포넌트 스타일 */
@@ -76,7 +82,7 @@ body {
     padding: 1.25rem;
 }
 
-/* 공통 테이블 커스텀 스타일 */
+/* 공통 테이블 커스텀 스타일 (글자 시인성 전면 개조) */
 .table-custom {
     width: 100%;
     margin-bottom: 0;
@@ -85,22 +91,29 @@ body {
 }
 
 .table-custom thead th {
-    background-color: rgba(255, 0, 127, 0.1);
-    color: var(--bp-pink);
-    font-weight: 600;
-    border-bottom: 2px solid rgba(255, 0, 127, 0.3);
+    background-color: rgba(255, 0, 127, 0.2) !important;
+    color: #FFFFFF !important; /* 헤더 글자를 순수 흰색으로 고정해서 눈에 박히게 함 */
+    font-weight: 700 !important;
+    border-bottom: 2px solid var(--neon-pink) !important;
     padding: 0.75rem;
     text-align: center;
+    text-shadow: 0 0 5px rgba(255, 0, 127, 0.5);
 }
 
 .table-custom tbody td {
     padding: 0.75rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     background-color: transparent;
+    color: #FFFFFF;
+}
+
+/* 테이블 내부 강조용 텍스트 */
+.table-custom tbody td.fw-bold {
+    color: var(--bp-pink) !important; /* 멤버 이름 등은 핑크로 포인트 */
 }
 
 .table-custom tbody tr:hover {
-    background-color: rgba(255, 69, 180, 0.05);
+    background-color: rgba(255, 69, 180, 0.08);
 }
 
 /* 뱃지 및 포인트 컴포넌트 */
