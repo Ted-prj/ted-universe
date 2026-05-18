@@ -1,1 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독한녀들 Book Club - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+    <div class="container login-container">
+        <div class="login-box">
+            <div class="brand-logo">
+                독한녀들 <span>♥</span>
+            </div>
+            <p class="text-muted mb-4">비밀 아지트에 오신 것을 환영합니다</p>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-3 text-start">
+                    <label for="memberSelect" class="form-label" style="color: var(--bp-pink); font-weight: 500;">누구신가요?</label>
+                    <select class="form-select form-select-custom" id="memberSelect" required>
+                        <option value="" disabled selected>멤버를 선택하세요</option>
+                    </select>
+                </div>
+
+                <div class="mb-4 text-start">
+                    <label for="passwordInput" class="form-label" style="color: var(--bp-pink); font-weight: 500;">비밀번호</label>
+                    <input type="password" class="form-control form-control-custom" id="passwordInput" placeholder="••••" required>
+                </div>
+
+                <button type="submit" class="btn btn-login">
+                    <i class="fa-solid fa-key me-2"></i>아지트 입장하기
+                </button>
+            </form>
+
+            <div id="errorMessage" class="text-danger mt-3 fw-medium" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const SUPABASE_URL = "YOUR_SUPABASE_URL";
+        const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadMembers();
+        });
+
+        async function loadMembers() {
+            try {
+                const { data, error } = await supabase
+                    .from('members')
+                    .select('member_name')
+                    .order('member_name', { ascending: true });
+
+                if (error) throw error;
+
+                const selectEl = document.getElementById("memberSelect");
+                data.forEach(member => {
+                    const option = document.createElement("option");
+                    option.value = member.member_name;
+                    option.textContent = member.member_name;
+                    selectEl.appendChild(option);
+                });
+            } catch (err) {
+                console.error("멤버 로드 실패:", err);
+                showError("멤버 목록을 불러오지 못했습니다.");
+            }
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const memberName = document.getElementById("memberSelect").value;
+            const password = document.getElementById("passwordInput").value;
+            const errorDiv = document.getElementById("errorMessage");
+            
+            errorDiv.style.display = "none";
+
+            try {
+                const { data, error } = await supabase
+                    .from('members')
+                    .select('member_name, password')
+                    .eq('member_name', memberName)
+                    .eq('password', password);
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    localStorage.setItem("login_member", memberName);
+                    window.location.href = "dashboard.html";
+                } else {
+                    showError("비밀번호가 일치하지 않습니다, 선장.");
+                }
+            } catch (err) {
+                console.error("로그인 에러:", err);
+                showError("로그인 처리 중 오류가 발생했습니다.");
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById("errorMessage");
+            errorDiv.textContent = message;
+            errorDiv.style.display = "block";
+        }
+    </script>
+</body>
+</html>
