@@ -14,12 +14,12 @@
     --text-muted: #FFC0CB !important; /* 러블리 핑크 화이트 */
 }
 
-/* 기본 바디 스타일 (하단 바 공간 확보를 위해 padding-bottom 필수 추가) */
+/* 기본 바디 스타일 */
 body {
     background-color: var(--bp-black);
     color: #FFFFFF !important;
     font-family: 'Noto Sans KR', sans-serif;
-    padding: 1rem 0.5rem 80px 0.5rem; /* 하단 바 영역 확보 */
+    padding: 1rem 0.5rem 80px 0.5rem; /* 하단 바 공간 확보 */
     font-size: 0.95rem;
 }
 
@@ -162,6 +162,47 @@ body {
 }
 
 /* =========================================================================
+   [공주님 전용 프로필 액자(Avatar) 디자인 스펙]
+   ========================================================================= */
+.princess-avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--bp-pink);
+    object-fit: cover;
+    margin-right: 6px;
+    box-shadow: 0 0 5px var(--neon-pink);
+    vertical-align: middle;
+}
+
+.princess-avatar-mid {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid var(--neon-pink);
+    object-fit: cover;
+    margin-right: 10px;
+    box-shadow: 0 0 8px var(--neon-pink);
+}
+
+.princess-avatar-lg {
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    border: 3px solid var(--neon-pink);
+    object-fit: cover;
+    box-shadow: 0 0 15px var(--neon-pink);
+    margin-bottom: 12px;
+    background-color: #000;
+    animation: pulseAvatar 2s infinite alternate;
+}
+
+@keyframes pulseAvatar {
+    0% { box-shadow: 0 0 10px var(--neon-pink); }
+    100% { box-shadow: 0 0 22px var(--bp-pink); }
+}
+
+/* =========================================================================
    [모바일 전용 블랙핑크 바텀 내비게이션 바]
    ========================================================================= */
 .bottom-nav {
@@ -177,7 +218,7 @@ body {
     align-items: center;
     z-index: 2000;
     box-shadow: 0 -5px 15px rgba(255, 0, 127, 0.25);
-    padding-bottom: env(safe-area-inset-bottom); /* 아이폰 하단 홈바 인셋 대응 */
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .bottom-nav-item {
@@ -221,4 +262,43 @@ body {
 .form-select-custom:focus, .form-control-custom:focus {
     border-color: var(--neon-pink) !important;
     box-shadow: 0 0 8px rgba(255, 0, 127, 0.5) !important;
+}
+
+.login-container {
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-box {
+    width: 100%;
+    max-width: 360px;
+    padding: 1.75rem;
+    background-color: var(--bp-card-bg);
+    border: 2px solid var(--neon-pink);
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(255, 0, 127, 0.3);
+    text-align: center;
+}
+
+.brand-logo {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #FFFFFF !important;
+    text-shadow: 0 0 10px var(--neon-pink);
+    margin-bottom: 0.25rem;
+}
+
+.brand-logo span {
+    color: var(--bp-pink) !important;
+}
+
+.password-box-princess {
+    letter-spacing: 0.5rem;
+    background-color: rgba(255, 0, 127, 0.05) !important;
+    border: 2px dashed rgba(255, 0, 127, 0.4) !important;
+}
+.password-box-princess:focus {
+    border: 2px solid var(--neon-pink) !important;
 }

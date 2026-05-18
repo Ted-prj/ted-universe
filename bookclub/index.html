@@ -7,13 +7,16 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="container login-container">
         <div class="login-box">
+            <div id="avatarStage" class="d-none animate-flicker">
+                <img id="princessAvatarDisplay" src="images/default_princess.png" class="princess-avatar-lg" onerror="this.src='images/default_princess.png'">
+            </div>
+
             <div class="brand-logo">
                 독한녀들 <span style="color: var(--neon-pink);">👑</span>
             </div>
@@ -27,7 +30,7 @@
                     <label for="memberSelect" class="form-label" style="color: var(--bp-pink); font-weight: 700; font-size: 0.95rem;">
                         <i class="fa-solid fa-heart-user me-1" style="color: var(--neon-pink);"></i> 오늘 수다 떨 공주님은 누구? 💕
                     </label>
-                    <select class="form-select form-select-custom" id="memberSelect" onchange="focusPassword()" required>
+                    <select class="form-select form-select-custom" id="memberSelect" onchange="focusPasswordAndShowAvatar()" required>
                         <option value="" disabled selected>공주님을 선택하셔요 🎀</option>
                     </select>
                 </div>
@@ -62,17 +65,18 @@
 
     <script>
         let isProcessing = false;
+        // 아바타 매핑 데이터 캐시용 오브젝트
+        const avatarMap = {};
 
         document.addEventListener("DOMContentLoaded", () => {
             loadMembers();
         });
 
-        // DB에서 공주님 리스트 로드
         async function loadMembers() {
             try {
                 const { data, error } = await _db
                     .from('members')
-                    .select('member_name')
+                    .select('member_name, image_name')
                     .order('member_name', { ascending: true });
 
                 if (error) throw error;
@@ -81,6 +85,7 @@
                 
                 if (data) {
                     data.forEach(member => {
+                        avatarMap[member.member_name] = member.image_name;
                         const option = document.createElement("option");
                         option.value = member.member_name;
                         option.textContent = `👸 ${member.member_name} 공주님`;
@@ -88,13 +93,23 @@
                     });
                 }
             } catch (err) {
-                console.error("공주님 로드 실패:", err);
-                showError("공주님 명단을 불러오지 못했사옵니다. 연결을 확인하셔요.");
+                console.error(err);
+                showError("공주님 명단을 불러오지 못했사옵니다.");
             }
         }
 
-        function focusPassword() {
+        // 선택 즉시 상단에 아바타 액자를 렌더링하고 포커싱한다
+        function focusPasswordAndShowAvatar() {
+            const memberName = document.getElementById("memberSelect").value;
             const passInput = document.getElementById("passwordInput");
+            const avatarStage = document.getElementById("avatarStage");
+            const avatarImg = document.getElementById("princessAvatarDisplay");
+
+            if (memberName && avatarMap[memberName]) {
+                avatarImg.src = `images/${avatarMap[memberName]}`;
+                avatarStage.classList.remove("d-none");
+            }
+
             passInput.disabled = false;
             passInput.value = "";
             passInput.focus();
@@ -102,7 +117,6 @@
             isProcessing = false;
         }
 
-        // 패스워드 실시간 감시 및 비동기 숙제 검사 트리거
         async function checkPasswordAutoLogin(input) {
             const memberName = document.getElementById("memberSelect").value;
             const password = input.value.trim();
@@ -117,32 +131,30 @@
             if (isProcessing) return;
             errorDiv.style.display = "none";
 
-            // 딱 4자리가 되는 순간 검문검색 들어간다
             if (password.length === 4) {
                 isProcessing = true; 
-                input.blur(); // 키보드 패널 닫기
+                input.blur(); 
 
                 try {
                     const { data, error } = await _db
                         .from('members')
-                        .select('member_name, password')
+                        .select('member_name, password, image_name')
                         .eq('member_name', memberName)
                         .eq('password', password);
 
                     if (error) throw error;
 
                     if (data && data.length > 0) {
-                        // 로그인 성공 시 로컬 세션 적재
+                        // 세션 적재 시 이름과 이미지 파일명도 함께 기억시킨다
                         localStorage.setItem("login_member", memberName);
+                        localStorage.setItem("login_member_image", data[0].image_name);
                         
-                        // 👑 [Zoro's Secret Scanner] 공주님 숙제 미이행 검사 시작
+                        // [숙제 검사 모듈]
                         try {
-                            // 1. 타겟 다음 달(M+1) 계산 (예: 2026-06)
                             const now = new Date();
                             const future = new Date(now.getFullYear(), now.getMonth() + 1, 1);
                             const nextMonthStr = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}`;
                             
-                            // 2. 현재 활성화된 최신 토론 차수(M) 조회
                             const { data: bookData } = await _db
                                 .from('books')
                                 .select('round_no')
@@ -150,7 +162,6 @@
                                 .limit(1);
                             const latestRound = bookData && bookData.length > 0 ? bookData[0].round_no : 0;
 
-                            // 3. (M+1)월 추천 책 등록 여부 검증
                             const { data: recData } = await _db
                                 .from('recommendations')
                                 .select('id')
@@ -158,7 +169,6 @@
                                 .eq('target_month', nextMonthStr);
                             const hasRec = recData && recData.length > 0;
 
-                            // 4. (M)월 최신 차수 총평 입력 여부 검증
                             let hasReview = true;
                             if (latestRound > 0) {
                                 const { data: revData } = await _db
@@ -166,11 +176,10 @@
                                     .select('id')
                                     .eq('member_name', memberName)
                                     .eq('round_no', latestRound)
-                                    .not('review_text', 'is', null); // 총평 텍스트가 채워져 있는지 체크
+                                    .not('review_text', 'is', null);
                                 hasReview = revData && revData.length > 0;
                             }
 
-                            // 하나라도 안 채웠으면 공주님 멘탈 흔드는 알림창 소환
                             if (!hasRec || !hasReview) {
                                 let alertMsg = `✨ [시크릿 라운지 알림] ✨\n\n👸 ${memberName} 공주님! 아직 비밀 기록장에 흔적을 남기지 않으셨사옵니다!\n\n`;
                                 if (!hasRec) alertMsg += `❌ 다음 달(${future.getMonth() + 1}월) 추천 도서 미등록\n`;
@@ -179,10 +188,9 @@
                                 alert(alertMsg);
                             }
                         } catch (checkErr) {
-                            console.error("공주님 숙제 스캐너 에러:", checkErr);
+                            console.error(checkErr);
                         }
 
-                        // 대시보드가 아닌 선장이 원한 feed.html로 다이렉트 랜딩!
                         window.location.href = "feed.html";
                     } else {
                         showError("시크릿 시그널이 올바르지 않사옵니다, 공주님! 🥀");
@@ -191,7 +199,7 @@
                         input.focus();
                     }
                 } catch (err) {
-                    console.error("로그인 에러:", err);
+                    console.error(err);
                     showError("서버 라운지에 일시적 문제가 발생했사옵니다.");
                     input.value = "";
                     isProcessing = false;

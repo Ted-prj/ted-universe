@@ -13,11 +13,14 @@
 
     <div class="container-fluid">
         <div class="dashboard-header">
-            <div class="d-flex justify-content-between align-items-start">
+            <div class="d-flex justify-content-between align-items-center">
                 <h1><i class="fa-solid fa-heart-pulse text-pink" style="color: var(--neon-pink);"></i> 소통 <span>FEED</span></h1>
-                <span class="badge bg-dark border border-pink text-pink p-2" id="userBadge" style="color: var(--bp-pink) !important;">공주님</span>
+                <div class="d-flex align-items-center">
+                    <img id="myAvatarHeader" src="images/default_princess.png" class="princess-avatar-sm" onerror="this.src='images/default_princess.png'">
+                    <span class="badge bg-dark border border-pink text-pink p-2" id="userBadge" style="color: var(--bp-pink) !important;">공주님</span>
+                </div>
             </div>
-            <p class="text-muted m-0">실시간 추천 릴레이와 공주님들의 생생한 한줄평 피드룸</p>
+            <p class="text-muted mt-2 m-0">실시간 추천 릴레이와 공주님들의 생생한 한줄평 피드룸</p>
         </div>
 
         <div class="stat-card">
@@ -33,7 +36,7 @@
 
         <div class="stat-card mt-3">
             <div class="card-header-custom">
-                <i class="fa-solid fa-gossip"><i class="fa-solid fa-comments me-1"></i></i> 공주님들의 생생 별점 & 총평 피드
+                <i class="fa-solid fa-comments"></i> 공주님들의 생생 별점 & 총평 피드
             </div>
             <div class="card-body-custom">
                 <div id="reviewFeedList">
@@ -45,7 +48,7 @@
 
     <div class="bottom-nav">
         <a href="feed.html" class="bottom-nav-item active">
-            <i class="fa-solid fa-house-heart"><i class="fa-solid fa-rss"></i></i>
+            <i class="fa-solid fa-rss"></i>
             <span>소통 피드</span>
         </a>
         <a href="write.html" class="bottom-nav-item">
@@ -62,84 +65,96 @@
     <script src="supabase_config.js"></script>
     <script>
         checkAuth();
+        const memberImages = {}; // 전역 아바타 매핑 캐시
 
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById("userBadge").textContent = `👸 ${getLoggedInMember()} 공주`;
+            document.getElementById("myAvatarHeader").src = `images/${localStorage.getItem("login_member_image") || 'default_princess.png'}`;
+            
+            // 피드 그리기 전 공주님들 이미지 정보 전량 선패칭
+            await syncMemberAvatars();
             loadRecommendationFeed();
             loadReviewFeed();
         });
 
-        // 1. 추천 도서 피드 로드
+        async function syncMemberAvatars() {
+            try {
+                const { data } = await _db.from('members').select('member_name, image_name');
+                if (data) {
+                    data.forEach(m => {
+                        memberImages[m.member_name] = m.image_name;
+                    });
+                }
+            } catch(e) { console.error(e); }
+        }
+
         async function loadRecommendationFeed() {
             try {
-                const { data, error } = await _db
-                    .from('recommendations')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
+                const { data, error } = await _db.from('recommendations').select('*').order('created_at', { ascending: false });
                 if (error) throw error;
                 const container = document.getElementById("recommendationFeedList");
                 container.innerHTML = "";
 
                 if (!data || data.length === 0) {
-                    container.innerHTML = `<p class="text-center text-muted m-0 py-3">아직 등록된 추천 도서가 없사옵니다.</p>`;
+                    container.innerHTML = `<p class="text-center text-muted m-0 py-3">등록된 추천 도서가 없사옵니다.</p>`;
                     return;
                 }
 
                 data.forEach(item => {
+                    const avatarFile = memberImages[item.member_name] || 'default_princess.png';
                     container.innerHTML += `
-                        <div class="p-3 mb-2 border-bottom border-secondary bg-dark rounded-3" style="border-color: rgba(255,0,127,0.1) !important;">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-bold text-pink" style="color: var(--bp-pink) !important;">👸 ${item.member_name} 공주님 픽</span>
-                                <span class="badge bg-secondary style" style="font-size:0.75rem;">타겟월: ${item.target_month}</span>
+                        <div class="p-3 mb-2 border-bottom border-secondary bg-dark rounded-3 d-flex align-items-center" style="border-color: rgba(255,0,127,0.1) !important;">
+                            <img src="images/${avatarFile}" class="princess-avatar-mid" onerror="this.src='images/default_princess.png'">
+                            <div class="w-100">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-pink" style="color: var(--bp-pink) !important;">${item.member_name} 공주 픽</span>
+                                    <span class="badge bg-secondary" style="font-size:0.7rem;">타겟: ${item.target_month}</span>
+                                </div>
+                                <h6 class="text-white fw-bold mb-1"><i class="fa-solid fa-book-sparkles me-1 text-warning"></i> ${item.title}</h6>
+                                <p class="text-muted small m-0">별칭: ${item.nickname || '없음'}</p>
                             </div>
-                            <h6 class="text-white fw-bold mb-1"><i class="fa-solid fa-book-sparkles me-1 text-warning"></i> ${item.title}</h6>
-                            <p class="text-muted small m-0">별칭/한줄요약: ${item.nickname || '없음'}</p>
                         </div>
                     `;
                 });
             } catch (err) {
                 console.error(err);
-                document.getElementById("recommendationFeedList").innerHTML = `<p class="text-danger">피드 로드 실패</p>`;
+                container.innerHTML = `<p class="text-danger">피드 로드 실패</p>`;
             }
         }
 
-        // 2. 총평 및 별점 피드 로드
         async function loadReviewFeed() {
             try {
-                const { data, error } = await _db
-                    .from('reviews_ratings')
-                    .select('*')
-                    .order('round_no', { ascending: false })
-                    .order('created_at', { ascending: false });
-
+                const { data, error } = await _db.from('reviews_ratings').select('*').order('round_no', { ascending: false }).order('created_at', { ascending: false });
                 if (error) throw error;
                 const container = document.getElementById("reviewFeedList");
                 container.innerHTML = "";
 
                 if (!data || data.length === 0) {
-                    container.innerHTML = `<p class="text-center text-muted m-0 py-3">아직 남겨진 총평이 없사옵니다.</p>`;
+                    container.innerHTML = `<p class="text-center text-muted m-0 py-3">남겨진 총평이 없사옵니다.</p>`;
                     return;
                 }
 
                 data.forEach(item => {
+                    const avatarFile = memberImages[item.member_name] || 'default_princess.png';
                     const stars = item.rating ? '★'.repeat(Math.floor(item.rating)) + (item.rating % 1 !== 0 ? '½' : '') : '평가없음';
                     container.innerHTML += `
-                        <div class="p-3 mb-2 rounded-3" style="background-color: #22101A; border: 1px dashed rgba(255,105,180,0.2);">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold text-white"><span class="badge bg-danger me-1" style="background-color: var(--neon-pink) !important;">${item.round_no}회차</span> ${item.member_name}</span>
-                                <span class="text-warning fw-bold" style="color: var(--royal-gold) !important;">${stars} (${item.rating || '0'})</span>
+                        <div class="p-3 mb-2 rounded-3 d-flex align-items-start" style="background-color: #22101A; border: 1px dashed rgba(255,105,180,0.2);">
+                            <img src="images/${avatarFile}" class="princess-avatar-mid mt-1" onerror="this.src='images/default_princess.png'">
+                            <div class="w-100">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-white"><span class="badge bg-danger me-1" style="background-color: var(--neon-pink) !important; font-size:0.75rem;">${item.round_no}회</span> ${item.member_name}</span>
+                                    <span class="text-warning fw-bold" style="color: var(--royal-gold) !important; font-size:0.85rem;">${stars}</span>
+                                </div>
+                                <p class="text-white m-0 small" style="line-height:1.4; word-break: break-all;">
+                                    "${item.review_text || '별점만 남겼사옵니다.'}"
+                                </p>
                             </div>
-                            <p class="text-white m-0 small" style="line-height:1.5; word-break: break-all;">
-                                <i class="fa-solid fa-quote-left me-1 text-pink" style="color: var(--bp-pink);"></i>
-                                ${item.review_text || '별점만 조용히 남겨주셨사옵니다.'}
-                            </p>
                         </div>
                     `;
                 });
             } catch (err) {
                 console.error(err);
-                document.getElementById("reviewFeedList").innerHTML = `<p class="text-danger">리뷰 피드 로드 실패</p>`;
+                container.innerHTML = `<p class="text-danger">리뷰 피드 로드 실패</p>`;
             }
         }
     </script>
