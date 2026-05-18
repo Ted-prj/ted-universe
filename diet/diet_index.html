@@ -147,7 +147,7 @@
             document.getElementById('export-csv-output').value = finalCsv.trim();
             
             if(guideInfo.length > 0) {
-                let guideText = `루카, 오늘 기록을 아래 양식에 맞춰서 CSV로 작성해줘. 테이블 제목은 [숫자. 이름] 형식을 지켜줘.\n\n`;
+                let guideText = `루카, 오늘 기록을 아래 양식에 맞춰서, CSV코드 형태로, 그대로 복사해서 쓸 수 있게, 한 블럭의 코드로 작성해줘. 테이블 제목은 [숫자. 이름] 형식을 지켜줘.\n\n`;
                 guideInfo.forEach(g => { guideText += `[${g.name}]\n${g.cols.join(',')}\n(데이터 입력)\n\n`; });
                 document.getElementById('luka-guide-text').innerText = guideText.trim();
                 document.getElementById('luka-guide-area').style.display = 'block';
