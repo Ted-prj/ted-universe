@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>독한녀들 Book Club - Write</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container-fluid">
+        <div class="dashboard-header">
+            <h1><i class="fa-solid fa-pen-fancy text-pink" style="color: var(--neon-pink);"></i> 비밀 <span>WRITE</span></h1>
+            <p class="text-muted m-0" id="welcomePrincess">공주님, 고결한 흔적을 남겨주셔요.</p>
+        </div>
+
+        <div class="stat-card mb-4">
+            <div class="card-header-custom">
+                <i class="fa-solid fa-book-medical"></i> 1. 다음 달(M+1) 도서 추천하기
+            </div>
+            <div class="card-body-custom">
+                <form id="recommendForm" onsubmit="saveRecommendation(event)">
+                    <div class="mb-2">
+                        <label class="form-label text-pink small fw-bold">타겟 월 선택</label>
+                        <select class="form-select form-select-custom" id="targetMonth" required>
+                            </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-pink small fw-bold">추천 도서명</label>
+                        <input type="text" class="form-control form-control-custom" id="recTitle" placeholder="정확한 책 제목 입력" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-pink small fw-bold">책 별칭 또는 한줄평 키워드</label>
+                        <input type="text" class="form-control form-control-custom" id="recNickname" placeholder="예: 트렌드코리아2026">
+                    </div>
+                    <button type="submit" class="btn btn-princess w-100 mt-2"><i class="fa-solid fa-heart-circle-plus"></i> 추천 도서 등록하기</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="card-header-custom">
+                <i class="fa-solid fa-star-exclamation"><i class="fa-solid fa-heart me-1"></i></i> 2. 이번 달(M) 티타임 평가 남기기
+            </div>
+            <div class="card-body-custom">
+                <form id="reviewForm" onsubmit="saveReviewRating(event)">
+                    <div class="mb-2">
+                        <label class="form-label text-pink small fw-bold">토론 참여 회차</label>
+                        <select class="form-select form-select-custom" id="roundNoSelect" required>
+                            </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-pink small fw-bold">마음의 별점 점수</label>
+                        <select class="form-select form-select-custom" id="ratingSelect" required>
+                            <option value="5.0">★★★★★ (5.0점 만점 최고여요)</option>
+                            <option value="4.5">★★★★☆ (4.5점 아주 좋아용)</option>
+                            <option value="4.0">★★★★ (4.0점 볼만해요)</option>
+                            <option value="3.5">★★★☆ (3.5점 낫배드)</option>
+                            <option value="3.0">★★★ (3.0점 평범해요)</option>
+                            <option value="2.5">★★☆ (2.5점 조금 아쉽네요)</option>
+                            <option value="2.0">★★ (2.0점 음... 글쎄요)</option>
+                            <option value="1.0">★ (1.0점 지루했사옵니다)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-pink small fw-bold">솔직 담백 총평 스토리</label>
+                        <textarea class="form-control form-control-custom" id="reviewText" rows="3" placeholder="공주님들의 뇌리에 남은 감상을 적어주셔요." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-princess w-100"><i class="fa-solid fa-cloud-arrow-up"></i> 리뷰 & 별점 굽기 완료</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="feed.html" class="bottom-nav-item">
+            <i class="fa-solid fa-rss"></i>
+            <span>소통 피드</span>
+        </a>
+        <a href="write.html" class="bottom-nav-item active">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>비밀 기록</span>
+        </a>
+        <a href="dashboard.html" class="bottom-nav-item">
+            <i class="fa-solid fa-crown"></i>
+            <span>핑크 라운지</span>
+        </a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase_config.js"></script>
+    <script>
+        checkAuth();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const princess = getLoggedInMember();
+            document.getElementById("welcomePrincess").innerHTML = `👸 <b>${princess} 공주님</b>의 핑크빛 아지트 레코드 존-★`;
+            setupTargetMonths();
+            loadRounds();
+        });
+
+        // M+1 타겟 월 드롭다운 바인딩 (현재 날짜 기준 다음 달 세팅)
+        function setupTargetMonths() {
+            const select = document.getElementById("targetMonth");
+            const now = new Date();
+            
+            for(let i=1; i<=3; i++) {
+                let future = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                let y = future.getFullYear();
+                let m = String(future.getMonth() + 1).padStart(2, '0');
+                let optStr = `${y}-${m}`;
+                select.innerHTML += `<option value="${optStr}">${y}년 ${m}월 모임용</option>`;
+            }
+        }
+
+        // 차수 정보 동적 바인딩
+        async function loadRounds() {
+            try {
+                const { data, error } = await _db.from('books').select('round_no, title').order('round_no', { ascending: false });
+                if (error) throw error;
+                const select = document.getElementById("roundNoSelect");
+                select.innerHTML = "";
+                data.forEach(b => {
+                    select.innerHTML += `<option value="${b.round_no}">${b.round_no}회차 [${b.title}]</option>`;
+                });
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        // 추천 도서 저장 로직 (CRUD - Create/Update)
+        async function saveRecommendation(e) {
+            e.preventDefault();
+            const member_name = getLoggedInMember();
+            const target_month = document.getElementById("targetMonth").value;
+            const title = document.getElementById("recTitle").value.trim();
+            const nickname = document.getElementById("recNickname").value.trim();
+
+            try {
+                const { error } = await _db.from('recommendations').insert([{
+                    target_month, member_name, title, nickname
+                }]);
+                if (error) throw error;
+                alert("추천 도서가 우아하게 적재되었사옵니다! 💖");
+                document.getElementById("recommendForm").reset();
+                setupTargetMonths();
+            } catch(err) {
+                alert("오류가 발생했어, 선장.");
+            }
+        }
+
+        // 총평 및 별점 저장 로직 (ON CONFLICT 대응 업서트 구현)
+        async function saveReviewRating(e) {
+            e.preventDefault();
+            const member_name = getLoggedInMember();
+            const round_no = parseInt(document.getElementById("roundNoSelect").value);
+            const rating = parseFloat(document.getElementById("ratingSelect").value);
+            const review_text = document.getElementById("reviewText").value.trim();
+
+            try {
+                const { error } = await _db.from('reviews_ratings').upsert({
+                    round_no, member_name, rating, review_text
+                }, { onConflict: 'round_no, member_name' });
+                
+                if (error) throw error;
+                alert("별점과 한줄평 리뷰 굽기가 성공했사옵니다! ☕");
+                document.getElementById("reviewForm").reset();
+                loadRounds();
+            } catch(err) {
+                console.error(err);
+                alert("리뷰 입력에 오류가 터졌다.");
+            }
+        }
+    </script>
+</body>
+</html>

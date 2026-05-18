@@ -61,7 +61,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // 중복 API 요청 방지용 잠금장치(Lock) 변수
         let isProcessing = false;
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -94,17 +93,16 @@
             }
         }
 
-        // 공주님 선택 시 패스워드 칸 활성화 및 포커스 이동
         function focusPassword() {
             const passInput = document.getElementById("passwordInput");
             passInput.disabled = false;
             passInput.value = "";
             passInput.focus();
             document.getElementById("errorMessage").style.display = "none";
-            isProcessing = false; // 공주님 새로 고르면 락 해제
+            isProcessing = false;
         }
 
-        // 패스워드 실시간 감시 (4자리 완료 시 벼락같이 실행)
+        // 패스워드 실시간 감시 및 비동기 숙제 검사 트리거
         async function checkPasswordAutoLogin(input) {
             const memberName = document.getElementById("memberSelect").value;
             const password = input.value.trim();
@@ -116,15 +114,13 @@
                 return;
             }
 
-            // 이미 처리 중이면 상큼하게 무시한다
             if (isProcessing) return;
-
             errorDiv.style.display = "none";
 
-            // 딱 4자리가 되는 순간 문지기를 베어버린다
+            // 딱 4자리가 되는 순간 검문검색 들어간다
             if (password.length === 4) {
-                isProcessing = true; // 문 걸어 잠그기
-                input.blur(); // 모바일 키보드 레이아웃을 자동으로 닫아주는 핵심 이펙트!
+                isProcessing = true; 
+                input.blur(); // 키보드 패널 닫기
 
                 try {
                     const { data, error } = await _db
@@ -136,12 +132,62 @@
                     if (error) throw error;
 
                     if (data && data.length > 0) {
+                        // 로그인 성공 시 로컬 세션 적재
                         localStorage.setItem("login_member", memberName);
-                        window.location.href = "dashboard.html";
+                        
+                        // 👑 [Zoro's Secret Scanner] 공주님 숙제 미이행 검사 시작
+                        try {
+                            // 1. 타겟 다음 달(M+1) 계산 (예: 2026-06)
+                            const now = new Date();
+                            const future = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                            const nextMonthStr = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}`;
+                            
+                            // 2. 현재 활성화된 최신 토론 차수(M) 조회
+                            const { data: bookData } = await _db
+                                .from('books')
+                                .select('round_no')
+                                .order('round_no', { ascending: false })
+                                .limit(1);
+                            const latestRound = bookData && bookData.length > 0 ? bookData[0].round_no : 0;
+
+                            // 3. (M+1)월 추천 책 등록 여부 검증
+                            const { data: recData } = await _db
+                                .from('recommendations')
+                                .select('id')
+                                .eq('member_name', memberName)
+                                .eq('target_month', nextMonthStr);
+                            const hasRec = recData && recData.length > 0;
+
+                            // 4. (M)월 최신 차수 총평 입력 여부 검증
+                            let hasReview = true;
+                            if (latestRound > 0) {
+                                const { data: revData } = await _db
+                                    .from('reviews_ratings')
+                                    .select('id')
+                                    .eq('member_name', memberName)
+                                    .eq('round_no', latestRound)
+                                    .not('review_text', 'is', null); // 총평 텍스트가 채워져 있는지 체크
+                                hasReview = revData && revData.length > 0;
+                            }
+
+                            // 하나라도 안 채웠으면 공주님 멘탈 흔드는 알림창 소환
+                            if (!hasRec || !hasReview) {
+                                let alertMsg = `✨ [시크릿 라운지 알림] ✨\n\n👸 ${memberName} 공주님! 아직 비밀 기록장에 흔적을 남기지 않으셨사옵니다!\n\n`;
+                                if (!hasRec) alertMsg += `❌ 다음 달(${future.getMonth() + 1}월) 추천 도서 미등록\n`;
+                                if (!hasReview) alertMsg += `❌ 이번 달(${latestRound}회차) 토론 총평 미등록\n`;
+                                alertMsg += `\n입장하신 후 꼭 '비밀 기록' 탭으로 이동하셔서 우아하게 입력해 주셔요! 💕`;
+                                alert(alertMsg);
+                            }
+                        } catch (checkErr) {
+                            console.error("공주님 숙제 스캐너 에러:", checkErr);
+                        }
+
+                        // 대시보드가 아닌 선장이 원한 feed.html로 다이렉트 랜딩!
+                        window.location.href = "feed.html";
                     } else {
                         showError("시크릿 시그널이 올바르지 않사옵니다, 공주님! 🥀");
                         input.value = ""; 
-                        isProcessing = false; // 인증 실패 시 다시 입력받을 수 있게 열기
+                        isProcessing = false; 
                         input.focus();
                     }
                 } catch (err) {

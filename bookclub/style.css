@@ -11,15 +11,15 @@
     --neon-pink: #FF007F;
     --royal-gold: #FFD700;
     --text-white: #FFFFFF !important;
-    --text-muted: #FFC0CB !important; /* 공주님들이 좋아할 러블리 핑크 화이트 */
+    --text-muted: #FFC0CB !important; /* 러블리 핑크 화이트 */
 }
 
-/* 기본 바디 스타일 */
+/* 기본 바디 스타일 (하단 바 공간 확보를 위해 padding-bottom 필수 추가) */
 body {
     background-color: var(--bp-black);
     color: #FFFFFF !important;
     font-family: 'Noto Sans KR', sans-serif;
-    padding: 1rem 0.5rem; /* 모바일 전용 좁은 패딩 */
+    padding: 1rem 0.5rem 80px 0.5rem; /* 하단 바 영역 확보 */
     font-size: 0.95rem;
 }
 
@@ -35,7 +35,7 @@ body {
 
 .dashboard-header h1 {
     font-weight: 900;
-    font-size: 1.6rem; /* 모바일 가독 사이즈 */
+    font-size: 1.6rem;
     color: #FFFFFF !important;
     text-shadow: 0 0 8px var(--neon-pink);
     margin-bottom: 0.5rem;
@@ -83,7 +83,7 @@ body {
     padding: 0.75rem;
 }
 
-/* 모바일 전용 고대비 테이블 스타일 */
+/* 고대비 테이블 스타일 */
 .table-custom {
     width: 100%;
     margin-bottom: 0;
@@ -110,7 +110,6 @@ body {
 
 .table-custom tbody td.fw-bold {
     color: var(--bp-pink) !important;
-    text-shadow: 0 0 2px rgba(255, 105, 180, 0.3);
 }
 
 .text-warning {
@@ -163,38 +162,54 @@ body {
 }
 
 /* =========================================================================
-   [index.html - 로그인 화면 전용 모바일 스타일]
+   [모바일 전용 블랙핑크 바텀 내비게이션 바]
    ========================================================================= */
-.login-container {
-    min-height: 90vh;
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 65px;
+    background-color: #0D0D0D;
+    border-top: 2px solid var(--neon-pink);
     display: flex;
+    justify-content: space-around;
     align-items: center;
-    justify-content: center;
+    z-index: 2000;
+    box-shadow: 0 -5px 15px rgba(255, 0, 127, 0.25);
+    padding-bottom: env(safe-area-inset-bottom); /* 아이폰 하단 홈바 인셋 대응 */
 }
 
-.login-box {
-    width: 100%;
-    max-width: 360px;
-    padding: 1.75rem;
-    background-color: var(--bp-card-bg);
-    border: 2px solid var(--neon-pink);
-    border-radius: 20px;
-    box-shadow: 0 0 20px rgba(255, 0, 127, 0.3);
+.bottom-nav-item {
+    color: #888888;
+    text-decoration: none !important;
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    width: 33.33%;
     text-align: center;
 }
 
-.brand-logo {
-    font-size: 2.2rem;
-    font-weight: 900;
-    color: #FFFFFF !important;
-    text-shadow: 0 0 10px var(--neon-pink);
-    margin-bottom: 0.25rem;
+.bottom-nav-item i {
+    font-size: 1.35rem;
+    margin-bottom: 3px;
 }
 
-.brand-logo span {
-    color: var(--bp-pink) !important;
+.bottom-nav-item:hover {
+    color: var(--bp-pink);
 }
 
+.bottom-nav-item.active {
+    color: var(--neon-pink) !important;
+    text-shadow: 0 0 8px var(--neon-pink);
+}
+
+/* =========================================================================
+   [index.html 및 폼 요소 스타일]
+   ========================================================================= */
 .form-select-custom, .form-control-custom {
     background-color: var(--bp-black) !important;
     border: 1px solid rgba(255, 69, 180, 0.3) !important;
@@ -203,18 +218,7 @@ body {
     border-radius: 10px;
     font-size: 0.95rem;
 }
-
 .form-select-custom:focus, .form-control-custom:focus {
     border-color: var(--neon-pink) !important;
     box-shadow: 0 0 8px rgba(255, 0, 127, 0.5) !important;
-}
-
-/* 패스워드 입력창 커스텀 (VS Code 문법 에러 완벽 척살) */
-.password-box-princess {
-    letter-spacing: 0.5rem;
-    background-color: rgba(255, 0, 127, 0.05) !important;
-    border: 2px dashed rgba(255, 0, 127, 0.4) !important;
-}
-.password-box-princess:focus {
-    border: 2px solid var(--neon-pink) !important;
 }
