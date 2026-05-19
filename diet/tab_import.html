@@ -1,0 +1,57 @@
+<div class="hub-card">
+    <h6 class="small fw-bold mb-2">CSV IMPORT (루카 데이터 입력)</h6>
+    <textarea id="import-input" class="form-control csv-box mb-3" rows="12" placeholder="CSV 형식을 붙여넣으세요." oninput="detectImportInfo()"></textarea>
+    <div id="import-tables-area" class="mb-3"></div>
+    <button class="btn-action w-100" onclick="processInsert()">데이터 최종 INSERT</button>
+</div>
+
+<script>
+    function detectImportInfo() {
+        const val = document.getElementById('import-input').value; 
+        const area = document.getElementById('import-tables-area'); 
+        area.innerHTML = "";
+        DIET_TABLES.forEach(t => { 
+            if(val.includes(`[${t.name}]`)) area.innerHTML += `<span class="table-badge">${t.name}</span>`; 
+        });
+    }
+
+    async function processInsert() {
+        const val = document.getElementById('import-input').value.trim(); 
+        if(!val) return;
+        try {
+            const headers = val.match(/\[(?:\d+|W\d+)\.\s[^\]]+\]/g); 
+            const sections = val.split(/\[(?:\d+|W\d+)\.\s[^\]]+\]/);
+            if(!headers) return alert("올바른 형식이 아닙니다.");
+            
+            for(let i=0; i<headers.length; i++) {
+                const tInfo = DIET_TABLES.find(t => headers[i].includes(t.name.split('.')[1]?.trim() || t.name.split(' ')[1]?.trim()));
+                if(!tInfo) continue;
+                const lines = sections[i+1].trim().split('\n');
+                if(lines.length < 2) continue;
+                const csvCols = lines[0].split(',').map(c => c.trim());
+                const csvData = lines.slice(1).map(l => {
+                    const cells = l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    let rowObj = {};
+                    csvCols.forEach((colName, idx) => {
+                        if(!['id', 'created_at', 'updated_at'].includes(colName)) {
+                            let cellValue = cells[idx]?.trim() || null;
+                            if(cellValue && cellValue.startsWith('"') && cellValue.endsWith('"')) { 
+                                cellValue = cellValue.substring(1, cellValue.length-1).replace(/""/g, '"'); 
+                            }
+                            if(cellValue === "") cellValue = null;
+                            rowObj[colName] = cellValue;
+                        }
+                    });
+                    return rowObj;
+                });
+                const { error } = await _db.schema(tInfo.schema).from(tInfo.id).insert(csvData);
+                if(error) throw error;
+            }
+            alert("데이터 지능형 삽입 완료! 🔥"); 
+            document.getElementById('import-input').value = ""; 
+            detectImportInfo();
+        } catch(e) { 
+            alert("오류: " + e.message); 
+        }
+    }
+</script>

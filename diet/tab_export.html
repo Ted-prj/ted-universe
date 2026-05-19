@@ -1,0 +1,114 @@
+<div class="hub-card">
+    <div class="d-flex justify-content-between mb-2">
+        <span class="small fw-bold">TABLE LIST</span>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="all-check" onchange="toggleAllCheck(this)">
+            <label class="form-check-label small" for="all-check">전체 선택</label>
+        </div>
+    </div>
+    <div id="table-select-list" class="row g-2 mb-3"></div>
+    <div class="row g-2 mb-3" style="border-top: 1px solid #333; padding-top: 15px;">
+        <div class="col-6">
+            <label class="label-small text-dim mb-1">시작 날짜</label>
+            <input type="date" id="export-start-date" class="form-control form-control-sm bg-dark text-white border-secondary" value="2026-04-13">
+        </div>
+        <div class="col-6">
+            <label class="label-small text-dim mb-1">종료 날짜</label>
+            <input type="date" id="export-end-date" class="form-control form-control-sm bg-dark text-white border-secondary">
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <button class="btn-outline" onclick="processExport('col')">칼럼명 추출</button>
+        <button class="btn-outline" onclick="processExport('data')">데이터 추출</button>
+        <button class="btn-outline" onclick="processExport('both')">칼럼&데이터 추출</button>
+    </div>
+    <textarea id="export-csv-output" class="form-control csv-box mb-2" rows="12" placeholder="추출 결과가 여기에 표시됩니다." readonly></textarea>
+    <button class="btn-action w-100 mb-3" onclick="copyResult()">CSV 결과 복사</button>
+    
+    <div id="luka-guide-area" class="guide-box" style="display:none;">
+        <label class="label-small text-pink mb-2" style="color:var(--bp-pink)">LUCA REQUEST GUIDE</label>
+        <div id="luka-guide-text" class="small mb-3" style="font-size: 0.7rem; color: #aaa; line-height: 1.4;"></div>
+        <button class="btn-outline w-100" onclick="copyLukaGuide()">루카 가이드 복사</button>
+    </div>
+</div>
+
+<script>
+    function initExtractUI() {
+        document.getElementById('table-select-list').innerHTML = DIET_TABLES.map(t => 
+            `<div class="col-6">
+                <div class="form-check">
+                    <input class="form-check-input chk-item" type="checkbox" value="${t.id}" id="e-${t.id}" data-schema="${t.schema}" data-name="${t.name}">
+                    <label class="form-check-label small text-truncate" for="e-${t.id}">${t.name}</label>
+                </div>
+            </div>`
+        ).join('');
+    }
+    
+    function toggleAllCheck(el) { 
+        document.querySelectorAll('.chk-item').forEach(c => c.checked = el.checked); 
+    }
+
+    async function processExport(mode) {
+        const checkedItems = Array.from(document.querySelectorAll('.chk-item:checked'));
+        if(!checkedItems.length) return alert("추출할 테이블을 선택하세요.");
+        const startDate = document.getElementById('export-start-date').value;
+        let endDate = document.getElementById('export-end-date').value;
+        let adjustedEnd = endDate ? endDate + 'T23:59:59.999Z' : endDate;
+        let finalCsv = "";
+        let guideInfo = [];
+
+        for(const item of checkedItems) {
+            const tableId = item.value; 
+            const schemaName = item.getAttribute('data-schema');
+            const tInfo = DIET_TABLES.find(t => t.id === tableId && t.schema === schemaName);
+            let query = _db.schema(schemaName).from(tableId).select('*');
+            if (tInfo.dateCol) { 
+                if (startDate) query = query.gte(tInfo.dateCol, startDate); 
+                if (endDate) query = query.lte(tInfo.dateCol, adjustedEnd); 
+            }
+            const { data } = await query.order('id', { ascending: true });
+            
+            finalCsv += `[${tInfo.name}]\n`;
+            if(data?.length) {
+                const cols = Object.keys(data[0]);
+                guideInfo.push({ name: tInfo.name, cols: cols.filter(c => c !== 'id' && c !== 'created_at' && c !== 'updated_at') });
+                if(mode !== 'data') finalCsv += cols.join(',') + '\n';
+                if(mode !== 'col') data.forEach(row => { 
+                    finalCsv += cols.map(c => { 
+                        let v = row[c] === null ? "" : row[c]; 
+                        let strV = String(v); 
+                        return (strV.includes(',') || strV.includes('\n')) ? `"${strV.replace(/"/g, '""')}"` : strV; 
+                    }).join(',') + '\n'; 
+                });
+            } else finalCsv += "(데이터 없음)\n";
+            finalCsv += '\n';
+        }
+        document.getElementById('export-csv-output').value = finalCsv.trim();
+        
+        if(guideInfo.length > 0) {
+            let guideText = `루카, 오늘 업데이트할 내용이 있는 기록을, 아래 양식에 맞춰서, CSV코드 형태로, 그대로 복사해서 쓸 수 있게, 한 블럭의 코드로 작성해줘. 테이블 제목은 [숫자. 이름] 형식을 지켜줘.\n\n`;
+            guideInfo.forEach(g => { guideText += `[${g.name}]\n${g.cols.join(',')}\n(데이터 입력)\n\n`; });
+            document.getElementById('luka-guide-text').innerText = guideText.trim();
+            document.getElementById('luka-guide-area').style.display = 'block';
+        }
+    }
+    
+    function copyResult() { 
+        const box = document.getElementById('export-csv-output'); 
+        if(!box.value) return alert("추출된 데이터가 없습니다."); 
+        box.select(); 
+        document.execCommand('copy'); 
+        alert("CSV 데이터가 복사되었습니다! 🖤💖"); 
+    }
+    
+    function copyLukaGuide() {
+        const guide = document.getElementById('luka-guide-text').innerText;
+        const temp = document.createElement('textarea');
+        document.body.appendChild(temp);
+        temp.value = guide; 
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        alert("루카용 요청 가이드가 복사되었습니다! 🤖");
+    }
+</script>

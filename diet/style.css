@@ -1,0 +1,183 @@
+:root { 
+    --bp-pink: rgb(232, 142, 163); 
+    --bp-black: #000; 
+    --bp-dark-gray: #121212; 
+    --neon-pink: #FF3F7E; 
+    --text-dim: #888; 
+}
+body { 
+    background-color: var(--bp-black); 
+    color: #fff; 
+    font-family: 'Pretendard', sans-serif; 
+    padding-bottom: 50px; 
+}
+#auth-overlay { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: #000; 
+    z-index: 10000; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+}
+.auth-input { 
+    max-width: 200px; 
+    font-size: 1.5rem; 
+    letter-spacing: 10px; 
+    background: #000 !important; 
+    border: 2px solid #333 !important; 
+    text-align: center; 
+    color: var(--bp-pink) !important; 
+}
+.container { 
+    max-width: 800px; 
+    margin: 0 auto; 
+    padding: 15px; 
+    display: none; 
+    position: relative; 
+    z-index: 1; 
+}
+.nav-pills { 
+    background: #000; 
+    border-radius: 16px; 
+    padding: 5px; 
+}
+.nav-pills .nav-link { 
+    color: var(--bp-pink); 
+    font-weight: 800; 
+    border-radius: 12px; 
+    margin: 2px; 
+    font-size: 0.75rem; 
+    border: none; 
+    background: transparent; 
+}
+.nav-pills .nav-link.active { 
+    background-color: var(--bp-pink) !important; 
+    color: #000 !important; 
+}
+.hub-card { 
+    background: var(--bp-dark-gray); 
+    border-radius: 20px; 
+    padding: 15px; 
+    border: 1px solid #252525; 
+    margin-bottom: 15px; 
+}
+.csv-box { 
+    background: #080808 !important; 
+    color: #00ff41 !important; 
+    font-family: 'Courier New', monospace; 
+    font-size: 0.7rem; 
+    border-radius: 12px; 
+    border: 1px solid #333 !important; 
+    width: 100%; 
+}
+.btn-action { 
+    background: var(--bp-pink); 
+    color: #000; 
+    border: none; 
+    border-radius: 10px; 
+    font-weight: 900; 
+    padding: 10px 15px; 
+    font-size: 0.8rem; 
+    transition: 0.2s; 
+}
+.btn-outline { 
+    background: transparent; 
+    color: var(--bp-pink); 
+    border: 1px solid var(--bp-pink); 
+    border-radius: 10px; 
+    font-weight: 800; 
+    padding: 6px 10px; 
+    font-size: 0.7rem; 
+}
+.table-wrap { 
+    overflow-x: auto; 
+    -webkit-overflow-scrolling: touch; 
+    border-radius: 10px; 
+    border: 1px solid #333; 
+    position: relative; 
+    min-height: 100px; 
+}
+table { 
+    width: 100%; 
+    border-collapse: separate; 
+    border-spacing: 0; 
+    color: #ccc; 
+    font-size: 0.7rem; 
+}
+th { 
+    background: #1a1a1a; 
+    color: var(--bp-pink); 
+    padding: 12px 10px; 
+    border-bottom: 1px solid #333; 
+    white-space: nowrap; 
+    position: sticky; 
+    top: 0; 
+    z-index: 10; 
+}
+td { 
+    padding: 12px 10px; 
+    border-bottom: 1px solid #222; 
+    white-space: nowrap; 
+    max-width: 200px; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    cursor: pointer; 
+}
+.sticky-col { 
+    position: sticky; 
+    left: 0; 
+    background: #121212; 
+    z-index: 5; 
+    border-right: 1px solid #444; 
+}
+.editing-cell { 
+    padding: 0 !important; 
+    background: var(--neon-pink) !important; 
+}
+.edit-input { 
+    width: 100%; 
+    border: none; 
+    background: transparent; 
+    color: #fff; 
+    padding: 12px 8px; 
+    font-weight: 800; 
+    outline: none; 
+    text-align: center; 
+}
+.table-badge { 
+    background: #1a1a1a; 
+    padding: 4px 10px; 
+    border-radius: 15px; 
+    font-size: 0.65rem; 
+    color: var(--bp-pink); 
+    border: 1px solid #333; 
+    margin: 2px; 
+    display: inline-block; 
+}
+.update-bar { 
+    display: none; 
+    gap: 10px; 
+    margin-bottom: 15px; 
+    padding: 10px; 
+    background: rgba(255, 63, 126, 0.1); 
+    border: 1px solid var(--neon-pink); 
+    border-radius: 12px; 
+}
+.label-small { 
+    font-size: 0.65rem; 
+    color: #666; 
+    margin-bottom: 2px; 
+    display: block; 
+    font-weight: 700; 
+}
+.guide-box { 
+    background: rgba(232, 142, 163, 0.05); 
+    border: 1px solid rgba(232, 142, 163, 0.2); 
+    border-radius: 12px; 
+    padding: 10px; 
+    margin-top: 15px; 
+}

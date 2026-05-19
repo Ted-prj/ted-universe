@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>TED DIET ADMIN v3.7.5</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+</head>
+<body>
+    <div id="auth-overlay">
+        <div class="text-center w-75">
+            <h4 style="color:var(--bp-pink); font-weight:900; letter-spacing:3px; margin-bottom: 20px;">DIET IDENTITY</h4>
+            <input type="password" id="pw-input" class="form-control auth-input mx-auto" maxlength="4" inputmode="numeric" autofocus oninput="if(this.value.length===4) verify()">
+            <div id="auth-msg" class="text-danger mt-3 small"></div>
+        </div>
+    </div>
+
+    <div class="container" id="main-app">
+        <div class="text-center mb-3">
+            <h4 style="color:var(--bp-pink); font-weight:900;" onclick="location.reload()">TED DIET HUB</h4>
+        </div>
+        <ul class="nav nav-pills nav-fill mb-3" id="dietTab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#v-extract">EXPORT</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-view" onclick="setTimeout(onTableSelectChange, 50)">VIEW & EDIT</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-import">IMPORT</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="v-extract"></div>
+            <div class="tab-pane fade" id="v-view"></div>
+            <div class="tab-pane fade" id="v-import"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        window.onload = () => { document.getElementById('pw-input').focus(); };
+
+        // 어드민 접근 패스워드 인증 및 모듈형 탭 파일 비동기 통합 처리
+        async function verify() {
+            const pw = document.getElementById('pw-input').value;
+            const { data } = await _db.from('settings').select('value').eq('code', 'ACCESS_PW').single();
+            if(data?.value === pw) {
+                document.getElementById('auth-overlay').style.display='none';
+                document.getElementById('main-app').style.display='block';
+                
+                // 각 분리된 HTML 모듈을 비동기 패치하여 DOM에 주입
+                await Promise.all([
+                    loadTabComponent('#v-extract', 'tab_export.html', initExtractUI),
+                    loadTabComponent('#v-view', 'tab_view.html', initViewUI),
+                    loadTabComponent('#v-import', 'tab_import.html')
+                ]);
+            } else { 
+                document.getElementById('auth-msg').innerText = "WRONG PASSWORD"; 
+                document.getElementById('pw-input').value = ""; 
+            }
+        }
+
+        // 분리된 HTML 스크립트 실행 컨텍스트 유지를 위한 전용 인클루더 함수
+        async function loadTabComponent(targetSelector, fileUrl, initCallback) {
+            try {
+                const response = await fetch(fileUrl);
+                if (!response.ok) throw new Error(`컴포넌트 로드 실패: ${fileUrl}`);
+                const htmlContent = await response.text();
+                const container = document.querySelector(targetSelector);
+                container.innerHTML = htmlContent;
+
+                // 내포된 스크립트 태그 강제 재평가 처리 (원래 동작 무결성 유지 목적)
+                const scripts = container.querySelectorAll('script');
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+
+                if (initCallback) initCallback();
+            } catch (error) {
+                console.error(error);
+                document.querySelector(targetSelector).innerHTML = `<p class="text-danger p-3">탭 모듈 로드 에러 발생</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
