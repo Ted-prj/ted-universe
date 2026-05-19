@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>LOGS MANAGEMENT v5.3.2</title>
+    <title>LOGS MANAGEMENT v5.3.3</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -11,20 +11,22 @@
         .session-card { background: #000; border: 2px solid #222; border-radius: 24px; margin-bottom: 30px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .session-header { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; cursor: pointer; }
         .session-edit-area { background: #111; border-radius: 15px; padding: 15px; display: none; }
-        .ex-group-card { background: #151515; border-radius: 18px; margin-bottom: 20px; border: 1px solid #252525; overflow: hidden; }
+        /* 버그 해결: position: relative 추가하여 absolute 자식들의 기준점 마련 */
+        .ex-group-card { background: #151515; border-radius: 18px; margin-bottom: 20px; border: 1px solid #252525; overflow: hidden; position: relative; }
         .ex-group-header { background: #1c1c1c; padding: 12px 15px; border-bottom: 1px solid #252525; display: flex; justify-content: space-between; align-items: center; }
         .set-item-card { background: transparent; border-bottom: 1px solid #222; padding: 10px 15px; position: relative; overflow: hidden; transition: background 0.3s; }
         .set-item-card:last-child { border-bottom: none; }
         .set-item-card.editing { background: #222; border-left: 3px solid var(--neon-pink); }
         .add-card-placeholder { background: rgba(232, 142, 163, 0.05); border: 1px dashed var(--bp-pink); border-radius: 12px; padding: 10px; margin: 10px; text-align: center; cursor: pointer; }
         .swipe-del-bg { position: absolute; right: -100%; top: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, #ff2d55); display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; color: white; font-weight: 900; z-index: 1; transition: 0.3s; }
-        .swipe-content { position: relative; z-index: 2; background: inherit; transition: 0.3s; }
+        /* 마스킹 보완: 배경을 명시적인 카드 색상으로 채워 글자 뒤로 빨간색이 비치지 않도록 조치 */
+        .swipe-content { position: relative; z-index: 2; background: #151515; transition: 0.3s; }
     </style>
 </head>
 <body style="background-color: var(--bp-black); color: white;">
     <div class="container-app">
         <div class="mgmt-card" style="background: transparent; border: none; padding: 10px;">
-            <h4 style="color:var(--bp-pink); font-weight:900;" class="mb-4">📅 LOG MANAGEMENT v5.3.2</h4>
+            <h4 style="color:var(--bp-pink); font-weight:900;" class="mb-4">📅 LOG MANAGEMENT v5.3.3</h4>
             <div class="mb-4">
                 <label class="label-small" style="color:#aaa;">날짜 선택</label>
                 <input type="date" id="log-date-picker" class="form-control" style="background:#1e1e1e; border:1px solid #333; color:white; border-radius:12px;" onchange="loadLogsByDate(this.value)">
@@ -46,13 +48,11 @@
         let touchStartX = 0;
 
         async function init() {
-            // 마스터 데이터 로드
             const { data: sData } = await _db.schema('workout').from('settings').select('*');
             sData.forEach(s => { if(!SETTINGS_MAP[s.category]) SETTINGS_MAP[s.category] = []; SETTINGS_MAP[s.category].push(s.name); });
             const { data: eData } = await _db.schema('workout').from('exercises').select('*').order('name');
             EXERCISE_MASTER = eData || [];
 
-            // 탭4.a 디폴트 날짜 로직 수정: session_logs에서도 최신 날짜 확인
             const { data: lastSession } = await _db.schema('workout').from('session_logs').select('workout_date').order('workout_date', { ascending: false }).limit(1);
             
             const defaultDate = lastSession?.[0] ? lastSession[0].workout_date : new Date().toISOString().split('T')[0];
@@ -79,7 +79,6 @@
             container.innerHTML = CURRENT_SESSIONS.map(sess => `<div id="session-unit-${sess.id}">${buildSessionHtml(sess)}</div>`).join('');
         }
 
-        // 사진1 대응: 심박수 항목(Avg, Min, Max) 추가
         function buildSessionHtml(sess) {
             return `
             <div class="session-card">
@@ -161,7 +160,6 @@
             </div>`;
         }
 
-        // 사진2 대응: 수정 모드 진입 시 클릭 이벤트 차단 및 Cancel 기능 보정
         function enterSetEdit(id) {
             const log = CURRENT_LOGS.find(l => l.id === id);
             const exInfo = EXERCISE_MASTER.find(e => e.id === log.exercise_id);
@@ -169,7 +167,7 @@
             const cardWrapper = document.getElementById(`set-card-unit-${id}`);
             
             cardWrapper.classList.add('editing');
-            contentArea.onclick = null; // 수정 모드 중 중복 클릭 방지
+            contentArea.onclick = null;
 
             let fields = '';
             if(exInfo.use_weight) fields += `<div class="col-4"><label class="label-mini">WEIGHT</label><input type="number" id="ed-w-${id}" class="edit-input" value="${log.weight}"></div>`;
@@ -186,7 +184,6 @@
                 </div>`;
         }
 
-        // Cancel 버튼 누를 때 .editing 클래스 제거 로직 포함
         function cancelSetEdit(id) {
             const log = CURRENT_LOGS.find(l => l.id === id);
             const cardWrapper = document.getElementById(`set-card-unit-${id}`);
@@ -198,7 +195,6 @@
                 </div>`;
         }
 
-        // renderSetItem 헬퍼 (리렌더링용)
         function renderSetItemInner(log) {
             return `
                 <div class="d-flex justify-content-between align-items-center">
@@ -224,7 +220,7 @@
             if(!error) {
                 const idx = CURRENT_LOGS.findIndex(l => l.id === id);
                 CURRENT_LOGS[idx] = data[0];
-                cancelSetEdit(id); // 수정 완료 후 리셋
+                cancelSetEdit(id);
             }
         }
 
@@ -246,10 +242,9 @@
             }
         }
 
-        // 기타 기능 유지
         function toggleSessionEdit(id) { const a = document.getElementById(`sess-edit-${id}`); a.style.display = a.style.display === 'none' ? 'block' : 'none'; }
         async function addNewExercise(sessId) { const exId = prompt("운동 ID 입력"); if (!exId) return; const ex = EXERCISE_MASTER.find(e => e.id === exId); if (!ex) return; const { data } = await _db.schema('workout').from('logs').insert([{ session_id: sessId, exercise_id: exId, display_name: ex.name, body_part: ex.body_part, set_no: 1, workout_date: document.getElementById('log-date-picker').value + ' 12:00:00', status: 'FINAL' }]).select(); CURRENT_LOGS.push(data[0]); document.getElementById(`ex-group-list-${sessId}`).innerHTML = renderExerciseGroups(sessId); }
-        async function addNewSet(sessId, exId) { const exLogs = CURRENT_LOGS.filter(l => l.session_id === sessId && l.exercise_id === exId); const lastLog = exLogs[exLogs.length - 1]; const nextSet = lastLog.set_no + 1; const newLog = { ...lastLog, id: undefined, set_no: nextSet, workout_date: new Date().toISOString() }; delete newLog.id; delete newLog.created_at; const { data, error } = await _db.schema('workout').from('logs').insert([newLog]).select(); if(!error) { CURRENT_LOGS.push(data[0]); document.getElementById(`set-list-${sessId}-${exId}`).innerHTML = CURRENT_LOGS.filter(l => l.session_id === sessId && l.exercise_id === exId).sort((a,b) => a.set_no - b.set_no).map(l => renderSetItem(l)).join(''); } }
+        async function addNewSet(sessId, exId) { const exLogs = CURRENT_LOGS.filter(l => l.session_id === sessId && l.exercise_id === exId); const lastLog = exLogs[exLogs.length - 1]; const nextSet = lastLog.set_no + 1; const newLog = { ...lastLog, id: undefined, set_no: nextSet, workout_date: new Date().toISOString() }; delete newLog.id; delete newLog.created_at; const { data, error } = await _db.schema('workout').from('logs').insert([newLog]).select(); if(!error) { CURRENT_LOGS.push(data[0]); document.getElementById('set-list-' + sessId + '-' + exId).innerHTML = CURRENT_LOGS.filter(l => l.session_id === sessId && l.exercise_id === exId).sort((a,b) => a.set_no - b.set_no).map(l => renderSetItem(l)).join(''); } }
         async function changeExerciseGroup(sessId, oldName, newExId) { const logsToUpdate = CURRENT_LOGS.filter(l => l.session_id === sessId && l.display_name === oldName); const newEx = EXERCISE_MASTER.find(e => e.id === newExId); if(!confirm(`종목을 변경하시겠습니까?`)) return loadLogsByDate(document.getElementById('log-date-picker').value); for (let log of logsToUpdate) { const oldValue = log.weight || log.reps || log.set_time || log.workout_time; const updates = { exercise_id: newExId, display_name: newEx.name, body_part: newEx.body_part, weight: newEx.use_weight ? (log.weight || (newEx.unit === 'kg' ? oldValue : 0)) : 0, reps: newEx.use_reps ? (log.reps || 0) : 0, set_time: newEx.use_set_time ? (log.set_time || (newEx.unit === 'min' ? oldValue : 0)) : 0, workout_time: newEx.use_exercise_time ? (log.workout_time || oldValue) : 0 }; const { data } = await _db.schema('workout').from('logs').update(updates).eq('id', log.id).select(); const idx = CURRENT_LOGS.findIndex(l => l.id === log.id); CURRENT_LOGS[idx] = data[0]; } document.getElementById(`ex-group-list-${sessId}`).innerHTML = renderExerciseGroups(sessId); }
         function handleTouchStart(e) { touchStartX = e.touches[0].clientX; }
         function handleTouchMoveGroup(e, id) { const move = e.touches[0].clientX - touchStartX; if (move < 0) { document.getElementById(`group-content-${id}`).style.transform = `translateX(${Math.max(move, -100)}px)`; document.getElementById(`del-group-bg-${id}`).style.right = '0'; } }
