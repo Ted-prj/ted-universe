@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>TED DIET HUB - VIEW & EDIT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="container" id="main-app" style="display:block;">
+        <div class="text-center mb-3">
+            <h4 style="color:var(--bp-pink); font-weight:900; cursor:pointer;" onclick="location.reload()">TED DIET HUB</h4>
+        </div>
+        
+        <ul class="nav nav-pills nav-fill mb-3">
+            <li class="nav-item">
+                <button class="nav-link" onclick="window.location.href='export.html'">EXPORT</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link active">VIEW & EDIT</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" onclick="window.location.href='import.html'">IMPORT</button>
+            </li>
+        </ul>
+
+        <div class="hub-card">
+            <div class="row g-2 mb-3 align-items-end">
+                <div class="col-6">
+                    <label class="small text-dim mb-1">TABLE</label>
+                    <select id="view-table-select" class="form-select form-select-sm bg-dark text-white border-secondary" onchange="onTableSelectChange()"></select>
+                </div>
+                <div class="col-6" id="date-filter-area" style="display:none;">
+                    <div class="d-flex justify-content-between">
+                        <label class="small text-dim mb-1">DATE FILTER</label>
+                        <span class="small text-info" style="cursor:pointer; font-size:10px;" onclick="resetDateFilter()">전체보기</span>
+                    </div>
+                    <input type="date" id="view-date" class="form-control form-control-sm bg-dark text-white border-secondary" onchange="loadTableData()">
+                </div>
+                <div class="col-12 mt-2" id="add-row-area" style="display:none;">
+                    <button class="btn-action w-100" style="background:var(--neon-pink); color:#fff;" onclick="createNewRow()">+ NEW PLAN (행 추가)</button>
+                </div>
+            </div>
+            <div id="update-btn-bar" class="update-bar">
+                <button class="btn-action flex-fill" onclick="commitUpdate()">SAVE TO DB (저장)</button>
+                <button class="btn-outline flex-fill" onclick="loadTableData()">되돌리기</button>
+            </div>
+            <div class="table-wrap" id="table-data-area"><p class="text-center opacity-50 my-5">테이블을 선택해 주세요.</p></div>
+        </div>
+    </div>
+
+    <script>
+        // 중요: let PENDING_UPDATES 선언문을 제거하여 config.js와 충돌을 방지했습니다.
+
+        window.onload = () => {
+            document.getElementById('view-table-select').innerHTML = DIET_TABLES.map(t => 
+                `<option value="${t.id}" data-schema="${t.schema}">${t.name}</option>`
+            ).join('');
+            onTableSelectChange();
+        };
+        
+        function resetDateFilter() { 
+            document.getElementById('view-date').value = ""; 
+            loadTableData(); 
+        }
+        
+        function onTableSelectChange() {
+            const sel = document.getElementById('view-table-select'); 
+            if(!sel.value) return;
+            const tid = sel.value;
+            const t = DIET_TABLES.find(x => x.id === tid && x.schema === sel.options[sel.selectedIndex].getAttribute('data-schema'));
+            document.getElementById('date-filter-area').style.display = t.dateCol ? 'block' : 'none';
+            document.getElementById('add-row-area').style.display = t.allowAdd ? 'block' : 'none';
+            document.getElementById('view-date').value = ""; 
+            loadTableData();
+        }
+
+        async function loadTableData() {
+            const sel = document.getElementById('view-table-select'); 
+            const tid = sel.value;
+            const schemaName = sel.options[sel.selectedIndex].getAttribute('data-schema');
+            const tInfo = DIET_TABLES.find(x => x.id === tid && x.schema === schemaName);
+            const dateVal = document.getElementById('view-date').value;
+            
+            window.PENDING_UPDATES = {}; // 공통 전역 객체 초기화
+            document.getElementById('update-btn-bar').style.display = 'none';
+            
+            let query = _db.schema(schemaName).from(tid).select('*');
+            if(tInfo.dateCol && dateVal) query = query.eq(tInfo.dateCol, dateVal);
+            const { data } = await query.order('id', { ascending: true });
+            renderTable(data || [], schemaName, tid);
+        }
+
+        function renderTable(data, schema, table) {
+            const area = document.getElementById('table-data-area');
+            if(data.length === 0) { 
+                area.innerHTML = `<table><thead><tr><th>ID</th><th>데이터가 없습니다.</th></tr></thead><tbody id="main-tbody"></tbody></table>`; 
+                return; 
+            }
+            const cols = Object.keys(data[0]);
+            let html = `<table><thead><tr>${cols.map(k => `<th class="${k==='id'?'sticky-col':''}">${k}</th>`).join('')}</tr></thead><tbody id="main-tbody">`;
+            data.forEach(row => {
+                html += `<tr>${cols.map(k => {
+                    const val = row[k] === null ? '' : row[k];
+                    const isEditable = (k !== 'id' && k !== 'created_at' && k !== 'updated_at');
+                    return `<td class="${k==='id'?'sticky-col':''}" onclick="${isEditable ? `makeEditable(this, '${schema}', '${table}', '${row.id}', '${k}')` : ''}">${val}</td>`;
+                }).join('')}</tr>`;
+            });
+            area.innerHTML = html + "</tbody></table>";
+        }
+
+        function createNewRow() {
+            const tbody = document.getElementById('main-tbody');
+            if(!tbody) {
+                const area = document.getElementById('table-data-area');
+                area.innerHTML = `<table><thead><tr><th class="sticky-col">id</th><th>plan_date</th><th>workout_available_min</th><th>is_alcohol_possible</th><th>is_alcohol_confirmed</th><th>description</th></tr></thead><tbody id="main-tbody"></tbody></table>`;
+            }
+            const targetTbody = document.getElementById('main-tbody');
+            const tempId = 'NEW_' + Date.now();
+            const newTr = document.createElement('tr');
+            newTr.id = `tr-${tempId}`;
+            newTr.style.background = "rgba(255, 63, 126, 0.15)";
+            const cols = ['id', 'plan_date', 'workout_available_min', 'is_alcohol_possible', 'is_alcohol_confirmed', 'description'];
+            const schema = 'diet'; 
+            const table = 'project_schedules';
+            
+            cols.forEach(k => {
+                const td = document.createElement('td');
+                let defaultVal = '';
+                if(k === 'id') { td.innerText = 'NEW'; td.className = 'sticky-col'; }
+                else if(k.includes('possible') || k.includes('confirmed')) defaultVal = 'false';
+                else if(k.includes('min')) defaultVal = '0';
+                else if(k === 'plan_date') defaultVal = new Date().toISOString().split('T')[0];
+                
+                if(k !== 'id') {
+                    td.onclick = function() { makeEditable(this, schema, table, tempId, k); };
+                    td.innerText = defaultVal;
+                    td.style.color = 'var(--neon-pink)'; 
+                    td.style.fontWeight = '900';
+                }
+                newTr.appendChild(td);
+            });
+            targetTbody.prepend(newTr);
+            window.PENDING_UPDATES[tempId] = { _schema: schema, _table: table, _isNew: true, plan_date: new Date().toISOString().split('T')[0], workout_available_min: 0, is_alcohol_possible: false, is_alcohol_confirmed: false, description: '' };
+            document.getElementById('update-btn-bar').style.display = 'flex';
+        }
+
+        function makeEditable(cell, schema, table, id, col) {
+            if(cell.classList.contains('editing-cell')) return;
+            const oldVal = cell.innerText.trim(); 
+            cell.classList.add('editing-cell');
+            let inputType = "text";
+            if(col.includes('date')) inputType = "date";
+            if(col.includes('min') || col.includes('weight')) inputType = "number";
+            cell.innerHTML = `<input type="${inputType}" value="${oldVal}" class="edit-input" onblur="finishEdit(this, '${schema}', '${table}', '${id}', '${col}', '${oldVal}')" onkeydown="if(event.key==='Enter') this.blur()">`;
+            cell.querySelector('input').focus();
+        }
+
+        function finishEdit(input, schema, table, id, col, oldVal) {
+            let newVal = input.value; 
+            const cell = input.parentElement; 
+            cell.classList.remove('editing-cell'); 
+            cell.innerText = newVal;
+            if(newVal != oldVal) {
+                if(!window.PENDING_UPDATES[id]) window.PENDING_UPDATES[id] = { _schema: schema, _table: table };
+                window.PENDING_UPDATES[id][col] = newVal;
+                document.getElementById('update-btn-bar').style.display = 'flex';
+                cell.style.color = 'var(--neon-pink)'; 
+                cell.style.fontWeight = '900';
+            }
+        }
+
+        async function commitUpdate() {
+            try {
+                for(const id in window.PENDING_UPDATES) {
+                    const { _schema, _table, _isNew, ...updateData } = window.PENDING_UPDATES[id];
+                    if(_isNew) { 
+                        const { error } = await _db.schema(_schema).from(_table).insert([updateData]); 
+                        if(error) throw error; 
+                    } else { 
+                        const { error } = await _db.schema(_schema).from(_table).update(updateData).eq('id', id); 
+                        if(error) throw error; 
+                    }
+                }
+                alert("성공! 🥗"); 
+                loadTableData();
+            } catch(e) { 
+                alert("실패: " + e.message); 
+            }
+        }
+    </script>
+</body>
+</html>
