@@ -42,7 +42,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h6 class="modal-title fw-bold" id="modal-date-title" style="color: var(--bp-pink);">2026-05-00 스케줄 관리</h6>
+                    <h6 class="modal-title fw-bold" id="modal-date-title" style="color: var(--bp-pink);">0000-00-00 스케줄 관리</h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -55,18 +55,18 @@
                     
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label-custom">🍷 음주 가능성</label>
-                            <select id="form-alcohol-possible" class="form-select form-select-sm bg-dark text-white border-secondary">
-                                <option value="false">가능성 없음 (false)</option>
-                                <option value="true">음주 가능성 있음 (true)</option>
-                            </select>
+                            <label class="form-label-custom">🍾 음주 확정 여부</label>
+                            <div class="form-check form-switch pt-1">
+                                <input class="form-check-input" type="checkbox" id="form-alcohol-confirmed" onchange="syncAlcoholPossible(this)">
+                                <label class="form-check-label small text-dim" for="form-alcohol-confirmed">CONFIRMED</label>
+                            </div>
                         </div>
                         <div class="col-6">
-                            <label class="form-label-custom">🍾 음주 확정 여부</label>
-                            <select id="form-alcohol-confirmed" class="form-select form-select-sm bg-dark text-white border-secondary">
-                                <option value="false">미확정 (false)</option>
-                                <option value="true">음주 확정 (true)</option>
-                            </select>
+                            <label class="form-label-custom">🍷 음주 가능성</label>
+                            <div class="form-check form-switch pt-1">
+                                <input class="form-check-input" type="checkbox" id="form-alcohol-possible">
+                                <label class="form-check-label small text-dim" for="form-alcohol-possible">POSSIBLE</label>
+                            </div>
                         </div>
                     </div>
                     
@@ -86,6 +86,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentDate = new Date();
+        // 테드 프로젝트의 2026년 타임라인 고정 처리
         if (currentDate.getFullYear() !== 2026) {
             currentDate = new Date(2026, 4, 1);
         }
@@ -96,6 +97,13 @@
         window.onload = () => {
             loadMonthData();
         };
+
+        // 음주 확정 체크 시 가능성 자동 동기화 로직
+        function syncAlcoholPossible(el) {
+            if (el.checked) {
+                document.getElementById('form-alcohol-possible').checked = true;
+            }
+        }
 
         async function loadMonthData() {
             const year = currentDate.getFullYear();
@@ -122,31 +130,25 @@
                         scheduleMap[row.plan_date] = row;
                     });
                 }
-                
                 renderCalendar(year, month);
             } catch (err) {
-                console.error("스케줄 데이터 로드 실패:", err);
-                alert("스케줄 로드 실패: " + err.message);
+                console.error("데이터 로드 실패:", err);
             }
         }
 
         function renderCalendar(year, month) {
             const tbody = document.getElementById('calendar-body');
             tbody.innerHTML = "";
-            
             const firstDayIndex = new Date(year, month, 1).getDay();
             const lastDate = new Date(year, month + 1, 0).getDate();
             const prevLastDate = new Date(year, month, 0).getDate();
-            
             let dateCounter = 1;
             let nextMonthCounter = 1;
-            
             const todayStr = new Date().toISOString().split('T')[0];
             
             for (let i = 0; i < 6; i++) {
                 let tr = document.createElement('tr');
                 let hasCells = false;
-                
                 for (let j = 0; j < 7; j++) {
                     let td = document.createElement('td');
                     let targetYear = year;
@@ -170,11 +172,9 @@
                     
                     const formattedDate = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDateNum).padStart(2, '0')}`;
                     td.setAttribute('data-date', formattedDate);
-                    
                     if (formattedDate === todayStr) td.classList.add('today');
                     
                     let cellHtml = `<div class="cal-num">${targetDateNum}</div><div class="cal-badges">`;
-                    
                     if (scheduleMap[formattedDate]) {
                         const sch = scheduleMap[formattedDate];
                         if (sch.workout_available_min > 0) {
@@ -191,11 +191,9 @@
                     }
                     cellHtml += `</div>`;
                     td.innerHTML = cellHtml;
-                    
                     td.onclick = () => openScheduleForm(formattedDate);
                     tr.appendChild(td);
                 }
-                
                 if (i > 0 && !hasCells) break;
                 tbody.appendChild(tr);
             }
@@ -213,13 +211,14 @@
             if (scheduleMap[dateStr]) {
                 const sch = scheduleMap[dateStr];
                 document.getElementById('form-workout-min').value = sch.workout_available_min || 0;
-                document.getElementById('form-alcohol-possible').value = String(sch.is_alcohol_possible);
-                document.getElementById('form-alcohol-confirmed').value = String(sch.is_alcohol_confirmed);
+                // 체크박스 값 할당 (불리언 타입 대응)
+                document.getElementById('form-alcohol-possible').checked = sch.is_alcohol_possible === true;
+                document.getElementById('form-alcohol-confirmed').checked = sch.is_alcohol_confirmed === true;
                 document.getElementById('form-description').value = sch.description || "";
             } else {
                 document.getElementById('form-workout-min').value = 0;
-                document.getElementById('form-alcohol-possible').value = "false";
-                document.getElementById('form-alcohol-confirmed').value = "false";
+                document.getElementById('form-alcohol-possible').checked = false;
+                document.getElementById('form-alcohol-confirmed').checked = false;
                 document.getElementById('form-description').value = "";
             }
             bModal.show();
@@ -228,8 +227,9 @@
         async function saveSchedule() {
             const plan_date = document.getElementById('form-plan-date').value;
             const workout_available_min = parseInt(document.getElementById('form-workout-min').value) || 0;
-            const is_alcohol_possible = document.getElementById('form-alcohol-possible').value === "true";
-            const is_alcohol_confirmed = document.getElementById('form-alcohol-confirmed').value === "true";
+            // 체크박스의 .checked 속성을 통해 불리언 값 추출
+            const is_alcohol_possible = document.getElementById('form-alcohol-possible').checked;
+            const is_alcohol_confirmed = document.getElementById('form-alcohol-confirmed').checked;
             const description = document.getElementById('form-description').value.trim();
             
             const payload = {
@@ -243,27 +243,16 @@
             
             try {
                 if (scheduleMap[plan_date]) {
-                    const { error } = await _db
-                        .schema('diet')
-                        .from('project_schedules')
-                        .update(payload)
-                        .eq('plan_date', plan_date);
-                        
+                    const { error } = await _db.schema('diet').from('project_schedules').update(payload).eq('plan_date', plan_date);
                     if (error) throw error;
                 } else {
-                    const { error } = await _db
-                        .schema('diet')
-                        .from('project_schedules')
-                        .insert([payload]);
-                        
+                    const { error } = await _db.schema('diet').from('project_schedules').insert([payload]);
                     if (error) throw error;
                 }
-                
                 bModal.hide();
-                alert("스케줄이 성공적으로 반영되었습니다! 🥗🔥");
+                alert("반영 완료! 🥗🔥");
                 loadMonthData();
             } catch (err) {
-                console.error("스케줄 커밋 에러:", err);
                 alert("저장 실패: " + err.message);
             }
         }
