@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>SETTINGS - WORKOUT</title>
+    <title>SETTINGS - WORKOUT v5.3.5</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,7 +12,7 @@
     <div class="container-app">
         <div class="mgmt-card">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 style="color:var(--bp-pink); font-weight:900; margin:0;">⚙️ 공통 설정 관리 (Tab 3)</h5>
+                <h5 style="color:var(--bp-pink); font-weight:900; margin:0;">⚙️ 공통 설정 관리 v5.3.5</h5>
                 <button class="btn btn-sm btn-outline-light" onclick="loadSettings()">Refresh</button>
             </div>
 
@@ -42,8 +42,7 @@
                     <button class="btn-pink px-4" onclick="addSetting()" style="border-radius: 0 10px 10px 0;">등록</button>
                 </div>
 
-                <div id="setting-list-container" class="mt-3">
-                    </div>
+                <div id="setting-list-container" class="mt-3"></div>
             </div>
         </div>
 
@@ -57,13 +56,12 @@
 
     <script src="supabase_config.js"></script>
     <script>
-        // 초기화 시 인증 확인 및 데이터 로드
         async function init() {
-            await checkAuth(); // 인증 상태 확인
+            await checkAuth(); 
             loadSettings();
         }
 
-        // 설정 데이터 불러오기
+        // 설정 데이터 불러오기 및 수정/삭제 듀얼 제어 UI 렌더링
         async function loadSettings() {
             const category = document.getElementById('category-select').value;
             const container = document.getElementById('setting-list-container');
@@ -80,17 +78,54 @@
             }
 
             container.innerHTML = data.map(item => `
-                <div class="d-flex justify-content-between align-items-center mb-2 p-2" 
+                <div id="setting-row-${item.id}" class="d-flex justify-content-between align-items-center mb-2 p-2" 
                      style="background:rgba(255,255,255,0.05); border-radius:10px; border:1px solid #222;">
                     <span style="font-size:0.9rem;">${item.name}</span>
-                    <button class="btn btn-sm btn-outline-danger" 
-                            style="font-size:0.7rem; padding:2px 8px; border-color:rgba(220,53,69,0.5);" 
-                            onclick="deleteSetting(${item.id})">삭제</button>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-secondary" 
+                                style="font-size:0.7rem; padding:2px 8px; border-color:rgba(255,255,255,0.2); color:#ccc;" 
+                                onclick="editSettingInline(${item.id}, '${item.name.replace(/'/g, "\\'")}')">수정</button>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                style="font-size:0.7rem; padding:2px 8px; border-color:rgba(220,53,69,0.5);" 
+                                onclick="deleteSetting(${item.id})">삭제</button>
+                    </div>
                 </div>
             `).join('');
         }
 
-        // 새 설정 추가
+        // 고도화: 수정을 위한 인라인 인풋 폼 스위칭 제어 함수
+        function editSettingInline(id, currentName) {
+            const row = document.getElementById(`setting-row-${id}`);
+            if (!row) return;
+            row.innerHTML = `
+                <div class="d-flex w-100 gap-2 align-items-center">
+                    <input type="text" id="edit-input-${id}" class="form-control form-control-sm" value="${currentName}" 
+                           style="background:#1e1e1e; border:1px solid var(--bp-pink); color:white; font-size:0.9rem;">
+                    <button class="btn btn-sm btn-pink" style="font-size:0.7rem; padding:4px 10px; white-space:nowrap;" onclick="saveSettingUpdate(${id})">저장</button>
+                    <button class="btn btn-sm btn-outline-light" style="font-size:0.7rem; padding:4px 10px; white-space:nowrap;" onclick="loadSettings()">취소</button>
+                </div>
+            `;
+            document.getElementById(`edit-input-${id}`).focus();
+        }
+
+        // 고도화: 인라인에서 수정된 설정 값을 Supabase DB에 실시간 업데이트 처리
+        async function saveSettingUpdate(id) {
+            const input = document.getElementById(`edit-input-${id}`);
+            if (!input) return;
+            const newName = input.value.trim();
+            if (!newName) return alert("명칭을 입력하세요.");
+
+            const { error } = await _db.schema('workout').from('settings')
+                .update({ name: newName })
+                .eq('id', id);
+
+            if (error) {
+                alert("수정 실패: " + error.message);
+                return;
+            }
+            loadSettings();
+        }
+
         async function addSetting() {
             const input = document.getElementById('new-name-input');
             const category = document.getElementById('category-select').value;
@@ -100,7 +135,6 @@
 
             const payload = names.map(name => ({ category, name }));
 
-            // v5.0.0 401 에러 방지: 인증 상태 재확인 후 인서트
             const { error } = await _db.schema('workout').from('settings').insert(payload);
 
             if (error) {
@@ -116,7 +150,6 @@
             loadSettings();
         }
 
-        // 설정 삭제
         async function deleteSetting(id) {
             if(!confirm("정말 삭제하시겠습니까?")) return;
 
