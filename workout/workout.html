@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.4.1</title>
+    <title>BLACKPINK WORKOUT v5.4.2</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -121,18 +121,11 @@
             await refreshActiveList();
         }
 
-        // 고도화 핵심: 테드가 확정한 무게 연산 공식을 전역 스크립트 유틸로 배치
         function calculateFinalWeight(weight, weightTypeId, equipTypeId) {
             let multiplier = 1;
-            // 원판더블(26), 덤벨더블(28), 케이블더블(46) 일 때 중량 x 2 적용
-            if ([26, 28, 46].includes(Number(weightTypeId))) {
-                multiplier = 2;
-            }
+            if ([26, 28, 46].includes(Number(weightTypeId))) multiplier = 2;
             let baseWeight = 0;
-            // 랙&바벨(47), 바벨(48) 일 때 기본 기구 중량 +20kg 적용
-            if ([47, 48].includes(Number(equipTypeId))) {
-                baseWeight = 20;
-            }
+            if ([47, 48].includes(Number(equipTypeId))) baseWeight = 20;
             return (Number(weight) * multiplier) + baseWeight;
         }
 
@@ -172,7 +165,6 @@
             const ex = EX_MASTER.find(e => e.id === exId);
             const { best, bestLog, recentConfigs } = await getDetailedStats(exId);
             
-            // 개선사항 1: QUICK ADD 영역의 BEST 정보에도 최종 중량 수치 실시간 연동
             let bestFinalHtml = '';
             if (bestLog && bestLog.weight) {
                 let finalW = calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
@@ -338,7 +330,6 @@
                 const ex = EX_MASTER.find(e => e.id === block.sets[0].exercise_id);
                 const { best, bestLog } = await getDetailedStats(block.sets[0].exercise_id);
                 
-                // 개선사항 1: 단일 운동 마스터 헤더 영역에 BEST 최종 중량 표기 추가 인젝션
                 let bestFinalHtml = '';
                 if (bestLog && bestLog.weight) {
                     let finalW = calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
@@ -399,7 +390,7 @@
             if(ex.use_machine_speed) inputsHtml += `<input type="number" id="ms-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.machine_speed||''}" placeholder="km/h">`;
             if(ex.use_heart_rate) inputsHtml += `<input type="number" id="hr-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.heart_rate||''}" placeholder="bpm">`;
 
-            // 개선사항 2: 마스터 탭 ON 상태인 필드값(무게/그립/라잉) 텍스트를 파싱하여 실시간으로 노트 상단에 주입
+            // 개선사항 2: 상단 배지에는 지난 세트의 기어 스펙(무게/그립/라잉)만 노출하여 뷰 최적화
             let configTags = [];
             if (ex.use_weight_type) {
                 let wId = s.weight_type || ex.weight_type;
@@ -414,7 +405,9 @@
                 if (lId && SETTINGS_LOOKUP[lId]) configTags.push(SETTINGS_LOOKUP[lId]);
             }
             let metaDetails = configTags.length > 0 ? ` <span style="color:#888; font-weight:normal;">[${configTags.join('/')}]</span>` : '';
-            let noteText = s.note ? ` | 📝 ${s.note}` : '';
+
+            // 개선사항 1: 지난 세트의 순수 노트 히스토리를 텍스트박스 바로 상단에 단독 배치 처리
+            let lastNoteHtml = lastNote ? `<div class="text-secondary mb-1" style="font-size:0.65rem; font-style:italic; color:#aaa; padding-left:2px;">⏮ 지난 노트: "${lastNote}"</div>` : '';
 
             return `
             <div class="swipe-wrapper">
@@ -427,10 +420,16 @@
                         <div class="col-2 fw-bold text-pink text-center set-no-label">${s.set_no}S</div>
                         <div class="col-7">
                             ${exLabelText}
-                            <div class="history-badge">⏮ Last: ${lastStr}${metaDetails}${noteText}</div>
+                            <div class="history-badge mb-2">⏮ Last: ${lastStr}${metaDetails}</div>
                             <div class="d-flex gap-1 mb-1 flex-wrap">${selects}</div>
                             <div class="d-flex gap-1 mb-1">${inputsHtml}</div>
-                            <input type="text" id="n-${s.id}" class="form-control form-control-sm row-input-${s.id}" style="font-size:0.65rem;" value="${s.note||''}" placeholder="노트...">
+                            
+                            <div class="mt-2 w-100">
+                                ${lastNoteHtml}
+                                <textarea id="n-${s.id}" class="form-control form-control-sm row-input-${s.id}" 
+                                          style="font-size:0.65rem; resize:none; overflow-y:hidden; background:#1c1c1c; border:1px solid #333; color:white; height:${isSaved ? '28px' : 'auto'};" 
+                                          placeholder="노트 입력..." rows="1">${s.note||''}</textarea>
+                            </div>
                         </div>
                         <div class="col-3"><button id="save-btn-${s.id}" class="btn-save ${isSaved?'st-saved':''}" onclick="saveSetRow(${s.id})">${isSaved?'SAVED':'SAVE'}</button></div>
                     </div>
@@ -463,7 +462,13 @@
             if(!error) {
                 btn.innerText = 'SAVED'; btn.classList.remove('st-update'); btn.classList.add('st-saved');
                 document.getElementById(`set-row-content-${id}`).classList.add('saved-row');
-                Object.assign(s, up); await refreshActiveList(); // 메타 정보 즉각 갱신을 위해 비동기 렌더링 호출
+                
+                // 개선사항 2: 저장 완료 시 수치와 상관없이 1줄 규격(28px)으로 롤백 복원 강제 집행
+                const ta = document.getElementById(`n-${id}`);
+                if (ta) ta.style.height = '28px';
+
+                Object.assign(s, up); 
+                await refreshActiveList(); 
             }
         }
 
@@ -490,7 +495,39 @@
         async function handleTouchEndSet(e, id, exName) { const diffX = e.changedTouches[0].clientX - touchStartX; if (diffX < -120) { if(confirm("이 세트를 삭제할까요?")) { await _db.schema('workout').from('active_workout').delete().eq('id', id); await refreshActiveList(); } else resetSwipeSet(id); } else resetSwipeSet(id); }
         function resetSwipeSet(id) { document.getElementById(`set-row-content-${id}`).style.transform = 'translateX(0)'; document.getElementById(`del-set-bg-${id}`).style.right = '-100%'; }
 
-        function addSetEventListeners(id) { const row = document.getElementById(`set-row-content-${id}`); if(!row) return; row.querySelectorAll(`.row-input-${id}, select`).forEach(el => { el.addEventListener('input', () => { const btn = document.getElementById(`save-btn-${id}`); if(btn && btn.innerText === 'SAVED') { btn.innerText = 'UPDATE'; btn.classList.add('st-update'); } }); }); }
+        function addSetEventListeners(id) { 
+            const row = document.getElementById(`set-row-content-${id}`); 
+            if(!row) return; 
+            row.querySelectorAll(`.row-input-${id}, select`).forEach(el => { 
+                el.addEventListener('input', () => { 
+                    const btn = document.getElementById(`save-btn-${id}`); 
+                    if(btn && btn.innerText === 'SAVED') { 
+                        btn.innerText = 'UPDATE'; 
+                        btn.classList.add('st-update'); 
+                    } 
+                }); 
+            }); 
+
+            // 개선사항 2: 새로운 입력 및 포커스 시점에 실시간 스크롤하이트 연산 엔진 매핑 바인딩
+            const ta = document.getElementById(`n-${id}`);
+            if (ta) {
+                ta.addEventListener('focus', function() {
+                    this.style.height = 'auto';
+                    this.style.height = this.scrollHeight + 'px';
+                });
+                ta.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = this.scrollHeight + 'px';
+                });
+                ta.addEventListener('blur', function() {
+                    const btn = document.getElementById(`save-btn-${id}`);
+                    if (btn && btn.innerText === 'SAVED') {
+                        this.style.height = '28px';
+                    }
+                });
+            }
+        }
+        
         function makeQField(col, label, input) { return `<div class="${col} mb-2"><label class="label-small">${label}</label>${input}</div>`; }
         function makeQSelect(id, list, def) { return `<select id="${id}" class="form-select">${list.map(v => `<option value="${v.id}" ${v.id==def?'selected':''}>${v.name}</option>`).join('')}</select>`; }
         function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v.id}" ${v.id==current?'selected':''}>${v.name}</option>`).join('')}</select>`; }
