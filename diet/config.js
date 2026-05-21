@@ -24,13 +24,13 @@ const DIET_TABLES = [
 let PENDING_UPDATES = {};
 
 /* ==========================================================================
-   🌐 전역 내비게이션 메뉴 마크업 동적 주입 자동화 엔진
+   📱 모바일 최적화 하단 고정 스크롤 탭바 동적 주입 엔진
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
     const navContainer = document.getElementById('global-nav');
     if (!navContainer) return;
 
-    // 앞으로 메뉴가 추가/삭제되면 여기 배열만 편집하면 끝납니다!
+    // 탭이 추가되거나 이름이 변경되면 여기 배열만 통제하면 즉시 전체 화면에 동기화됩니다.
     const NAVIGATION_MENUS = [
         { id: 'export', name: 'EXPORT', url: 'export.html' },
         { id: 'view', name: 'VIEW & EDIT', url: 'view.html' },
@@ -41,17 +41,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeId = navContainer.getAttribute('data-active');
 
     const navHtml = `
-        <ul class="nav nav-pills nav-fill mb-3">
-            ${NAVIGATION_MENUS.map(menu => `
-                <li class="nav-item">
-                    <button class="nav-link ${menu.id === activeId ? 'active' : ''}" 
-                            onclick="window.location.href='${menu.url}'">
-                        ${menu.name}
-                    </button>
-                </li>
-            `).join('')}
-        </ul>
+        <div class="bottom-nav-container">
+            <ul class="nav nav-pills">
+                ${NAVIGATION_MENUS.map(menu => `
+                    <li class="nav-item">
+                        <button class="nav-link ${menu.id === activeId ? 'active' : ''}" 
+                                onclick="window.location.href='${menu.url}'">
+                            ${menu.name}
+                        </button>
+                    </li>
+                `).join('')}
+            </ul>
+        </div>
     `;
 
     navContainer.innerHTML = navHtml;
+    
+    // 현재 활성화된 활성 탭 메뉴 위치로 자동 가로 스크롤 포커싱 기믹
+    const activeBtn = navContainer.querySelector('.nav-link.active');
+    if (activeBtn) {
+        setTimeout(() => {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }, 150);
+    }
 });
