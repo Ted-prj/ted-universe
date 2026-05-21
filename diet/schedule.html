@@ -32,7 +32,7 @@
                         </tr>
                     </thead>
                     <tbody id="calendar-body">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -50,7 +50,14 @@
                     
                     <div class="mb-3">
                         <label class="form-label-custom">🏋️‍♂️ 운동 가능 시간 (분)</label>
-                        <input type="number" id="form-workout-min" class="form-control form-control-sm bg-dark text-white border-secondary" min="0" value="0">
+                        <input type="number" id="form-workout-min" class="form-control form-control-sm bg-dark text-white border-secondary mb-2" min="0" value="60" inputmode="numeric" pattern="[0-9]*">
+                        
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn-outline flex-fill py-1" style="font-size: 0.65rem;" onclick="setPresetMinutes(30)">30분</button>
+                            <button type="button" class="btn-outline flex-fill py-1" style="font-size: 0.65rem;" onclick="setPresetMinutes(60)">60분</button>
+                            <button type="button" class="btn-outline flex-fill py-1" style="font-size: 0.65rem;" onclick="setPresetMinutes(90)">90분</button>
+                            <button type="button" class="btn-outline flex-fill py-1" style="font-size: 0.65rem;" onclick="setPresetMinutes(120)">120분</button>
+                        </div>
                     </div>
                     
                     <div class="row g-2 mb-3">
@@ -86,7 +93,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentDate = new Date();
-        // 테드 프로젝트의 2026년 타임라인 고정 처리
         if (currentDate.getFullYear() !== 2026) {
             currentDate = new Date(2026, 4, 1);
         }
@@ -98,11 +104,15 @@
             loadMonthData();
         };
 
-        // 음주 확정 체크 시 가능성 자동 동기화 로직
         function syncAlcoholPossible(el) {
             if (el.checked) {
                 document.getElementById('form-alcohol-possible').checked = true;
             }
+        }
+
+        // 프리셋 버튼 터치 시 입력창 값 즉시 변경 엔진
+        function setPresetMinutes(mins) {
+            document.getElementById('form-workout-min').value = mins;
         }
 
         async function loadMonthData() {
@@ -210,13 +220,13 @@
             
             if (scheduleMap[dateStr]) {
                 const sch = scheduleMap[dateStr];
-                document.getElementById('form-workout-min').value = sch.workout_available_min || 0;
-                // 체크박스 값 할당 (불리언 타입 대응)
+                document.getElementById('form-workout-min').value = sch.workout_available_min;
                 document.getElementById('form-alcohol-possible').checked = sch.is_alcohol_possible === true;
                 document.getElementById('form-alcohol-confirmed').checked = sch.is_alcohol_confirmed === true;
                 document.getElementById('form-description').value = sch.description || "";
             } else {
-                document.getElementById('form-workout-min').value = 0;
+                // 데이터가 없는 완전 클린한 새 날짜를 누르면 기본 60분 자동 바인딩!
+                document.getElementById('form-workout-min').value = 60;
                 document.getElementById('form-alcohol-possible').checked = false;
                 document.getElementById('form-alcohol-confirmed').checked = false;
                 document.getElementById('form-description').value = "";
@@ -227,7 +237,6 @@
         async function saveSchedule() {
             const plan_date = document.getElementById('form-plan-date').value;
             const workout_available_min = parseInt(document.getElementById('form-workout-min').value) || 0;
-            // 체크박스의 .checked 속성을 통해 불리언 값 추출
             const is_alcohol_possible = document.getElementById('form-alcohol-possible').checked;
             const is_alcohol_confirmed = document.getElementById('form-alcohol-confirmed').checked;
             const description = document.getElementById('form-description').value.trim();
