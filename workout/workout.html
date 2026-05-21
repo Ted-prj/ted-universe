@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.4.2</title>
+    <title>BLACKPINK WORKOUT v5.4.3</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -197,6 +197,9 @@
             if(ex.use_machine_speed) html += makeQField('col-4', '속도', `<input type="number" id="val-ms" class="form-control" value="${best.machine_speed||''}">`);
             if(ex.use_heart_rate) html += makeQField('col-4', '심박수', `<input type="number" id="q-val-hr" class="form-control" value="${best.heart_rate||''}">`);
             
+            // 고도화: 종목 설정에 포즈 수가 켜져 있으면 QUICK ADD 영역에 포즈 수 인풋 노출 및 패드 주입
+            if(ex.use_pause_count) html += makeQField('col-4', '포즈 수', `<input type="number" id="q-val-pause" class="form-control" value="0" inputmode="numeric" pattern="[0-9]*">`);
+            
             document.getElementById('q-inputs').innerHTML = html;
             handleSupersetSelectChange(document.getElementById('q-superset').value);
         }
@@ -260,6 +263,8 @@
                     level: Number(document.getElementById('q-val-ml')?.value || 0),
                     machine_speed: Number(document.getElementById('val-ms')?.value || 0),
                     heart_rate: Number(document.getElementById('q-val-hr')?.value || 0),
+                    // 고도화: 생성 시점에 포즈 수 바인딩
+                    pause_count: document.getElementById('q-val-pause') ? Number(document.getElementById('q-val-pause').value) : 0,
                     equipment_type: document.getElementById('q-val-equip')?.value ? Number(document.getElementById('q-val-equip').value) : (ex.equipment_type ? Number(ex.equipment_type) : null), 
                     weight_type: document.getElementById('q-val-weight-type')?.value ? Number(document.getElementById('q-val-weight-type').value) : (ex.weight_type ? Number(ex.weight_type) : null),
                     grip_type: document.getElementById('q-val-grip')?.value ? Number(document.getElementById('q-val-grip').value) : (ex.grip_type ? Number(ex.grip_type) : null), 
@@ -381,16 +386,19 @@
             if(ex.use_grip) selects += makeRowSelect(s.id, 'grip', SETTINGS_CODE['GRIP'], s.grip_type);
             if(ex.use_lying) selects += makeRowSelect(s.id, 'lying', SETTINGS_CODE['LYING'], s.lying_type);
 
+            // 고도화: 모든 숫자형 입력창 요소에 모바일 순수 숫자 패드를 띄우기 위한 inputmode="numeric" 및 pattern="[0-9]*" 완전 주입
             let inputsHtml = '';
-            if(ex.use_weight) inputsHtml += `<input type="number" id="w-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.weight||''}" placeholder="kg">`;
-            if(ex.use_reps) inputsHtml += `<input type="number" id="r-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.reps||''}" placeholder="회">`;
-            if(ex.use_set_time) inputsHtml += `<input type="number" id="st-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.set_time||''}" placeholder="sec">`;
-            if(ex.use_exercise_time) inputsHtml += `<input type="number" id="t-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.workout_time||''}" placeholder="min">`;
-            if(ex.use_machine_lv) inputsHtml += `<input type="number" id="ml-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.level||''}" placeholder="Lv">`;
-            if(ex.use_machine_speed) inputsHtml += `<input type="number" id="ms-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.machine_speed||''}" placeholder="km/h">`;
-            if(ex.use_heart_rate) inputsHtml += `<input type="number" id="hr-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.heart_rate||''}" placeholder="bpm">`;
+            if(ex.use_weight) inputsHtml += `<input type="number" id="w-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.weight||''}" placeholder="kg" inputmode="numeric" pattern="[0-9]*">`;
+            if(ex.use_reps) inputsHtml += `<input type="number" id="r-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.reps||''}" placeholder="회" inputmode="numeric" pattern="[0-9]*">`;
+            if(ex.use_set_time) inputsHtml += `<input type="number" id="st-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.set_time||''}" placeholder="sec" inputmode="numeric" pattern="[0-9]*">`;
+            if(ex.use_exercise_time) inputsHtml += `<input type="number" id="t-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.workout_time||''}" placeholder="min" inputmode="numeric" pattern="[0-9]*">`;
+            if(ex.use_machine_lv) inputsHtml += `<input type="number" id="ml-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.level||''}" placeholder="Lv" inputmode="numeric" pattern="[0-9]*">`;
+            if(ex.use_machine_speed) inputsHtml += `<input type="number" id="ms-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.machine_speed||''}" placeholder="km/h" inputmode="numeric" pattern="[0-9]*">`;
+            if(ex.use_heart_rate) inputsHtml += `<input type="number" id="hr-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.heart_rate||''}" placeholder="bpm" inputmode="numeric" pattern="[0-9]*">`;
+            
+            // 고도화: 포즈 수 활성화 상태일 시 실제 입력 세트 카드에 인풋 필드 렌더링 및 숫자 패드 매핑
+            if(ex.use_pause_count) inputsHtml += `<input type="number" id="pc-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.pause_count||'0'}" placeholder="포즈" inputmode="numeric" pattern="[0-9]*">`;
 
-            // 개선사항 2: 상단 배지에는 지난 세트의 기어 스펙(무게/그립/라잉)만 노출하여 뷰 최적화
             let configTags = [];
             if (ex.use_weight_type) {
                 let wId = s.weight_type || ex.weight_type;
@@ -405,8 +413,6 @@
                 if (lId && SETTINGS_LOOKUP[lId]) configTags.push(SETTINGS_LOOKUP[lId]);
             }
             let metaDetails = configTags.length > 0 ? ` <span style="color:#888; font-weight:normal;">[${configTags.join('/')}]</span>` : '';
-
-            // 개선사항 1: 지난 세트의 순수 노트 히스토리를 텍스트박스 바로 상단에 단독 배치 처리
             let lastNoteHtml = lastNote ? `<div class="text-secondary mb-1" style="font-size:0.65rem; font-style:italic; color:#aaa; padding-left:2px;">⏮ 지난 노트: "${lastNote}"</div>` : '';
 
             return `
@@ -458,12 +464,14 @@
             if(ex.use_machine_speed) up.machine_speed = Number(document.getElementById(`ms-${id}`).value);
             if(ex.use_heart_rate) up.heart_rate = Number(document.getElementById(`hr-${id}`).value);
             
+            -- 고도화: 저장 서브밋 단계에서 포즈 수 데이터 추출 및 active_workout 테이블 갱신 추가
+            if(ex.use_pause_count) up.pause_count = Number(document.getElementById(`pc-${id}`).value);
+            
             const { error } = await _db.schema('workout').from('active_workout').update(up).eq('id', id);
             if(!error) {
                 btn.innerText = 'SAVED'; btn.classList.remove('st-update'); btn.classList.add('st-saved');
                 document.getElementById(`set-row-content-${id}`).classList.add('saved-row');
                 
-                // 개선사항 2: 저장 완료 시 수치와 상관없이 1줄 규격(28px)으로 롤백 복원 강제 집행
                 const ta = document.getElementById(`n-${id}`);
                 if (ta) ta.style.height = '28px';
 
@@ -508,7 +516,6 @@
                 }); 
             }); 
 
-            // 개선사항 2: 새로운 입력 및 포커스 시점에 실시간 스크롤하이트 연산 엔진 매핑 바인딩
             const ta = document.getElementById(`n-${id}`);
             if (ta) {
                 ta.addEventListener('focus', function() {
