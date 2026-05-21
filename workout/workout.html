@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.4.0</title>
+    <title>BLACKPINK WORKOUT v5.4.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -96,7 +96,6 @@
     <script>
         checkAuth();
         let EX_MASTER = [];
-        // 고도화: 문자열 결합 구조가 아닌 고유 고정 ID 객체 연동 매핑 리스트 구조로 전면 혁신
         let SETTINGS_CODE = { 'EXERCISE_TYPE':[], 'BODY_PART':[], 'EQUIPMENT':[], 'WEIGHT_SUB_TYPE':[], 'GRIP':[], 'LYING':[] };
         let SETTINGS_LOOKUP = {};
         let ACTIVE_SETS = [];
@@ -122,7 +121,21 @@
             await refreshActiveList();
         }
 
-        // 고도화: 종류 변경 시 문자열 대신 고유 정수 ID 룩업을 거쳐 매끄러운 반응형 뷰 교대 지휘
+        // 고도화 핵심: 테드가 확정한 무게 연산 공식을 전역 스크립트 유틸로 배치
+        function calculateFinalWeight(weight, weightTypeId, equipTypeId) {
+            let multiplier = 1;
+            // 원판더블(26), 덤벨더블(28), 케이블더블(46) 일 때 중량 x 2 적용
+            if ([26, 28, 46].includes(Number(weightTypeId))) {
+                multiplier = 2;
+            }
+            let baseWeight = 0;
+            // 랙&바벨(47), 바벨(48) 일 때 기본 기구 중량 +20kg 적용
+            if ([47, 48].includes(Number(equipTypeId))) {
+                baseWeight = 20;
+            }
+            return (Number(weight) * multiplier) + baseWeight;
+        }
+
         function handleTypeChange(typeId) {
             const buwiWrapper = document.getElementById('q-buwi-wrapper');
             const exWrapper = document.getElementById('q-ex-wrapper');
@@ -143,7 +156,6 @@
             }
         }
 
-        // 고도화: 부위 선택 이력 필터 조회 시 정수형 외래키 기준점으로 타겟 쿼리 변환
         async function handleBuwiChange(buwiId) {
             const currentTypeId = document.getElementById('q-type').value;
             if(SETTINGS_LOOKUP[currentTypeId] === '유산소') return;
@@ -159,9 +171,17 @@
             if(!exId) return;
             const ex = EX_MASTER.find(e => e.id === exId);
             const { best, bestLog, recentConfigs } = await getDetailedStats(exId);
+            
+            // 개선사항 1: QUICK ADD 영역의 BEST 정보에도 최종 중량 수치 실시간 연동
+            let bestFinalHtml = '';
+            if (bestLog && bestLog.weight) {
+                let finalW = calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
+                bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.75rem;">(최종: ${finalW}kg)</span>`;
+            }
+
             document.getElementById('q-stats-area').style.display = 'block';
             document.getElementById('q-best-info').innerHTML = `
-                <b class="text-pink">🏆 BEST: ${best}</b> 
+                <b class="text-pink">🏆 BEST: ${best}${bestFinalHtml}</b> 
                 <small style="color:#666">(${bestLog.date})</small>
                 ${bestLog.note ? `<div style="font-size:0.65rem; color:var(--deep-purple); margin-top:3px; font-style:italic;">📝 ${bestLog.note}</div>` : ''}
             `;
@@ -204,7 +224,6 @@
             }
         }
 
-        // 고도화: 유산소 생성 시 '전신'의 고유 정수 ID를 자동 수집하고, 드랍다운 선택 값들을 정수 구조로 적재
         async function addWorkoutFromQuick() {
             const exId = document.getElementById('q-ex').value;
             if(!exId) return alert("종목을 선택하세요.");
@@ -222,7 +241,7 @@
                 ssId = 'ss_' + Date.now();
                 
                 const targetIds = targetSets.map(s => s.id);
-                const { error: upError } = await _db.schema('workout').from('active_workout').update({ program_id: ssId }).in('id', targetIds);
+                const { error: upError = null } = await _db.schema('workout').from('active_workout').update({ program_id: ssId }).in('id', targetIds);
                 if(upError) return alert("수퍼세트 바인딩 실패: " + upError.message);
             } else {
                 const setsInput = document.getElementById('q-val-sets');
@@ -249,9 +268,10 @@
                     level: Number(document.getElementById('q-val-ml')?.value || 0),
                     machine_speed: Number(document.getElementById('val-ms')?.value || 0),
                     heart_rate: Number(document.getElementById('q-val-hr')?.value || 0),
-                    equipment_type: document.getElementById('q-val-equip')?.value ? Number(document.getElementById('q-val-equip').value) : null, 
-                    grip_type: document.getElementById('q-val-grip')?.value ? Number(document.getElementById('q-val-grip').value) : null, 
-                    lying_type: document.getElementById('q-val-lying')?.value ? Number(document.getElementById('q-val-lying').value) : null, 
+                    equipment_type: document.getElementById('q-val-equip')?.value ? Number(document.getElementById('q-val-equip').value) : (ex.equipment_type ? Number(ex.equipment_type) : null), 
+                    weight_type: document.getElementById('q-val-weight-type')?.value ? Number(document.getElementById('q-val-weight-type').value) : (ex.weight_type ? Number(ex.weight_type) : null),
+                    grip_type: document.getElementById('q-val-grip')?.value ? Number(document.getElementById('q-val-grip').value) : (ex.grip_type ? Number(ex.grip_type) : null), 
+                    lying_type: document.getElementById('q-val-lying')?.value ? Number(document.getElementById('q-val-lying').value) : (ex.lying_type ? Number(ex.lying_type) : null), 
                     program_id: ssId
                 });
             }
@@ -292,7 +312,6 @@
             for(const block of blocks) {
                 const card = document.createElement('div');
                 card.id = `block-card-${block.id}`;
-                // 고도화: 카드 테두리 파트 키 파싱 시 정수형 ID를 문자열 텍스트로 치환 후 테마 변환기 적용
                 card.className = `workout-card border-${getPartKey(SETTINGS_LOOKUP[block.sets[0].body_part])}`;
                 area.appendChild(card);
                 await renderBlockCard(card.id, block);
@@ -312,13 +331,20 @@
             
             const names = [...new Set(block.sets.map(s => s.display_name))];
             const titleText = block.isSuperset ? `🔗 수퍼세트 (${names.join(' + ')})` : names[0];
-            // 고도화: 블록 헤더의 부위 레이블 파싱 구간 룩업 동기화
             const bodyParts = [...new Set(block.sets.map(s => SETTINGS_LOOKUP[s.body_part] || '전신'))].join(', ');
             
             let bestInfoHtml = '';
             if(!block.isSuperset) {
-                const { best } = await getDetailedStats(block.sets[0].exercise_id);
-                bestInfoHtml = `<small class="text-pink" style="font-size:0.6rem;">🏆 BEST: ${best}</small>`;
+                const ex = EX_MASTER.find(e => e.id === block.sets[0].exercise_id);
+                const { best, bestLog } = await getDetailedStats(block.sets[0].exercise_id);
+                
+                // 개선사항 1: 단일 운동 마스터 헤더 영역에 BEST 최종 중량 표기 추가 인젝션
+                let bestFinalHtml = '';
+                if (bestLog && bestLog.weight) {
+                    let finalW = calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
+                    bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.65rem;">(최종: ${finalW}kg)</span>`;
+                }
+                bestInfoHtml = `<small class="text-pink" style="font-size:0.6rem;">🏆 BEST: ${best}${bestFinalHtml}</small>`;
             } else {
                 bestInfoHtml = `<button class="btn btn-xs py-0 px-2" style="font-size:0.6rem; color:var(--neon-pink); border:1px solid rgba(255,63,126,0.4); border-radius:6px; background:rgba(255,63,126,0.05);" onclick="detachSuperset('${block.ssId}')">🔓 그룹 분리하기</button>`;
             }
@@ -359,9 +385,8 @@
             const exLabelText = isSuperset ? `<div class="mb-1 fw-bold" style="font-size:0.65rem; color:var(--bp-pink); opacity:0.9;">[ ${s.display_name} ]</div>` : '';
             
             let selects = '';
-            // 고도화: 로우 카드의 인라인 드랍다운 요소 생성 시 정수형 ID 기반 전용 컴포넌트 유틸로 스위칭
             if(ex.use_equipment) selects += makeRowSelect(s.id, 'equip', SETTINGS_CODE['EQUIPMENT'], s.equipment_type);
-            if(ex.use_weight_type) selects += makeRowSelect(s.id, 'weight-type', SETTINGS_CODE['WEIGHT_SUB_TYPE'], ex.weight_type);
+            if(ex.use_weight_type) selects += makeRowSelect(s.id, 'weight-type', SETTINGS_CODE['WEIGHT_SUB_TYPE'], s.weight_type || ex.weight_type);
             if(ex.use_grip) selects += makeRowSelect(s.id, 'grip', SETTINGS_CODE['GRIP'], s.grip_type);
             if(ex.use_lying) selects += makeRowSelect(s.id, 'lying', SETTINGS_CODE['LYING'], s.lying_type);
 
@@ -374,6 +399,23 @@
             if(ex.use_machine_speed) inputsHtml += `<input type="number" id="ms-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.machine_speed||''}" placeholder="km/h">`;
             if(ex.use_heart_rate) inputsHtml += `<input type="number" id="hr-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.heart_rate||''}" placeholder="bpm">`;
 
+            // 개선사항 2: 마스터 탭 ON 상태인 필드값(무게/그립/라잉) 텍스트를 파싱하여 실시간으로 노트 상단에 주입
+            let configTags = [];
+            if (ex.use_weight_type) {
+                let wId = s.weight_type || ex.weight_type;
+                if (wId && SETTINGS_LOOKUP[wId]) configTags.push(SETTINGS_LOOKUP[wId]);
+            }
+            if (ex.use_grip) {
+                let gId = s.grip_type || ex.grip_type;
+                if (gId && SETTINGS_LOOKUP[gId]) configTags.push(SETTINGS_LOOKUP[gId]);
+            }
+            if (ex.use_lying) {
+                let lId = s.lying_type || ex.lying_type;
+                if (lId && SETTINGS_LOOKUP[lId]) configTags.push(SETTINGS_LOOKUP[lId]);
+            }
+            let metaDetails = configTags.length > 0 ? ` <span style="color:#888; font-weight:normal;">[${configTags.join('/')}]</span>` : '';
+            let noteText = s.note ? ` | 📝 ${s.note}` : '';
+
             return `
             <div class="swipe-wrapper">
                 <div class="swipe-del-bg" id="del-set-bg-${s.id}">DELETE 🗑️</div>
@@ -385,7 +427,7 @@
                         <div class="col-2 fw-bold text-pink text-center set-no-label">${s.set_no}S</div>
                         <div class="col-7">
                             ${exLabelText}
-                            <div class="history-badge">⏮ Last: ${lastStr} ${lastNote ? ' | 📝 '+lastNote : ''}</div>
+                            <div class="history-badge">⏮ Last: ${lastStr}${metaDetails}${noteText}</div>
                             <div class="d-flex gap-1 mb-1 flex-wrap">${selects}</div>
                             <div class="d-flex gap-1 mb-1">${inputsHtml}</div>
                             <input type="text" id="n-${s.id}" class="form-control form-control-sm row-input-${s.id}" style="font-size:0.65rem;" value="${s.note||''}" placeholder="노트...">
@@ -396,7 +438,6 @@
             </div>`;
         }
 
-        // 고도화: 세트 행 저장 시 드랍다운에서 선택된 명칭의 고유 ID(Integer) 숫자를 추출하여 무결성 동기화
         async function saveSetRow(id) {
             const btn = document.getElementById(`save-btn-${id}`);
             const s = ACTIVE_SETS.find(x => x.id === id);
@@ -405,6 +446,7 @@
                 status: 'SAVED', 
                 note: document.getElementById(`n-${id}`).value, 
                 equipment_type: document.getElementById(`sel-equip-${id}`)?.value ? Number(document.getElementById(`sel-equip-${id}`).value) : null, 
+                weight_type: document.getElementById(`sel-weight-type-${id}`)?.value ? Number(document.getElementById(`sel-weight-type-${id}`).value) : null, 
                 grip_type: document.getElementById(`sel-grip-${id}`)?.value ? Number(document.getElementById(`sel-grip-${id}`).value) : null, 
                 lying_type: document.getElementById(`sel-lying-${id}`)?.value ? Number(document.getElementById(`sel-lying-${id}`).value) : null 
             };
@@ -421,7 +463,7 @@
             if(!error) {
                 btn.innerText = 'SAVED'; btn.classList.remove('st-update'); btn.classList.add('st-saved');
                 document.getElementById(`set-row-content-${id}`).classList.add('saved-row');
-                Object.assign(s, up); updateProgress();
+                Object.assign(s, up); await refreshActiveList(); // 메타 정보 즉각 갱신을 위해 비동기 렌더링 호출
             }
         }
 
@@ -450,7 +492,6 @@
 
         function addSetEventListeners(id) { const row = document.getElementById(`set-row-content-${id}`); if(!row) return; row.querySelectorAll(`.row-input-${id}, select`).forEach(el => { el.addEventListener('input', () => { const btn = document.getElementById(`save-btn-${id}`); if(btn && btn.innerText === 'SAVED') { btn.innerText = 'UPDATE'; btn.classList.add('st-update'); } }); }); }
         function makeQField(col, label, input) { return `<div class="${col} mb-2"><label class="label-small">${label}</label>${input}</div>`; }
-        // 고도화: 드랍다운 옵션 생성 유틸들이 개별 객체의 id와 name 속성을 명확히 분리 매핑하도록 리팩토링
         function makeQSelect(id, list, def) { return `<select id="${id}" class="form-select">${list.map(v => `<option value="${v.id}" ${v.id==def?'selected':''}>${v.name}</option>`).join('')}</select>`; }
         function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v.id}" ${v.id==current?'selected':''}>${v.name}</option>`).join('')}</select>`; }
         function updateProgress() { const saved = ACTIVE_SETS.filter(s => s.status === 'SAVED').length; const pct = ACTIVE_SETS.length ? Math.round((saved/ACTIVE_SETS.length)*100) : 0; document.getElementById('progress-fill').style.width = pct + '%'; document.getElementById('progress-text').innerText = `${saved} / ${ACTIVE_SETS.length} SAVED (${pct}%)`; }
@@ -463,6 +504,47 @@
         
         function toggleFinishArea() { const a = document.getElementById('session-input-area'); a.style.display = a.style.display==='none'?'block':'none'; }
         
+        async function getDetailedStats(exId, setNo = null) {
+            if (typeof _getDetailedStats === 'function') return await _getDetailedStats(exId, setNo);
+            try {
+                const { data: logs } = await _db.schema('workout').from('logs').select('*').eq('exercise_id', exId).order('weight', { ascending: false }).limit(1);
+                let best = "0kg x 0회";
+                let bestLog = { weight: 0, reps: 0, date: '-', note: '', weight_type: null, equipment_type: null };
+                if (logs && logs.length > 0) {
+                    best = `${logs[0].weight}kg x ${logs[0].reps}회`;
+                    bestLog = { 
+                        weight: logs[0].weight, reps: logs[0].reps, 
+                        date: logs[0].workout_date ? logs[0].workout_date.split('T')[0] : '-', note: logs[0].note,
+                        weight_type: logs[0].weight_type, equipment_type: logs[0].equipment_type
+                    };
+                }
+                let lastStr = "이력 없음"; let lastNote = "";
+                const query = _db.schema('workout').from('logs').select('*').eq('exercise_id', exId);
+                if (setNo) query.eq('set_no', setNo);
+                const { data: lastLogs } = await query.order('workout_date', { ascending: false }).limit(1);
+                if (lastLogs && lastLogs.length > 0) {
+                    lastStr = `${lastLogs[0].weight}kg x ${lastLogs[0].reps}회`;
+                    lastNote = lastLogs[0].note || "";
+                }
+                return { best, bestLog, recentConfigs: [], lastStr, lastNote };
+            } catch (e) {
+                return { best: "0kg x 0회", bestLog: {}, recentConfigs: [], lastStr: "이력 없음", lastNote: "" };
+            }
+        }
+
+        function getSmartDate() {
+            const now = new Date(); let targetDate = new Date(now);
+            if (now.getHours() < 6) {
+                if (confirm("새벽 6시 이전입니다. 어제 날짜로 기록하시겠습니까?")) {
+                    targetDate.setDate(now.getDate() - 1);
+                }
+            }
+            const yyyy = targetDate.getFullYear();
+            const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(targetDate.getDate()).padStart(2, '0');
+            return { idStr: `${yyyy}${mm}${dd}`, justDate: `${yyyy}-${mm}-${dd}`, full: targetDate.toISOString() };
+        }
+
         async function processFinalSave() {
             if(ACTIVE_SETS.some(s => s.status === 'TEMP')) return alert("저장 안 된 세트가 있음!");
             const smartDate = getSmartDate();
