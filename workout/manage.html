@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>MANAGE - WORKOUT v5.2.1</title>
+    <title>MANAGE - WORKOUT v5.4.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -19,7 +19,7 @@
     <div class="container-app">
         <div class="mgmt-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 style="color:var(--bp-pink); font-weight:900; margin:0;">⚙️ 운동 마스터 관리 v5.2.1</h5>
+                <h5 style="color:var(--bp-pink); font-weight:900; margin:0;">⚙️ 운동 마스터 관리 v5.4.0</h5>
                 <div class="d-flex gap-2">
                     <button id="btn-master-delete" class="btn-delete" onclick="prepareDelete()">삭제</button>
                     <button class="btn btn-sm btn-outline-light" onclick="resetMgmtTab()">Refresh</button>
@@ -93,13 +93,18 @@
     <script>
         checkAuth();
         let EX_MASTER = [];
+        // 고도화: 문자열 텍스트가 아닌 { id, name } 오브젝트 배열 구조로 마스터 데이터 규격 변경
         let SETTINGS_CODE = { 'EXERCISE_TYPE':[], 'BODY_PART':[], 'EQUIPMENT':[], 'WEIGHT_SUB_TYPE':[], 'GRIP':[], 'LYING':[] };
+        let SETTINGS_LOOKUP = {};
 
         async function init() {
             const { data: sData } = await _db.schema('workout').from('settings').select('*');
             if(sData) {
                 Object.keys(SETTINGS_CODE).forEach(k => SETTINGS_CODE[k] = []);
-                sData.forEach(s => { if(SETTINGS_CODE[s.category]) SETTINGS_CODE[s.category].push(s.name); });
+                sData.forEach(s => { 
+                    SETTINGS_LOOKUP[s.id] = s.name; // 실시간 이름 출력을 위한 사전 객체 적재
+                    if(SETTINGS_CODE[s.category]) SETTINGS_CODE[s.category].push({ id: s.id, name: s.name }); 
+                });
             }
             const { data: eData } = await _db.schema('workout').from('exercises').select('*').order('name');
             EX_MASTER = eData || [];
@@ -108,7 +113,8 @@
 
         function initMgmtUI() {
             const exSel = document.getElementById('mgmt-ex-select');
-            exSel.innerHTML = '<option value="">-- 신규 등록 --</option>' + EX_MASTER.map(e => `<option value="${e.id}">${e.name} (${e.body_part || '유산소'})</option>`).join('');
+            // 고도화: 종목 선택 대화상자 렌더링 시 정수형 외래키 부위 ID를 사전에서 추적하여 명칭 출력
+            exSel.innerHTML = '<option value="">-- 신규 등록 --</option>' + EX_MASTER.map(e => `<option value="${e.id}">${e.name} (${SETTINGS_LOOKUP[e.body_part] || '유산소'})</option>`).join('');
             fillDropdown('exercise_type', 'EXERCISE_TYPE');
             fillDropdown('body_part', 'BODY_PART');
             fillDropdown('equipment_type', 'EQUIPMENT');
@@ -117,9 +123,10 @@
             fillDropdown('lying_type', 'LYING');
         }
 
+        // 고도화: 정규화 매핑 스펙에 맞추어 option 태그의 value에 텍스트가 아닌 정수 ID를 할당하도록 개조
         function fillDropdown(id, category, currentVal = '') {
             const list = SETTINGS_CODE[category] || [];
-            let html = list.map(v => `<option value="${v}" ${v === currentVal ? 'selected' : ''}>${v}</option>`).join('');
+            let html = list.map(v => `<option value="${v.id}" ${Number(v.id) === Number(currentVal) ? 'selected' : ''}>${v.name}</option>`).join('');
             html += '<option value="ADD">추가...</option>';
             const el = document.getElementById(id);
             if(el) el.innerHTML = html;
@@ -154,7 +161,7 @@
 
             ['use_exercise_time', 'use_weight', 'use_set_no', 'use_reps', 'use_set_time', 'use_heart_rate', 'use_machine_lv', 'use_machine_speed'].forEach(f => {
                 const el = document.getElementById(f);
-                if(el) el.checked = e[f] === true; // 확실하게 true일 때만 체크
+                if(el) el.checked = e[f] === true; 
             });
         }
 
@@ -166,7 +173,6 @@
             fillDropdown(selectId, category, value);
         }
 
-        // --- 탭2.a.3 삭제 및 마이그레이션 로직 ---
         async function prepareDelete() {
             const id = document.getElementById('mgmt-ex-select').value;
             if(!id) return;
@@ -183,6 +189,7 @@
             const oldId = document.getElementById('mgmt-ex-select').value;
             const newId = document.getElementById('migration-ex-select').value;
             const newEx = EX_MASTER.find(e => e.id === newId);
+            // 외래키 릴레이션 마이그레이션 실행 (newEx.body_part는 이제 올바른 정수형 ID임)
             const { error } = await _db.schema('workout').from('logs').update({ exercise_id: newId, display_name: newEx.name, body_part: newEx.body_part }).eq('exercise_id', oldId);
             if(error) return alert("이전 실패: " + error.message);
             executeFinalDelete(oldId);
@@ -197,11 +204,16 @@
 
         function hideMigration() { document.getElementById('migration-overlay').style.display = 'none'; }
 
-        // --- 탭2.a.4 저장 로직 보강 ---
         async function saveMasterData() {
             const id = document.getElementById('mgmt-ex-select').value;
             const name = document.getElementById('mgmt-name').value;
             if(!name) return alert("종목명을 입력하세요.");
+
+            // 고도화: NOT NULL 제약조건이 걸린 부위 ID 무결성 방어 체크 추가
+            const bodyPartVal = await getVal('body_part', 'add-body_part', 'BODY_PART');
+            if(!bodyPartVal && document.getElementById('use_body_part').checked) {
+                return alert("운동 부위를 올바르게 지정해주세요.");
+            }
 
             const payload = {
                 name: name,
@@ -210,7 +222,7 @@
                 use_exercise_type: document.getElementById('use_exercise_type').checked,
                 exercise_type: await getVal('exercise_type', 'add-exercise_type', 'EXERCISE_TYPE'),
                 use_body_part: document.getElementById('use_body_part').checked,
-                body_part: await getVal('body_part', 'add-body_part', 'BODY_PART'),
+                body_part: bodyPartVal,
                 use_equipment: document.getElementById('use_equipment').checked,
                 equipment_type: await getVal('equipment_type', 'add-equipment', 'EQUIPMENT'),
                 use_weight_type: document.getElementById('use_weight_type').checked,
@@ -220,7 +232,6 @@
                 use_lying: document.getElementById('use_lying').checked,
                 lying_type: await getVal('lying_type', 'add-lying', 'LYING'),
                 
-                // Group B 항목들: 명시적으로 boolean 값 할당
                 use_exercise_time: !!document.getElementById('use_exercise_time').checked,
                 use_weight: !!document.getElementById('use_weight').checked,
                 use_set_no: !!document.getElementById('use_set_no').checked,
@@ -231,7 +242,7 @@
                 use_machine_speed: !!document.getElementById('use_machine_speed').checked
             };
 
-            console.log("저장할 데이터(Payload):", payload); // 디버깅용
+            console.log("저장할 데이터(Payload):", payload);
 
             const res = id ? await _db.schema('workout').from('exercises').update(payload).eq('id', id) : await _db.schema('workout').from('exercises').insert([{...payload, id: 'ex_' + Date.now()}]);
             
@@ -243,15 +254,19 @@
             }
         }
 
+        // 고도화: 인라인 신규 명칭 벌크 삽입 시, 새로 발급된 정수형 시퀀스 ID값을 리턴하도록 완전 리팩토링
         async function getVal(selId, textId, category) {
             const sel = document.getElementById(selId);
-            if(!sel) return '';
+            if(!sel) return null;
             if(sel.value === 'ADD') {
                 const newVal = document.getElementById(textId).value.trim();
-                if(newVal) await _db.schema('workout').from('settings').insert([{category, name: newVal}]);
-                return newVal;
+                if(newVal) {
+                    const { data, error } = await _db.schema('workout').from('settings').insert([{category, name: newVal}]).select();
+                    if(!error && data && data.length > 0) return data[0].id; // 생성된 ID 반환
+                }
+                return null;
             }
-            return sel.value;
+            return sel.value ? Number(sel.value) : null;
         }
 
         function resetMgmtTab() {

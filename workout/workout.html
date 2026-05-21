@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.3.4</title>
+    <title>BLACKPINK WORKOUT v5.4.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -96,33 +96,44 @@
     <script>
         checkAuth();
         let EX_MASTER = [];
+        // 고도화: 문자열 결합 구조가 아닌 고유 고정 ID 객체 연동 매핑 리스트 구조로 전면 혁신
         let SETTINGS_CODE = { 'EXERCISE_TYPE':[], 'BODY_PART':[], 'EQUIPMENT':[], 'WEIGHT_SUB_TYPE':[], 'GRIP':[], 'LYING':[] };
+        let SETTINGS_LOOKUP = {};
         let ACTIVE_SETS = [];
         let touchStartX = 0;
 
         async function init() {
             const { data: sData } = await _db.schema('workout').from('settings').select('*');
-            if(sData) sData.forEach(s => { if(SETTINGS_CODE[s.category]) SETTINGS_CODE[s.category].push(s.name); });
+            if (sData) {
+                sData.forEach(s => { 
+                    SETTINGS_LOOKUP[s.id] = s.name;
+                    if(SETTINGS_CODE[s.category]) {
+                        SETTINGS_CODE[s.category].push({ id: s.id, name: s.name });
+                    }
+                });
+            }
             const { data: eData } = await _db.schema('workout').from('exercises').select('*').order('name');
             EX_MASTER = eData || [];
 
-            document.getElementById('q-type').innerHTML = SETTINGS_CODE['EXERCISE_TYPE'].map(t => `<option value="${t}">${t}</option>`).join('');
-            document.getElementById('q-buwi').innerHTML = SETTINGS_CODE['BODY_PART'].map(b => `<option value="${b}">${b}</option>`).join('');
+            document.getElementById('q-type').innerHTML = SETTINGS_CODE['EXERCISE_TYPE'].map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            document.getElementById('q-buwi').innerHTML = SETTINGS_CODE['BODY_PART'].map(b => `<option value="${b.id}">${b.name}</option>`).join('');
             
             handleTypeChange(document.getElementById('q-type').value);
             await refreshActiveList();
         }
 
-        function handleTypeChange(type) {
+        // 고도화: 종류 변경 시 문자열 대신 고유 정수 ID 룩업을 거쳐 매끄러운 반응형 뷰 교대 지휘
+        function handleTypeChange(typeId) {
             const buwiWrapper = document.getElementById('q-buwi-wrapper');
             const exWrapper = document.getElementById('q-ex-wrapper');
             const exSelect = document.getElementById('q-ex');
+            const typeName = SETTINGS_LOOKUP[typeId];
             
-            if (type === '유산소') {
+            if (typeName === '유산소') {
                 if(buwiWrapper) buwiWrapper.style.display = 'none';
                 if(exWrapper) { exWrapper.classList.remove('col-4'); exWrapper.classList.add('col-8'); }
                 document.getElementById('buwi-last-date').innerText = '';
-                const filtered = EX_MASTER.filter(e => e.exercise_type === '유산소');
+                const filtered = EX_MASTER.filter(e => Number(e.exercise_type) === Number(typeId));
                 exSelect.innerHTML = filtered.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
                 if(filtered.length > 0) loadQuickExStats(filtered[0].id);
             } else {
@@ -132,12 +143,13 @@
             }
         }
 
-        async function handleBuwiChange(buwi) {
-            const currentType = document.getElementById('q-type').value;
-            if(currentType === '유산소') return;
-            const { data } = await _db.schema('workout').from('logs').select('workout_date').eq('body_part', buwi).order('workout_date', {ascending:false}).limit(1);
+        // 고도화: 부위 선택 이력 필터 조회 시 정수형 외래키 기준점으로 타겟 쿼리 변환
+        async function handleBuwiChange(buwiId) {
+            const currentTypeId = document.getElementById('q-type').value;
+            if(SETTINGS_LOOKUP[currentTypeId] === '유산소') return;
+            const { data } = await _db.schema('workout').from('logs').select('workout_date').eq('body_part', buwiId).order('workout_date', {ascending:false}).limit(1);
             document.getElementById('buwi-last-date').innerText = data?.[0] ? `최근 운동: ${data[0].workout_date.split('T')[0]}` : '이력 없음';
-            const filtered = EX_MASTER.filter(e => e.body_part === buwi && e.exercise_type === currentType);
+            const filtered = EX_MASTER.filter(e => Number(e.body_part) === Number(buwiId) && Number(e.exercise_type) === Number(currentTypeId));
             document.getElementById('q-ex').innerHTML = filtered.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
             if(filtered.length > 0) loadQuickExStats(filtered[0].id);
             else { document.getElementById('q-stats-area').style.display = 'none'; document.getElementById('q-inputs').innerHTML = ''; }
@@ -171,11 +183,9 @@
             if(ex.use_exercise_time) html += makeQField('col-4', '전체시간(m)', `<input type="number" id="q-val-time" class="form-control" value="${best.time||''}">`);
             if(ex.use_machine_lv) html += makeQField('col-4', '강도', `<input type="number" id="q-val-ml" class="form-control" value="${best.machine_lv||''}">`);
             if(ex.use_machine_speed) html += makeQField('col-4', '속도', `<input type="number" id="val-ms" class="form-control" value="${best.machine_speed||''}">`);
-            // 고도화: 마스터 플래그에 따라 QUICK ADD에 심박수 입력필드 동적 렌더링 주입
             if(ex.use_heart_rate) html += makeQField('col-4', '심박수', `<input type="number" id="q-val-hr" class="form-control" value="${best.heart_rate||''}">`);
             
             document.getElementById('q-inputs').innerHTML = html;
-            
             handleSupersetSelectChange(document.getElementById('q-superset').value);
         }
 
@@ -194,12 +204,14 @@
             }
         }
 
+        // 고도화: 유산소 생성 시 '전신'의 고유 정수 ID를 자동 수집하고, 드랍다운 선택 값들을 정수 구조로 적재
         async function addWorkoutFromQuick() {
             const exId = document.getElementById('q-ex').value;
             if(!exId) return alert("종목을 선택하세요.");
             const ex = EX_MASTER.find(e => e.id === exId);
             
-            const currentType = document.getElementById('q-type').value;
+            const currentTypeId = document.getElementById('q-type').value;
+            const currentTypeName = SETTINGS_LOOKUP[currentTypeId];
             const supersetTarget = document.getElementById('q-superset').value;
             let ssId = '';
             let sets = 1;
@@ -217,12 +229,18 @@
                 sets = setsInput ? (parseInt(setsInput.value) || 1) : 1;
             }
             
+            let targetBodyPartId = ex.body_part;
+            if (currentTypeName === '유산소') {
+                const jeonshin = SETTINGS_CODE['BODY_PART'].find(b => b.name === '전신');
+                if(jeonshin) targetBodyPartId = jeonshin.id;
+            }
+            
             const payload = [];
             for(let i=1; i<=sets; i++) {
                 payload.push({ 
                     exercise_id: exId, 
                     display_name: ex.name, 
-                    body_part: currentType === '유산소' ? '전신' : ex.body_part, 
+                    body_part: targetBodyPartId, 
                     set_no: i, status: 'TEMP', unit: ex.unit || 'kg',
                     weight: Number(document.getElementById('q-val-weight')?.value || 0), 
                     reps: Number(document.getElementById('q-val-reps')?.value || 0), 
@@ -230,11 +248,10 @@
                     workout_time: Number(document.getElementById('q-val-time')?.value || 0),
                     level: Number(document.getElementById('q-val-ml')?.value || 0),
                     machine_speed: Number(document.getElementById('val-ms')?.value || 0),
-                    // 고도화: QUICK ADD 생성 페이로드에 심박수 바인딩 추가
                     heart_rate: Number(document.getElementById('q-val-hr')?.value || 0),
-                    equipment_type: document.getElementById('q-val-equip')?.value, 
-                    grip_type: document.getElementById('q-val-grip')?.value, 
-                    lying_type: document.getElementById('q-val-lying')?.value, 
+                    equipment_type: document.getElementById('q-val-equip')?.value ? Number(document.getElementById('q-val-equip').value) : null, 
+                    grip_type: document.getElementById('q-val-grip')?.value ? Number(document.getElementById('q-val-grip').value) : null, 
+                    lying_type: document.getElementById('q-val-lying')?.value ? Number(document.getElementById('q-val-lying').value) : null, 
                     program_id: ssId
                 });
             }
@@ -275,7 +292,8 @@
             for(const block of blocks) {
                 const card = document.createElement('div');
                 card.id = `block-card-${block.id}`;
-                card.className = `workout-card border-${getPartKey(block.sets[0].body_part)}`;
+                // 고도화: 카드 테두리 파트 키 파싱 시 정수형 ID를 문자열 텍스트로 치환 후 테마 변환기 적용
+                card.className = `workout-card border-${getPartKey(SETTINGS_LOOKUP[block.sets[0].body_part])}`;
                 area.appendChild(card);
                 await renderBlockCard(card.id, block);
             }
@@ -294,7 +312,8 @@
             
             const names = [...new Set(block.sets.map(s => s.display_name))];
             const titleText = block.isSuperset ? `🔗 수퍼세트 (${names.join(' + ')})` : names[0];
-            const bodyParts = [...new Set(block.sets.map(s => s.body_part))].join(', ');
+            // 고도화: 블록 헤더의 부위 레이블 파싱 구간 룩업 동기화
+            const bodyParts = [...new Set(block.sets.map(s => SETTINGS_LOOKUP[s.body_part] || '전신'))].join(', ');
             
             let bestInfoHtml = '';
             if(!block.isSuperset) {
@@ -340,6 +359,7 @@
             const exLabelText = isSuperset ? `<div class="mb-1 fw-bold" style="font-size:0.65rem; color:var(--bp-pink); opacity:0.9;">[ ${s.display_name} ]</div>` : '';
             
             let selects = '';
+            // 고도화: 로우 카드의 인라인 드랍다운 요소 생성 시 정수형 ID 기반 전용 컴포넌트 유틸로 스위칭
             if(ex.use_equipment) selects += makeRowSelect(s.id, 'equip', SETTINGS_CODE['EQUIPMENT'], s.equipment_type);
             if(ex.use_weight_type) selects += makeRowSelect(s.id, 'weight-type', SETTINGS_CODE['WEIGHT_SUB_TYPE'], ex.weight_type);
             if(ex.use_grip) selects += makeRowSelect(s.id, 'grip', SETTINGS_CODE['GRIP'], s.grip_type);
@@ -352,7 +372,6 @@
             if(ex.use_exercise_time) inputsHtml += `<input type="number" id="t-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.workout_time||''}" placeholder="min">`;
             if(ex.use_machine_lv) inputsHtml += `<input type="number" id="ml-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.level||''}" placeholder="Lv">`;
             if(ex.use_machine_speed) inputsHtml += `<input type="number" id="ms-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.machine_speed||''}" placeholder="km/h">`;
-            // 고도화: 마스터 플래그에 따라 진행 중인 세트 로우카드에 심박수 입력필드 바인딩 및 표시
             if(ex.use_heart_rate) inputsHtml += `<input type="number" id="hr-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.heart_rate||''}" placeholder="bpm">`;
 
             return `
@@ -377,6 +396,7 @@
             </div>`;
         }
 
+        // 고도화: 세트 행 저장 시 드랍다운에서 선택된 명칭의 고유 ID(Integer) 숫자를 추출하여 무결성 동기화
         async function saveSetRow(id) {
             const btn = document.getElementById(`save-btn-${id}`);
             const s = ACTIVE_SETS.find(x => x.id === id);
@@ -384,9 +404,9 @@
             const up = { 
                 status: 'SAVED', 
                 note: document.getElementById(`n-${id}`).value, 
-                equipment_type: document.getElementById(`sel-equip-${id}`)?.value, 
-                grip_type: document.getElementById(`sel-grip-${id}`)?.value, 
-                lying_type: document.getElementById(`sel-lying-${id}`)?.value 
+                equipment_type: document.getElementById(`sel-equip-${id}`)?.value ? Number(document.getElementById(`sel-equip-${id}`).value) : null, 
+                grip_type: document.getElementById(`sel-grip-${id}`)?.value ? Number(document.getElementById(`sel-grip-${id}`).value) : null, 
+                lying_type: document.getElementById(`sel-lying-${id}`)?.value ? Number(document.getElementById(`sel-lying-${id}`).value) : null 
             };
             
             if(ex.use_weight) up.weight = Number(document.getElementById(`w-${id}`).value);
@@ -395,7 +415,6 @@
             if(ex.use_exercise_time) up.workout_time = Number(document.getElementById('t-' + id).value);
             if(ex.use_machine_lv) up.level = Number(document.getElementById(`ml-${id}`).value);
             if(ex.use_machine_speed) up.machine_speed = Number(document.getElementById(`ms-${id}`).value);
-            // 고도화: 인풋창의 변경된 심박수 데이터를 추출하여 active_workout 테이블에 업데이트 반영
             if(ex.use_heart_rate) up.heart_rate = Number(document.getElementById(`hr-${id}`).value);
             
             const { error } = await _db.schema('workout').from('active_workout').update(up).eq('id', id);
@@ -431,8 +450,9 @@
 
         function addSetEventListeners(id) { const row = document.getElementById(`set-row-content-${id}`); if(!row) return; row.querySelectorAll(`.row-input-${id}, select`).forEach(el => { el.addEventListener('input', () => { const btn = document.getElementById(`save-btn-${id}`); if(btn && btn.innerText === 'SAVED') { btn.innerText = 'UPDATE'; btn.classList.add('st-update'); } }); }); }
         function makeQField(col, label, input) { return `<div class="${col} mb-2"><label class="label-small">${label}</label>${input}</div>`; }
-        function makeQSelect(id, list, def) { return `<select id="${id}" class="form-select">${list.map(v => `<option value="${v}" ${v===def?'selected':''}>${v}</option>`).join('')}</select>`; }
-        function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v}" ${v===current?'selected':''}>${v}</option>`).join('')}</select>`; }
+        // 고도화: 드랍다운 옵션 생성 유틸들이 개별 객체의 id와 name 속성을 명확히 분리 매핑하도록 리팩토링
+        function makeQSelect(id, list, def) { return `<select id="${id}" class="form-select">${list.map(v => `<option value="${v.id}" ${v.id==def?'selected':''}>${v.name}</option>`).join('')}</select>`; }
+        function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v.id}" ${v.id==current?'selected':''}>${v.name}</option>`).join('')}</select>`; }
         function updateProgress() { const saved = ACTIVE_SETS.filter(s => s.status === 'SAVED').length; const pct = ACTIVE_SETS.length ? Math.round((saved/ACTIVE_SETS.length)*100) : 0; document.getElementById('progress-fill').style.width = pct + '%'; document.getElementById('progress-text').innerText = `${saved} / ${ACTIVE_SETS.length} SAVED (${pct}%)`; }
         
         function updateSupersetDropdown() { 
