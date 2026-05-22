@@ -108,7 +108,7 @@
                         <i class="fa-solid fa-tags me-1"></i> 취향 컬렉션별 분석 (대분류)
                     </div>
                     <div class="card-body-custom">
-                        <table class="table table-custom text-center" id="mainCatStatsTable">
+                        <table class="table table-custom text-center" id="mainCatStatsTable" style="table-layout: fixed; width: 100%;">
                             <thead>
                                 <tr>
                                     <th class="text-start" style="width: 50%;">대분류 장르</th>
@@ -134,7 +134,7 @@
                         <i class="fa-solid fa-wand-magic me-1"></i> 시크릿 목적별 분석 (맞춤)
                     </div>
                     <div class="card-body-custom">
-                        <table class="table table-custom text-center" id="customCatStatsTable">
+                        <table class="table table-custom text-center" id="customCatStatsTable" style="table-layout: fixed; width: 100%;">
                             <thead>
                                 <tr>
                                     <th class="text-start" style="width: 50%;">비밀 맞춤 분류</th>
@@ -176,11 +176,10 @@
 
         async function fetchAllDashboardData() {
             try {
-                // 👑 [명세 반영 장치] 아코디언 서랍의 하위 도서 리스트마저도 오직 완료된(is_closed = true) 도서만 긁어오도록 제어!
                 const { data: bData } = await _db
                     .from('books')
                     .select('round_no, title, main_category, custom_category')
-                    .eq('is_closed', true); // 👑 완벽 차단 잠금
+                    .eq('is_closed', true); 
                 
                 globalBooksData = bData || [];
                 
@@ -214,15 +213,16 @@
                 }
                 data.forEach(row => {
                     const recentRatingHtml = row.recent_rating > 0 ? `<span class="text-warning">★</span>${row.recent_rating.toFixed(1)}` : `<span class="text-muted">-</span>`;
+                    const avgScoreDisplay = row.avg_rating ? row.avg_rating.toFixed(1) : '0.0';
                     tbody.innerHTML += `
                         <tr>
-                            <td class="fw-bold text-pink text-start">
+                            <td class="fw-bold text-pink text-start text-truncate" style="max-width:0;">
                                 <img src="images/${row.image_name}" class="princess-avatar-sm" onerror="this.src='images/default_princess.png'">
                                 ${row.member_name}
                             </td>
                             <td class="text-start text-wrap" style="word-break: break-all; font-size:0.85rem;">${row.recent_book}</td>
                             <td>${recentRatingHtml}</td>
-                            <td><div class="rating-badge">★${row.avg_rating.toFixed(1)}</div></td>
+                            <td><div class="rating-badge">★${avgScoreDisplay}</div></td>
                         </tr>
                     `;
                 });
@@ -232,7 +232,6 @@
             }
         }
 
-        // 선장의 지침대로 수정 내용 없음 (진행/완료 상관없이 공식 매핑된 모든 선정 도서를 투명하게 역추적 카운트)
         async function fetchRecommendationCrownStats() {
             const container = document.getElementById("recommendationCrownContainer");
             try {
@@ -283,9 +282,9 @@
                             
                             <div id="panel_${safeId}" class="d-none mt-2 px-3 py-2 rounded-3" style="background-color: #150910; border: 1px dashed rgba(255,105,180,0.25);">
                                 ${count > 0 ? matchingBooks.map(b => `
-                                    <div class="small py-1 text-white d-flex align-items-center" style="font-size:0.82rem; font-weight:400;">
+                                    <div class="small py-1 text-white d-flex align-items-center" style="font-size:0.82rem; font-weight:400; width:100%; min-width:0;">
                                         <span class="text-warning fw-bold me-2 flex-shrink-0">[제 ${b.round_no}회차]</span>
-                                        <span class="text-truncate">${b.title}</span>
+                                        <span class="text-truncate" style="flex-grow:1; min-width:0; text-align:left;">${b.title}</span>
                                     </div>
                                 `).join('') : `<div class="small text-muted py-1 text-center">선정 히스토리가 없사옵니다. 🥀</div>`}
                             </div>
@@ -306,7 +305,8 @@
                     return;
                 }
                 data.forEach(row => {
-                    const ratingHtml = row.avg_rating > 0 ? `<div class="rating-badge" style="background: transparent; border: 1px solid var(--neon-pink); color: var(--neon-pink); box-shadow: none;">★${row.avg_rating.toFixed(1)}</div>` : `<span class="text-muted">평가전</span>`;
+                    const scoreVal = row.avg_rating ? row.avg_rating.toFixed(1) : '0.0';
+                    const ratingHtml = row.avg_rating > 0 ? `<div class="rating-badge" style="background: transparent; border: 1px solid var(--neon-pink); color: var(--neon-pink); box-shadow: none;">★${scoreVal}</div>` : `<span class="text-muted">평가전</span>`;
                     tbody.innerHTML += `
                         <tr>
                             <td><span class="badge bg-dark border border-secondary">제 ${row.round_no}회차</span></td>
@@ -321,6 +321,7 @@
             }
         }
 
+        // 👑 파트 4: 대분류 통계 사냥 (Null-Guard 안전장치 및 초압축 Flex 트렁케이트 전격 이식)
         async function fetchMainCategoryStats() {
             try {
                 const { data, error } = await _db.from('v_main_category_stats').select('*');
@@ -334,27 +335,30 @@
                 data.forEach((row, index) => {
                     const safeId = `main_cat_${index}`;
                     const targetBooks = globalBooksData.filter(b => b.main_category === row.main_category);
+                    
+                    // 👑 [수정사항 1 방어막]: avg_rating이 null일 경우 주저 없이 '평가전' 표출 처리하여 크래시 방지!
+                    const avgScoreDisplay = row.avg_rating ? '★' + Number(row.avg_rating).toFixed(1) : '평가전';
 
                     tbody.innerHTML += `
                         <tr onclick="toggleAccordion('panel_${safeId}', 'arrow_panel_${safeId}')" style="cursor: pointer; transition: background 0.2s;">
-                            <td class="text-start fw-medium" style="color: #fff !important;">
+                            <td class="text-start fw-medium text-truncate" style="color: #fff !important; max-width:0;">
                                 <i class="fa-regular fa-star text-pink me-1" style="color:var(--bp-pink);"></i>${row.main_category}
                                 <i class="fa-solid fa-chevron-down ms-1 text-muted" id="arrow_panel_${safeId}" style="font-size:0.7rem; transition: transform 0.2s;"></i>
                             </td>
                             <td><span class="count-badge">${row.book_count}권</span></td>
-                            <td><span class="rating-badge">★${row.avg_rating.toFixed(1)}</span></td>
+                            <td><span class="rating-badge">${avgScoreDisplay}</span></td>
                         </tr>
                         <tr id="panel_${safeId}" class="d-none" style="background-color: #190B13;">
-                            <td colspan="3" class="text-start px-3 py-2" style="border-bottom: 1px solid rgba(255,0,127,0.15) !important;">
+                            <td colspan="3" class="text-start px-3 py-2" style="border-bottom: 1px solid rgba(255,0,127,0.15) !important; max-width:0;">
                                 ${targetBooks.length > 0 ? targetBooks.map(b => {
                                     const score = globalBookRatings[`${b.round_no}-${b.title}`];
-                                    const scoreStr = score > 0 ? `★${score.toFixed(1)}` : '평가전';
+                                    const scoreStr = score > 0 ? `★${Number(score).toFixed(1)}` : '평가전';
                                     return `
-                                        <div class="d-flex justify-content-between align-items-center small py-1" style="border-bottom: 1px solid rgba(255,255,255,0.04); font-size:0.82rem;">
-                                            <span class="text-white text-truncate" style="max-width: 75%;">
-                                                <span class="text-warning fw-bold me-1">[제 ${b.round_no}회차]</span> ${b.title}
-                                            </span>
-                                            <span class="badge bg-dark border border-pink text-pink" style="font-size: 0.68rem;">${scoreStr}</span>
+                                        <div class="d-flex justify-content-between align-items-center small py-1" style="border-bottom: 1px solid rgba(255,255,255,0.04); font-size:0.82rem; width:100%; min-width:0;">
+                                            <div class="text-white text-truncate me-2" style="flex-grow:1; min-width:0; text-align:left;">
+                                                <span class="text-warning fw-bold me-1">[제 ${b.round_no}회차]</span>${b.title}
+                                            </div>
+                                            <span class="badge bg-dark border border-pink text-pink flex-shrink-0" style="font-size: 0.68rem;">${scoreStr}</span>
                                         </div>
                                     `;
                                 }).join('') : `<div class="small text-muted text-center py-1">소속 도서 정보 가공전</div>`}
@@ -368,6 +372,7 @@
             }
         }
 
+        // 👑 파트 5: 맞춤 분류 통계 사냥 (Null-Guard 안전장치 및 초압축 Flex 트렁케이트 전격 이식)
         async function fetchCustomCategoryStats() {
             try {
                 const { data, error } = await _db.from('v_custom_category_stats').select('*');
@@ -381,26 +386,29 @@
                 data.forEach((row, index) => {
                     const safeId = `custom_cat_${index}`;
                     const targetBooks = globalBooksData.filter(b => b.custom_category === row.custom_category);
+                    
+                    // 👑 [수정사항 1 방어막]: 동일한 null 크래시 파괴 조치 방어선 수립!
+                    const avgScoreDisplay = row.avg_rating ? '★' + Number(row.avg_rating).toFixed(1) : '평가전';
 
                     tbody.innerHTML += `
                         <tr onclick="toggleAccordion('panel_${safeId}', 'arrow_panel_${safeId}')" style="cursor: pointer; transition: background 0.2s;">
-                            <td class="text-start fw-medium" style="color: #fff !important;"><i class="fa-solid fa-sparkles me-1" style="color:var(--neon-pink);"></i>${row.custom_category}
+                            <td class="text-start fw-medium text-truncate" style="color: #fff !important; max-width:0;"><i class="fa-solid fa-sparkles me-1" style="color:var(--neon-pink);"></i>${row.custom_category}
                                 <i class="fa-solid fa-chevron-down ms-1 text-muted" id="arrow_panel_${safeId}" style="font-size:0.7rem; transition: transform 0.2s;"></i>
                             </td>
                             <td><span class="count-badge">${row.book_count}권</span></td>
-                            <td><span class="rating-badge">★${row.avg_rating.toFixed(1)}</span></td>
+                            <td><span class="rating-badge">${avgScoreDisplay}</span></td>
                         </tr>
                         <tr id="panel_${safeId}" class="d-none" style="background-color: #190B13;">
-                            <td colspan="3" class="text-start px-3 py-2" style="border-bottom: 1px solid rgba(255,0,127,0.15) !important;">
+                            <td colspan="3" class="text-start px-3 py-2" style="border-bottom: 1px solid rgba(255,0,127,0.15) !important; max-width:0;">
                                 ${targetBooks.length > 0 ? targetBooks.map(b => {
                                     const score = globalBookRatings[`${b.round_no}-${b.title}`];
-                                    const scoreStr = score > 0 ? `★${score.toFixed(1)}` : '평가전';
+                                    const scoreStr = score > 0 ? `★${Number(score).toFixed(1)}` : '평가전';
                                     return `
-                                        <div class="d-flex justify-content-between align-items-center small py-1" style="border-bottom: 1px solid rgba(255,255,255,0.04); font-size:0.82rem;">
-                                            <span class="text-white text-truncate" style="max-width: 75%;">
-                                                <span class="text-warning fw-bold me-1">[제 ${b.round_no}회차]</span> ${b.title}
-                                            </span>
-                                            <span class="badge bg-dark border border-pink text-pink" style="font-size: 0.68rem;">${scoreStr}</span>
+                                        <div class="d-flex justify-content-between align-items-center small py-1" style="border-bottom: 1px solid rgba(255,255,255,0.04); font-size:0.82rem; width:100%; min-width:0;">
+                                            <div class="text-white text-truncate me-2" style="flex-grow:1; min-width:0; text-align:left;">
+                                                <span class="text-warning fw-bold me-1">[제 ${b.round_no}회차]</span>${b.title}
+                                            </div>
+                                            <span class="badge bg-dark border border-pink text-pink flex-shrink-0" style="font-size: 0.68rem;">${scoreStr}</span>
                                         </div>
                                     `;
                                 }).join('') : `<div class="small text-muted text-center py-1">소속 도서 정보 가공전</div>`}
