@@ -239,3 +239,56 @@ body {
 /* 삭제 전용 스타일 */
 .btn-delete { background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 0.75rem; font-weight: 800; padding: 5px 12px; display: none; }
 .migration-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; align-items: center; justify-content: center; padding: 20px; }
+
+/* ==========================================================================
+   📱 횡방향 가로스크롤 고성능 Bottom Tab Bar CSS 섹션 (WORKOUT 프로젝트 이식)
+   ========================================================================== */
+.bottom-nav-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-top: 1px solid #222;
+    padding: 8px 10px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 1050;
+}
+.bottom-nav-container .nav-pills {
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: nowrap; /* 자동 줄바꿈 강제 억제 기믹 */
+    overflow-x: auto;  /* 가로 스크롤 활성화 */
+    -webkit-overflow-scrolling: touch; /* iOS 모바일 터치 가속 최적화 */
+}
+/* 메뉴 개수가 늘어나도 스크롤 유연성을 지탱하는 최소 너비 확보 */
+.bottom-nav-container .nav-item {
+    flex: 1 0 auto; 
+    min-width: 90px; 
+    text-align: center;
+}
+.bottom-nav-container .nav-pills::-webkit-scrollbar {
+    display: none; /* 지저분한 브라우저 기본 스크롤바 강제 숨김 조치 */
+}
+.bottom-nav-container .nav-link {
+    color: var(--bp-pink);
+    font-weight: 800;
+    border-radius: 12px;
+    padding: 8px 5px;
+    font-size: 0.72rem;
+    background: transparent;
+    border: none;
+    width: 96%;
+    margin: 0 auto;
+    display: block;
+    text-decoration: none;
+    text-align: center;
+}
+.bottom-nav-container .nav-link.active {
+    background-color: var(--bp-pink) !important;
+    color: #000 !important;
+}

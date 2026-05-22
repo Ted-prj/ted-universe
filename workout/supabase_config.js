@@ -57,3 +57,47 @@ async function getDetailedStats(exId, setNo = null) {
         lastNote: lastLog?.note || '' 
     };
 }
+
+/* ==========================================================================
+   📱 WORKOUT 앱 전역 모바일 횡방향 스크롤 내비게이션 동적 주입 엔진 (v5.4.9)
+   ========================================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+    const navContainer = document.getElementById('global-nav');
+    if (!navContainer) return;
+
+    // 💡 테드! 이제 여기 배열에 한 줄만 추가하면 모든 탭 화면에 실시간 동기화 완료!
+    const NAVIGATION_MENUS = [
+        { id: 'workout', name: 'WORKOUT', url: 'workout.html' },
+        { id: 'manage', name: 'MANAGE', url: 'manage.html' },
+        { id: 'settings', name: 'SETTINGS', url: 'settings.html' },
+        { id: 'logs', name: 'LOGS', url: 'logs.html' },
+        // 💖 명세 반영: 테드의 DIET HUB 외부 깃허브 주소 파이프라인 연결
+        { id: 'diethub', name: 'DIET HUB', url: 'https://ted-prj.github.io/ted-finance/diet' }
+    ];
+
+    const activeId = navContainer.getAttribute('data-active');
+
+    const navHtml = `
+        <div class="bottom-nav-container">
+            <ul class="nav nav-pills">
+                ${NAVIGATION_MENUS.map(menu => `
+                    <li class="nav-item">
+                        <a href="${menu.url}" class="nav-link ${menu.id === activeId ? 'active' : ''}">
+                            ${menu.name}
+                        </a>
+                    </li>
+                `).join('')}
+            </ul>
+        </div>
+    `;
+
+    navContainer.innerHTML = navHtml;
+    
+    // 현재 활성화된 활성 탭 메뉴 위치로 자동 가로 스크롤 포커싱 기믹
+    const activeBtn = navContainer.querySelector('.nav-link.active');
+    if (activeBtn) {
+        setTimeout(() => {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }, 150);
+    }
+});
