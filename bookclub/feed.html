@@ -82,7 +82,8 @@
                 const { data } = await _db
                     .from('members')
                     .select('member_name, image_name')
-                    .eq('is_active', true);
+                    .eq('is_active', true)
+                    .order('member_name', { ascending: true });
                     
                 if (data) {
                     allMembersList = data.map(m => m.member_name);
@@ -90,37 +91,57 @@
                         memberImages[m.member_name] = m.image_name;
                     });
                 }
-            } catch(e) { console.error("아바타 동기화 실패:", e); }
+            } catch(e) { console.error("멤버 아바타 동기화 실패:", e); }
         }
 
+        // 👑 [Zoro's Pure Flag Targeting Engine] is_closed 기반 자동 추적 라우터
         async function loadTargetFeeds() {
             try {
+                // 1. 토론 완료 여부가 아직 진행 중(is_closed = false)인 이번 회차 방 추적
                 const { data: bookData } = await _db
                     .from('books')
                     .select('round_no, title')
+                    .eq('is_closed', false) // 👑 선장의 오더 조건 직격 매핑
                     .order('round_no', { ascending: false })
                     .limit(1);
                 
-                const latestRound = bookData && bookData.length > 0 ? bookData[0].round_no : 0;
-                const latestTitle = bookData && bookData.length > 0 ? bookData[0].title : '지정 도서 없음';
+                let currentRound = 0;
+                let currentTitle = '지정 도서 없음';
 
-                const nextRound = latestRound + 1;
+                if (bookData && bookData.length > 0) {
+                    currentRound = bookData[0].round_no;
+                    currentTitle = bookData[0].title;
+                } else {
+                    // 혹시라도 전부 클로즈 된 예외 상황인 경우 최고 차수 폴백 방어막
+                    const { data: maxBook } = await _db.from('books').select('round_no, title').order('round_no', { ascending: false }).limit(1);
+                    if (maxBook && maxBook.length > 0) {
+                        currentRound = maxBook[0].round_no;
+                        currentTitle = maxBook[0].title;
+                    }
+                }
 
+                // 2. 다음 티타임 추천 타겟 차수 연산 (명세 2번: false 차수 + 1)
+                const nextRound = currentRound + 1;
+
+                // 타이틀 텍스트 동적 프리필 조율
                 document.getElementById("recHeaderTitle").innerHTML = `<i class="fa-solid fa-paper-plane"></i> 💌 다음 (제 ${nextRound}회차) 티타임 추천 릴레이 현황`;
-                document.getElementById("reviewHeaderTitle").innerHTML = `<i class="fa-solid fa-comments"></i> ☕ 이번 (제 ${latestRound}회차) 티타임 공주님들의 생생 별점 & 총평`;
+                document.getElementById("reviewHeaderTitle").innerHTML = `<i class="fa-solid fa-comments"></i> ☕ 이번 (제 ${currentRound}회차) 티타임 공주님들의 생생 별점 & 총평`;
 
-                // 👑 날짜 연산코드 매핑 조각을 완전 제거하고 순수 차수(nextRound)를 던져서 추적!
+                // 비동기 병렬 데이터 사냥 개시
                 await Promise.all([
                     fetchFilteredRecommendations(nextRound),
-                    fetchFilteredReviews(latestRound, latestTitle)
+                    fetchFilteredReviews(currentRound, currentTitle)
                 ]);
 
-                renderPrincessNagging(nextRound, latestRound);
+                // 탈영병 색출 잔소리 기믹 구동 (명세 1번 전달)
+                renderPrincessNagging(nextRound, currentRound);
 
-            } catch (err) { console.error("피드 차수 바인딩 에러:", err); }
+            } catch (err) {
+                console.error("차수 피드 바인딩 에러:", err);
+            }
         }
 
-        // 👑 target_round를 기준으로 후보작 리스트 정밀 타격 스캔
+        // 명세 2번: is_closed가 false인 차수 + 1차수 추천 항목 수색
         async function fetchFilteredRecommendations(nextRoundNum) {
             const container = document.getElementById("recommendationFeedList");
             try {
@@ -138,7 +159,7 @@
                     container.innerHTML = `
                         <div class="text-center py-4 text-muted small">
                             <i class="fa-solid fa-envelope-open-text d-block fs-3 mb-2" style="color: rgba(255,105,180,0.3);"></i>
-                            아직 공주님들이 다음 (제 ${nextRoundNum}회차) 티타임 후보작을 내지 않으셨사옵니다.
+                            아직 어떤 공주님도 다음 (제 ${nextRoundNum}회차) 티타임 추천작을 내지 않으셨사옵니다.
                         </div>`;
                     return;
                 }
@@ -169,6 +190,7 @@
             } catch (err) { console.error(err); }
         }
 
+        // 명세 3번: is_closed가 false인 차수의 review_text와 rating_before 표출
         async function fetchFilteredReviews(roundNo, bookTitle) {
             const container = document.getElementById("reviewFeedList");
             try {
@@ -186,23 +208,29 @@
                     container.innerHTML = `
                         <div class="text-center py-4 text-muted small">
                             <i class="fa-solid fa-mug-tea d-block fs-3 mb-2" style="color: rgba(255,105,180,0.3);"></i>
-                            이번 제 ${roundNo}회차 티타임 도서 [${bookTitle}]에 달린 평이 아직 없사옵니다.
+                            이번 제 ${roundNo}회차 티타임 도서 [${bookTitle}]에 <br>달린 토론 전 별점 총평이 아직 없사옵니다. 🎉
                         </div>`;
                     return;
                 }
 
                 container.innerHTML = `
                     <div class="small mb-3 px-2 py-1 rounded bg-black text-center border border-secondary text-truncate" style="color: var(--bp-pink) !important; border-color: rgba(255,105,180,0.2) !important;">
-                        📖 이번 티타임 지정 도서 : <b>${bookTitle}</b>
+                        📖 이번 티타임 도서 : <b>${bookTitle}</b>
                     </div>
                 `;
 
                 data.forEach(item => {
-                    if (item.review_text) {
+                    // 👑 [명세 충족 매킹 조율] reviews_ratings 테이블에서 review_text와 rating_before가 둘 다 무사히 채워진 기지배들만 숙제 완료 처리!
+                    if (item.review_text && item.rating_before !== null) {
                         submittedReviews.push(item.member_name); 
                     }
+                    
                     const avatarFile = memberImages[item.member_name] || 'default_princess.png';
-                    const stars = item.rating ? '★'.repeat(Math.floor(item.rating)) + (item.rating % 1 !== 0 ? '½' : '') : '평가전';
+                    
+                    // 👑 구형 rating 대신 토론 전 평점인 rating_before 기둥으로 스포트라이트 표출 조치!
+                    const score = item.rating_before;
+                    const stars = score !== null ? '★'.repeat(Math.floor(score)) + (score % 1 !== 0 ? '½' : '') : '평가전';
+                    const scoreLabel = score !== null ? score.toFixed(1) : '0';
                     
                     container.innerHTML += `
                         <div class="p-3 mb-2 rounded-3 d-flex align-items-start" style="background-color: #22101A; border: 1px dashed rgba(255,105,180,0.2);">
@@ -210,10 +238,10 @@
                             <div class="w-100">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="fw-bold text-white" style="font-size:0.9rem;">${item.member_name} 공주</span>
-                                    <span class="text-warning fw-bold" style="color: var(--royal-gold) !important; font-size:0.85rem;">${stars} <small style="color:#aaa;">(${item.rating || '0'})</small></span>
+                                    <span class="text-warning fw-bold" style="color: var(--royal-gold) !important; font-size:0.85rem;">${stars} <small style="color:#aaa;">(${scoreLabel})</small></span>
                                 </div>
                                 <p class="text-white m-0 small mt-1" style="line-height:1.4; word-break: break-all; font-weight:400;">
-                                    "${item.review_text || '아직 별점만 남겨두고 수다 장전 중이셔요.'}"
+                                    "${item.review_text || '아직 별점만 던져두고 수다 장전 중이셔요.'}"
                                 </p>
                             </div>
                         </div>
@@ -222,22 +250,27 @@
             } catch (err) { console.error(err); }
         }
 
+        // 명세 1번: is_closed가 false인 차수에 대해 review_text와 rating_before가 없는 공주들 색출
         function renderPrincessNagging(nextRound, roundNo) {
             const container = document.getElementById("naggingContainer");
+            
+            // 다음 차수 추천 릴레이 안 낸 사람 추적
             const missingRecs = allMembersList.filter(m => !submittedRecs.includes(m));
+            // 👑 이번 차수 평점 전 기록이 누락된 기지배 색출 (submittedReviews 필터망 연동)
             const missingReviews = allMembersList.filter(m => !submittedReviews.includes(m));
 
             if (missingRecs.length === 0 && missingReviews.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-2" style="color: #39FF14;">
                         🎉 <b>어머나 대박 사건!! 정예 공주님 전원 숙제 컴플리트!-★</b> <br>
-                        <span style="font-size:0.8rem; color:#fff;">밀린 흔적이 단 하나도 없사옵니다. 고결함 그 자체셔요 💖</span>
+                        <span style="font-size:0.8rem; color:#fff;">밀린 기록이 단 하나도 없사옵니다. 고결함 그 자체셔요 💖</span>
                     </div>
                 `;
                 return;
             }
 
             let html = `<div class="text-start small" style="line-height:1.6;">`;
+            
             if (missingRecs.length > 0) {
                 html += `
                     <div class="mb-2">
@@ -249,17 +282,19 @@
                     </div>
                 `;
             }
+
             if (missingReviews.length > 0) {
                 html += `
                     <div>
-                        <span class="text-warning fw-bold">☕ 이번 (제 ${roundNo}회차) 티타임 총평 꿀 먹은 기지배들 :</span> <br>
+                        <span class="text-warning fw-bold">☕ 이번 (제 ${roundNo}회차) 토론 전 총평/별점 누락 기지배들 :</span> <br>
                         <span class="fw-bold text-white" style="font-size:0.95rem; color:var(--neon-pink) !important;">
                             ${missingReviews.map(m => `🥀${m}`).join(', ')}
                         </span> <br>
-                        <span class="text-muted" style="font-size:0.75rem;">👉 수다는 천상 공주님들이 왜 감상평 굽기는 백지인 것이옵니까?! 어서 채우셔요! 💕</span>
+                        <span class="text-muted" style="font-size:0.75rem;">👉 수다는 천상 공주님들이 왜 감상평이랑 토론 전 별점 굽기는 백지인 것이옵니까?! 어서 채우셔요! 💕</span>
                     </div>
                 `;
             }
+
             html += `</div>`;
             container.innerHTML = html;
         }

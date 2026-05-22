@@ -3,206 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>독한녀들 Book Club - Princess Gate</title>
+    <title>독한녀들 Book Club - Gate</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="style.css">
-
-    <style>
-        .gate-container {
-            min-height: 95vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-
-        .gate-box {
-            width: 100%;
-            max-width: 400px;
-            padding: 2rem 1.5rem;
-            background-color: var(--bp-card-bg);
-            border: 2px solid var(--neon-pink);
-            border-radius: 24px;
-            box-shadow: 0 0 30px rgba(255, 0, 127, 0.25);
-            text-align: center;
-        }
-
-        .homework-item {
-            background-color: rgba(255, 0, 127, 0.08);
-            border: 1px dashed var(--bp-pink);
-            border-radius: 12px;
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-            color: #FFFFFF !important;
-            font-size: 0.9rem;
-            text-align: left;
-            display: flex;
-            align-items: center;
-        }
-
-        .homework-item i {
-            color: var(--neon-pink) !important;
-            font-size: 1.1rem;
-            margin-right: 0.5rem;
-        }
-
-        .welcome-sparkle {
-            color: #FFD700;
-            font-size: 1.5rem;
-            animation: spinSparkle 2s infinite linear;
-            display: inline-block;
-        }
-
-        @keyframes spinSparkle {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
 </head>
-<body>
-
-    <div class="container gate-container">
-        <div class="gate-box">
+<body style="background-color: var(--bp-black); overflow: hidden;"> <div class="login-container container-fluid px-3">
+        <div class="login-box p-3" style="max-width: 350px; border-radius: 24px;">
             
-            <div class="mb-3">
-                <img id="gatePrincessAvatar" src="images/default_princess.png" class="princess-avatar-lg" style="width: 100px; height: 100px;" onerror="this.src='images/default_princess.png'">
-                <h4 class="mt-2 fw-bold text-white"><span id="gatePrincessName" style="color: var(--bp-pink);">공주</span>님 환영하옵니다 👑</h4>
-            </div>
+            <h2 class="brand-logo mb-1" style="font-size: 1.9rem;">독한녀들 <span>👑</span></h2>
+            <p class="text-muted mb-3" style="font-size: 0.78rem;">러블리 공주님들의 시크릿 티타임 관문</p>
 
-            <div id="gateLoading" class="py-4">
-                <div class="spinner-border spinner-pink" role="status"></div>
-                <p class="text-muted small mt-2">비밀 기록장 검문 중이옵니다...</p>
-            </div>
-
-            <div id="stageHomework" class="d-none">
-                <div class="alert alert-danger bg-dark text-danger border-0 small fw-bold mb-3" style="color: var(--neon-pink) !important;">
-                    <i class="fa-solid fa-rose-sharp fa-flower"></i> 아직 기록장에 남기지 않은 발자취가 있사옵니다! 🥀
+            <div class="p-2 mb-3 rounded text-start" id="upcomingNoticeBox"
+                 style="background: rgba(255, 0, 127, 0.04); border: 1px dashed var(--neon-pink); font-size: 0.78rem;">
+                <div class="fw-bold text-pink mb-1" style="font-size: 0.8rem;">
+                    <i class="fa-solid fa-mug-hot me-1 text-warning"></i> 다음 티타임 예정 스펙 예고
                 </div>
-                
-                <div id="homeworkContainer" class="mb-4">
-                    </div>
-
-                <a href="write.html" class="btn btn-login mb-2">
-                    <i class="fa-solid fa-pen-line"></i> 비밀 기록장 작성하러 가기 💕
-                </a>
-                <a href="feed.html" class="btn btn- राजकुमारी text-muted small w-100 d-block mt-2" style="color: var(--text-muted) !important; text-decoration: underline !important;">
-                    나중에 쓸래요 (피드 입장하기)
-                </a>
-            </div>
-
-            <div id="stagePerfect" class="d-none py-2">
-                <div class="mb-3">
-                    <span class="welcome-sparkle">✨</span>
-                    <span class="welcome-sparkle">💖</span>
-                    <span class="welcome-sparkle">✨</span>
+                <div id="upcomingContent" class="text-white" style="line-height: 1.4;">
+                    <span class="text-muted">실시간 예고장을 수색 중이옵니다...</span>
                 </div>
-                <h5 class="fw-bold" style="color: #39FF14; text-shadow: 0 0 8px rgba(57,255,20,0.4);">어머나! 완벽해라! 😍</h5>
-                <p class="text-white small px-2 mt-2 mb-4" style="line-height:1.6;">
-                    우리 고결한 <b><span id="perfectPrincessName" class="text-pink" style="color: var(--bp-pink);">공주</span>님</b>께선 모든 숙제를 우아하게 끝마치셨사옵니다! <br>밀린 발자취가 단 하나도 없사옵니다 최고요-★
-                </p>
-                <a href="feed.html" class="btn btn-login" style="background: linear-gradient(135deg, #00FF7F, #39FF14); box-shadow: 0 4px 15px rgba(57,255,20,0.3);">
-                    <i class="fa-solid fa-door-open me-1"></i> 시크릿 피드 라운지 입장하기
-                </a>
             </div>
 
+            <div class="mb-3 text-start">
+                <label class="form-label text-pink small fw-bold mb-1"><i class="fa-solid fa-wand-magic-sparkles"></i> 오늘 수다 떨 공주님은 누구? 💕</label>
+                <select class="form-select form-select-custom py-2" id="memberSelect" style="font-size:0.9rem;">
+                    <option value="">정예 공주님을 선택하셔요 🎀</option>
+                </select>
+            </div>
+
+            <div class="mb-3 text-start">
+                <label class="form-label text-pink small fw-bold mb-1"><i class="fa-solid fa-key"></i> 시크릿 시그널 (숫자 4자리) 🤫</label>
+                <input type="password" class="form-control form-control-custom password-box-princess text-center py-2 text-white fw-bold" 
+                       id="passwordInput" maxlength="4" placeholder="••••" inputmode="numeric" pattern="[0-9]*" onkeyup="handlePasswordAutoSubmit()">
+            </div>
+
+            <p class="text-muted m-0 px-1" style="font-size: 0.72rem; line-height: 1.3;">
+                ※ 공주님 선택 후 패스워드 4자리를 입력하시면 <br>시크릿 아지트로 자동 입장되옵니다.
+            </p>
+            
+            <div id="errorMessageArea" class="text-danger fw-bold mt-2 d-none" style="font-size: 0.75rem;"></div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase_config.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // 무인증 축출
-        checkAuth();
+        // 로그인 상태라면 문지기 패스하고 바로 피드로 대피
+        if (localStorage.getItem("login_member")) {
+            window.location.href = "feed.html";
+        }
 
         document.addEventListener("DOMContentLoaded", () => {
-            const memberName = getLoggedInMember();
-            const imageFile = localStorage.getItem("login_member_image") || 'default_princess.png';
-            
-            document.getElementById("gatePrincessName").textContent = memberName;
-            document.getElementById("gatePrincessAvatar").src = `images/${imageFile}`;
-
-            // 벼락검문 개시
-            scanPrincessHomework(memberName);
+            fetchGateActiveMembers();
+            fetchUpcomingTeatimeSpec();
         });
 
-        async function scanPrincessHomework(memberName) {
-            const loadingDiv = document.getElementById("gateLoading");
-            const hwStage = document.getElementById("stageHomework");
-            const perfectStage = document.getElementById("stagePerfect");
-            const hwContainer = document.getElementById("homeworkContainer");
-
+        // 1. 드롭다운 바인딩을 위한 활성 공주 명단 로드
+        async function fetchGateActiveMembers() {
+            const select = document.getElementById("memberSelect");
             try {
-                // 1. 타겟 다음 달(M+1) 매핑 계산
-                const now = new Date();
-                const future = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-                const nextMonthStr = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}`;
+                const { data, error } = await _db
+                    .from('members')
+                    .select('member_name')
+                    .eq('is_active', true)
+                    .order('member_name', { ascending: true });
+
+                if (error) throw error;
                 
-                // 2. 현재 입력된 최신 토론 차수(M) 추출
-                const { data: bookData } = await _db
-                    .from('books')
-                    .select('round_no')
-                    .order('round_no', { ascending: false })
-                    .limit(1);
-                const latestRound = bookData && bookData.length > 0 ? bookData[0].round_no : 0;
-
-                // 3. (M+1)월 추천 도서 데이터 있나 스캔
-                const { data: recData } = await _db
-                    .from('recommendations')
-                    .select('id')
-                    .eq('member_name', memberName)
-                    .eq('target_month', nextMonthStr);
-                const hasRec = recData && recData.length > 0;
-
-                // 4. 이번 달(M) 최신 차수 리뷰 달았나 스캔
-                let hasReview = true;
-                if (latestRound > 0) {
-                    const { data: revData } = await _db
-                        .from('reviews_ratings')
-                        .select('id')
-                        .eq('member_name', memberName)
-                        .eq('round_no', latestRound)
-                        .not('review_text', 'is', null);
-                    hasReview = revData && revData.length > 0;
-                }
-
-                // 검사 완료 후 로딩 바 숨기기
-                loadingDiv.classList.add("d-none");
-
-                // 분기점 돌파
-                if (!hasRec || !hasReview) {
-                    // 미이행 숙제가 발견되었을 때
-                    hwContainer.innerHTML = "";
-                    if (!hasRec) {
-                        hwContainer.innerHTML += `
-                            <div class="homework-item">
-                                <i class="fa-solid fa-circle-exclamation text-danger"></i>
-                                <div><b>다음 달(${future.getMonth() + 1}월) 추천 도서</b>를 아직 안 고르셨사옵니다!</div>
-                            </div>
-                        `;
-                    }
-                    if (!hasReview) {
-                        hwContainer.innerHTML += `
-                            <div class="homework-item">
-                                <i class="fa-solid fa-circle-exclamation text-danger"></i>
-                                <div><b>이번 달(${latestRound}회차) 토론 총평</b>을 작성하지 않으셨사옵니다!</div>
-                            </div>
-                        `;
-                    }
-                    hwStage.classList.remove("d-none");
-                } else {
-                    // 미인계마냥 완벽하게 다 제출했을 때 깨발랄 소환!
-                    document.getElementById("perfectPrincessName").textContent = memberName;
-                    perfectStage.classList.remove("d-none");
-                }
-
+                data.forEach(m => {
+                    select.innerHTML += `<option value="${m.member_name}">${m.member_name} 공주님</option>`;
+                });
             } catch (err) {
-                console.error("검문소 모듈 치명적 에러:", err);
-                loadingDiv.innerHTML = `<p class="text-danger small">안전 검문 실패. 관리자 선장에게 문의하셔요.</p>`;
+                console.error(err);
+                document.getElementById("errorMessageArea").textContent = "⚠️ 공주님 명단을 불러오지 못했사옵니다.";
+                document.getElementById("errorMessageArea").classList.remove("d-none");
+            }
+        }
+
+        // 👑 [Zoro's Gate Spec Scanner] is_closed가 false인 차기 지정도서 완벽 스캔 및 제로스크롤 배치 빌더
+        async function fetchUpcomingTeatimeSpec() {
+            const contentZone = document.getElementById("upcomingContent");
+            try {
+                const { data, error } = await _db
+                    .from('books')
+                    .select('round_no, title, discussion_date, location')
+                    .eq('is_closed', false) // 👑 선장의 핵심 필터링 명세 조건
+                    .order('round_no', { ascending: true });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    contentZone.innerHTML = `<div class="text-muted" style="font-size:0.72rem;">현재 예정된 다음 티타임 일정이 없사옵니다. ☕</div>`;
+                    return;
+                }
+
+                // 여러 개의 책이 한 차수에 동시 선정될 수 있으므로 유연하게 압축 결합!
+                const targetRound = data[0].round_no;
+                const formattedDate = data[0].discussion_date ? data[0].discussion_date : '미정';
+                const formattedLocation = data[0].location ? data[0].location : '장소 미정 📍';
+                
+                // 도서 제목들만 쏙 발라내기
+                const bookTitles = data.map(b => `<b>[${b.title}]</b>`).join(', ');
+
+                // 모바일 해상도 터짐을 방지하기 위한 슬림 한줄 스펙 압축 레이아웃 렌더링!
+                contentZone.innerHTML = `
+                    <div class="text-white" style="font-size:0.8rem; font-weight:500;">
+                        <span class="text-warning fw-bold">[제 ${targetRound}회차]</span> ${bookTitles}
+                    </div>
+                    <div class="d-flex justify-content-between mt-1 text-muted" style="font-size:0.72rem; color: var(--text-muted) !important;">
+                        <span>📅 날짜 : ${formattedDate}</span>
+                        <span class="text-truncate" style="max-width:50%;">📍 장소 : ${formattedLocation}</span>
+                    </div>
+                `;
+            } catch (err) {
+                console.error("예고장 스캔 실패:", err);
+                contentZone.innerHTML = `<span class="text-danger" style="font-size:0.72rem;">예고편 로드 실패</span>`;
+            }
+        }
+
+        // 4자리 입력 시 번개처럼 패스워드 자동 일치 검증 처리 기믹
+        async function handlePasswordAutoSubmit() {
+            const name = document.getElementById("memberSelect").value;
+            const pwd = document.getElementById("passwordInput").value;
+            const errZone = document.getElementById("errorMessageArea");
+
+            if (!name) {
+                if (pwd.length > 0) {
+                    alert("공주님 이름부터 셀렉트 박스에서 고르셔요!");
+                    document.getElementById("passwordInput").value = "";
+                }
+                return;
+            }
+
+            // 4자리가 꽉 차는 순간 다이렉트 직격 검증 단행
+            if (pwd.length === 4) {
+                errZone.classList.add("d-none");
+                try {
+                    const { data, error } = await _db
+                        .from('members')
+                        .select('member_name, image_name, password')
+                        .eq('member_name', name)
+                        .eq('password', pwd)
+                        .eq('is_active', true);
+
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        // 일치 확인 시 세션 키 발급 후 입장권 끊기
+                        localStorage.setItem("login_member", data[0].member_name);
+                        localStorage.setItem("login_member_image", data[0].image_name || 'default_princess.png');
+                        
+                        window.location.href = "feed.html";
+                    } else {
+                        errZone.textContent = "❌ 시크릿 시그널 암호가 올바르지 않사옵니다.";
+                        errZone.classList.remove("d-none");
+                        document.getElementById("passwordInput").value = "";
+                        document.getElementById("passwordInput").focus();
+                    }
+                } catch (err) {
+                    console.error(err);
+                    errZone.textContent = "⚠️ 서버 통신 검격 도중 장해 발생.";
+                    errZone.classList.remove("d-none");
+                }
             }
         }
     </script>

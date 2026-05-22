@@ -37,7 +37,7 @@
                         <button type="button" class="btn w-100 p-2 text-start small fw-bold text-warning animate-pulse" 
                                 id="reRecommendBtn" onclick="injectLastUnselectedBook()"
                                 style="background: rgba(255, 215, 0, 0.06); border: 1px dashed var(--royal-gold); border-radius: 10px;">
-                            </button>
+                        </button>
                     </div>
                     
                     <div class="mb-2">
@@ -78,12 +78,13 @@
                         <select class="form-select form-select-custom" id="roundNoSelect" onchange="loadExistingReview()" required>
                             </select>
                     </div>
+
                     <div class="mb-2">
-                        <label class="form-label text-pink small fw-bold">마음의 별점 점수</label>
+                        <label class="form-label text-pink small fw-bold">토론 전 마음의 별점 점수</label>
                         <select class="form-select form-select-custom" id="ratingSelect" required>
                             <option value="5.0">★★★★★ (5.0점 최고여요)</option>
                             <option value="4.5">★★★★☆ (4.5점 아주 좋아용)</option>
-                            <option value="4.0">★★★★ (4.0점 볼만해요)</option>
+                            <option value="4.0" selected>★★★★ (4.0점 볼만해요)</option>
                             <option value="3.5">★★★☆ (3.5점 낫배드)</option>
                             <option value="3.0">★★★ (3.0점 평범해요)</option>
                             <option value="2.5">★★☆ (2.5점 아쉬워요)</option>
@@ -91,10 +92,12 @@
                             <option value="1.0">★ (1.0점 시간낭비)</option>
                         </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label text-pink small fw-bold">솔직 담백 총평 스토리</label>
                         <textarea class="form-control form-control-custom" id="reviewText" rows="3" placeholder="공주님들의 뇌리에 남은 감상을 적어주셔요." required></textarea>
                     </div>
+
                     <button type="submit" class="btn btn-princess w-100" id="reviewSubmitBtn">
                         <i class="fa-solid fa-cloud-arrow-up"></i> 리뷰 & 별점 굽기 완료
                     </button>
@@ -112,8 +115,6 @@
         checkAuth();
         let currentRecId = null;
         let latestRound = 0; 
-        
-        // 👑 낙방작 캐싱용 비밀 전역 오브젝트 자물쇠
         let lastUnselectedBookObj = null;
 
         document.addEventListener("DOMContentLoaded", async () => {
@@ -123,8 +124,6 @@
             
             await loadRounds();
             setupTargetRounds();
-            
-            // 👑 공주님의 가장 최근 탈락작이 있는지 실시간 사냥 가동
             await huntLastUnselectedRecommendation();
 
             loadExistingRecommendation();
@@ -160,7 +159,6 @@
             } catch(e) { console.error(e); }
         }
 
-        // 👑 [Zoro's Failure Hunter] 낙방하여 억울하게 처박힌 가장 최신 추천 이력을 역추적하는 로직
         async function huntLastUnselectedRecommendation() {
             const member_name = getLoggedInMember();
             try {
@@ -168,7 +166,7 @@
                     .from('recommendations')
                     .select('title, author, page_count, nickname, is_selected')
                     .eq('member_name', member_name)
-                    .eq('is_selected', false) // ❌ 선정되지 못한 패자부활전 타겟들
+                    .eq('is_selected', false) 
                     .order('created_at', { ascending: false })
                     .limit(1);
 
@@ -179,9 +177,8 @@
 
                 if (data && data.length > 0) {
                     lastUnselectedBookObj = data[0];
-                    // 버튼 활성화 및 텍스트 럭셔리 큐레이션 주입
                     btn.innerHTML = `<i class="fa-solid fa-arrows-rotate text-warning"></i> ♻️ 지난 탈락작 <b>[${lastUnselectedBookObj.title}]</b> 원터치 불러오기`;
-                    wrapper.classList.remove("d-none"); // 버튼 커튼 오픈!
+                    wrapper.classList.remove("d-none"); 
                 } else {
                     lastUnselectedBookObj = null;
                     wrapper.classList.add("d-none");
@@ -189,7 +186,6 @@
             } catch (err) { console.error("낙방 이력 추적 에러:", err); }
         }
 
-        // 👑 [Zoro's One-Touch Injector] 버튼 클릭 시 입력 폼에 옛날 탈락작 스펙을 번개처럼 주입!
         function injectLastUnselectedBook() {
             if (!lastUnselectedBookObj) return;
             
@@ -202,7 +198,6 @@
             document.getElementById("recTitle").focus();
         }
 
-        // 차수별 기존 추천작 조회 자동완성
         async function loadExistingRecommendation() {
             const member_name = getLoggedInMember();
             const target_round = document.getElementById("targetRoundSelect").value;
@@ -244,6 +239,7 @@
             } catch (err) { console.error(err); }
         }
 
+        // 👑 [명세 반영 교정] 구형 rating 대신 rating_before 컬럼값을 낚아채어 셋팅하는 기믹
         async function loadExistingReview() {
             const member_name = getLoggedInMember();
             const roundNoEl = document.getElementById("roundNoSelect");
@@ -254,7 +250,7 @@
             try {
                 const { data, error } = await _db
                     .from('reviews_ratings')
-                    .select('rating, review_text')
+                    .select('rating_before, review_text') // 👑 정밀 교정 컬럼
                     .eq('member_name', member_name)
                     .eq('round_no', round_no)
                     .limit(1);
@@ -267,13 +263,13 @@
 
                 if (data && data.length > 0) {
                     const rev = data[0];
-                    ratingSelect.value = rev.rating ? rev.rating.toFixed(1) : "5.0";
+                    ratingSelect.value = rev.rating_before ? rev.rating_before.toFixed(1) : "4.0";
                     reviewText.value = rev.review_text || "";
 
                     submitBtn.innerHTML = `<i class="fa-solid fa-pen-fancy"></i> 티타임 총평 우아하게 수정하기`;
                     submitBtn.style.background = "linear-gradient(135deg, #FF007F, #FF69B4)";
                 } else {
-                    ratingSelect.value = "5.0";
+                    ratingSelect.value = "4.0";
                     reviewText.value = "";
 
                     submitBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 리뷰 & 별점 굽기 완료`;
@@ -282,7 +278,6 @@
             } catch (err) { console.error(err); }
         }
 
-        // 추천 도서 내역 저장 및 수정 조율
         async function saveRecommendation(e) {
             e.preventDefault();
             const member_name = getLoggedInMember();
@@ -314,7 +309,6 @@
                     alert("추천 도서가 지정 차수에 명확히 등록되었사옵니다! 💖");
                 }
                 
-                // 👑 등록 후 혹시 모를 탈락작 상태 최신화를 위해 사냥꾼 엔진 및 폼 리프레시 동기화
                 await huntLastUnselectedRecommendation();
                 await loadExistingRecommendation();
             } catch(err) { 
@@ -323,20 +317,24 @@
             }
         }
 
+        // 👑 [명세 반영 교정] 별점을 순수 rating_before 컬럼 파이프라인에 업서트 꽂는 기믹
         async function saveReviewRating(e) {
             e.preventDefault();
             const member_name = getLoggedInMember();
             const round_no = parseInt(document.getElementById("roundNoSelect").value);
-            const rating = parseFloat(document.getElementById("ratingSelect").value);
+            const rating_before = parseFloat(document.getElementById("ratingSelect").value); // 👑 명세 반영 변수
             const review_text = document.getElementById("reviewText").value.trim();
 
             try {
                 const { error } = await _db.from('reviews_ratings').upsert({ 
-                    round_no, member_name, rating, review_text 
+                    round_no, 
+                    member_name, 
+                    rating_before, // 👑 정밀 교정 컬럼 맵핑
+                    review_text 
                 }, { onConflict: 'round_no, member_name' });
                 
                 if (error) throw error;
-                alert("별점과 티타임 리뷰 공식 총평이 영구히 적재되었사옵니다! ☕");
+                alert("토론 전 마음의 별점과 리뷰 총평이 성공적으로 장전되었습니다! ☕");
                 await loadExistingReview();
             } catch(err) { 
                 console.error(err);

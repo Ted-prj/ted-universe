@@ -165,7 +165,6 @@
     <script>
         checkAuth();
 
-        // 👑 [Zoro's Cross Mapping Cache] 하위 도서 리스트 매핑을 위한 전역 스코프 자물쇠
         let globalBooksData = [];
         let globalBookRatings = {};
 
@@ -177,8 +176,12 @@
 
         async function fetchAllDashboardData() {
             try {
-                // 아코디언 서랍 개방 시 벼락 노출을 위해 전권 마스터 데이터 사전 캐싱 수색!
-                const { data: bData } = await _db.from('books').select('round_no, title, main_category, custom_category');
+                // 👑 [명세 반영 장치] 아코디언 서랍의 하위 도서 리스트마저도 오직 완료된(is_closed = true) 도서만 긁어오도록 제어!
+                const { data: bData } = await _db
+                    .from('books')
+                    .select('round_no, title, main_category, custom_category')
+                    .eq('is_closed', true); // 👑 완벽 차단 잠금
+                
                 globalBooksData = bData || [];
                 
                 const { data: rData } = await _db.from('v_book_stats').select('*');
@@ -188,7 +191,7 @@
                         globalBookRatings[`${row.round_no}-${row.title}`] = row.avg_rating;
                     });
                 }
-            } catch(e) { console.error("선행 통계 마스터 캐싱 실패:", e); }
+            } catch(e) { console.error("선행 데이터 스캔 실패:", e); }
 
             await Promise.all([
                 fetchMemberStats(),
@@ -229,6 +232,7 @@
             }
         }
 
+        // 선장의 지침대로 수정 내용 없음 (진행/완료 상관없이 공식 매핑된 모든 선정 도서를 투명하게 역추적 카운트)
         async function fetchRecommendationCrownStats() {
             const container = document.getElementById("recommendationCrownContainer");
             try {
@@ -264,7 +268,7 @@
                         <div class="mb-2 border-bottom border-secondary pb-2" style="border-color: rgba(255,0,127,0.1) !important;">
                             <div class="d-flex justify-content-between align-items-center p-2 rounded bg-black" 
                                  style="cursor: pointer; border: 1px solid rgba(255,0,127,0.15);" 
-                                 onclick="toggleAccordion('panel_${safeId}', 'arrow_${safeId}')">
+                                 onclick="toggleAccordion('panel_${safeId}', 'arrow_panel_${safeId}')">
                                 <div class="fw-bold text-pink" style="font-size:0.9rem;">
                                     <img src="images/${member.image_name}" class="princess-avatar-sm" onerror="this.src='images/default_princess.png'">
                                     ${name} 공주
@@ -317,7 +321,6 @@
             }
         }
 
-        // 👑 대분류 대칭 인라인 테이블 서랍 아코디언 제련
         async function fetchMainCategoryStats() {
             try {
                 const { data, error } = await _db.from('v_main_category_stats').select('*');
@@ -330,7 +333,6 @@
                 }
                 data.forEach((row, index) => {
                     const safeId = `main_cat_${index}`;
-                    // 캐싱된 마스터 풀방에서 해당 대분류 장르에 매핑되는 도서들 정밀 슬라이스 체 거르기
                     const targetBooks = globalBooksData.filter(b => b.main_category === row.main_category);
 
                     tbody.innerHTML += `
@@ -366,7 +368,6 @@
             }
         }
 
-        // 👑 비밀 맞춤 분류 서랍 아코디언 제련
         async function fetchCustomCategoryStats() {
             try {
                 const { data, error } = await _db.from('v_custom_category_stats').select('*');
@@ -413,7 +414,6 @@
             }
         }
 
-        // 👑 통합형 아코디언 가속 스위칭 마스터 기믹 함수
         function toggleAccordion(panelId, arrowId) {
             const panel = document.getElementById(panelId);
             const arrow = document.getElementById(arrowId);

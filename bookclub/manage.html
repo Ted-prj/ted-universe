@@ -18,7 +18,7 @@
                 <h1><i class="fa-solid fa-screwdriver-wrenches text-pink" style="color: var(--neon-pink);"></i> 시크릿 운영 <span>MANAGE</span></h1>
                 <span class="badge bg-dark border border-warning text-warning p-2" id="roundStatusBadge"><i class="fa-solid fa-gavel"></i> 차수 로딩 중...</span>
             </div>
-            <p class="text-muted mt-2 m-0">티타임 마감, 최종 별점 수거 및 다음 회차 진급 처리를 대행하옵니다 👑</p>
+            <p class="text-muted mt-2 m-0">티타임 공식 마감, 최종 평점 수거 및 다음 회차 개막을 대행하옵니다 👑</p>
         </div>
 
         <div class="stat-card mb-4" style="border-color: var(--neon-pink) !important;">
@@ -26,7 +26,7 @@
                 <i class="fa-solid fa-mug-tea" style="color: var(--neon-pink) !important;"></i> ☕ <span id="currentRoundTitleLabel">현재 차수</span> 토론 마감 및 최종 별점 수거
             </div>
             <div class="card-body-custom p-3">
-                <p class="text-muted small mb-3">※ 토론을 마무리하며 갈대 같은 공주님들의 최종 평점(rating_after)을 거두어 주셔요.</p>
+                <p class="text-muted small mb-3">※ 토론을 마무리하며 공주님들이 최종적으로 확정한 평점을 거두어 주셔요.</p>
                 <div id="memberFinalRatingsContainer" class="d-flex flex-column gap-2">
                     <div class="text-center py-2"><div class="spinner-border spinner-pink spinner-sm" role="status"></div></div>
                 </div>
@@ -38,42 +38,53 @@
                 <i class="fa-solid fa-calendar-circle-plus"></i> 📅 다음 차수 도서 및 토론 일정 수립
             </div>
             <div class="card-body-custom p-3">
-                <div class="mb-3">
+                <div class="mb-2">
                     <label class="form-label text-pink small fw-bold" id="nextRoundDateLabel">다음 차수 토론 날짜 선택</label>
                     <input type="date" class="form-control form-control-custom text-center text-white" id="nextRoundDateInput" style="background:#000 !important;" required>
                 </div>
 
-                <div class="form-check form-switch mb-3 px-5">
-                    <input class="form-check-input" type="checkbox" id="spontaneousToggle" onchange="toggleSpontaneousForm()">
-                    <label class="form-check-label text-warning small fw-bold" for="spontaneousToggle">💡 후보작 목록 외 [즉석 도서 직접 기입] 하기</label>
+                <div class="mb-3">
+                    <label class="form-label text-pink small fw-bold"><i class="fa-solid fa-location-dot me-1"></i> 다음 티타임 개최 장소 입력</label>
+                    <input type="text" class="form-control form-control-custom" id="nextRoundLocationInput" placeholder="예: 강남 핑크 테라스 (미정 시 공백 가능)">
                 </div>
 
                 <div id="candidateSelectionWrapper">
-                    <label class="form-label text-pink small fw-bold mb-2">다음 차수 공주 추천 후보작 중 택 1</label>
-                    <div id="candidateRadioContainer" class="d-flex flex-column gap-2">
+                    <label class="form-label text-pink small fw-bold mb-2">다음 차수 공주 추천 후보작 목록 (복수 선택 가능)</label>
+                    <div id="candidateCheckboxContainer" class="d-flex flex-column gap-2">
                         </div>
                 </div>
 
-                <div id="spontaneousFormWrapper" class="d-none rounded p-3 border border-secondary" style="background:#0a0a0a; border-color: rgba(255,215,0,0.2) !important;">
-                    <label class="form-label text-warning small fw-bold mb-2"><i class="fa-solid fa-wand-magic-sparkles"></i> 즉석 추가 도서 상세 스펙 입력</label>
+                <div class="text-center mt-3">
+                    <span class="small fw-bold text-warning" style="cursor: pointer; text-decoration: underline;" onclick="toggleSpontaneousFormDropdown()">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> 후보작 목록 외 [즉석 도서 직접 기입] 하기 (터치하여 확장)
+                    </span>
+                </div>
+
+                <div id="spontaneousFormWrapper" class="d-none mt-3 rounded p-3 border border-secondary" style="background:#0a0a0a; border-color: rgba(255,215,0,0.2) !important;">
                     <div class="row g-2">
                         <div class="col-12">
+                            <label class="form-label text-warning small fw-bold m-0 mb-1">즉석 추가 도서명</label>
                             <input type="text" class="form-control form-control-custom" id="sponTitle" placeholder="책 제목 입력">
                         </div>
                         <div class="col-7">
+                            <label class="form-label text-warning small fw-bold m-0 mb-1">작가명</label>
                             <input type="text" class="form-control form-control-custom" id="sponAuthor" placeholder="작가명">
                         </div>
                         <div class="col-5">
+                            <label class="form-label text-warning small fw-bold m-0 mb-1">쪽수</label>
                             <input type="number" class="form-control form-control-custom" id="sponPage" placeholder="쪽수" min="1">
                         </div>
                         <div class="col-6">
-                            <input type="text" class="form-control form-control-custom" id="sponMainCat" value="인문/사회" placeholder="대분류 장르">
+                            <label class="form-label text-warning small fw-bold m-0 mb-1">대분류</label>
+                            <input type="text" class="form-control form-control-custom" id="sponMainCat" value="인문/사회">
                         </div>
                         <div class="col-6">
-                            <input type="text" class="form-control form-control-custom" id="sponCustomCat" value="공감/치유" placeholder="맞춤 분류">
+                            <label class="form-label text-warning small fw-bold m-0 mb-1">맞춤분류</label>
+                            <input type="text" class="form-control form-control-custom" id="sponCustomCat" value="공감/치유">
                         </div>
                         <div class="col-12">
-                            <input type="text" class="form-control form-control-custom" id="sponBy" value="즉석지정" placeholder="추천공주명">
+                            <label class="form-label text-warning small fw-bold m-0 mb-1">추천 공주명</label>
+                            <input type="text" class="form-control form-control-custom" id="sponBy" value="즉석지정">
                         </div>
                     </div>
                 </div>
@@ -81,15 +92,14 @@
         </div>
 
         <div class="mb-4 px-1">
-            <button class="btn w-100 p-3 fw-bold fs-6 text-white" id="btnSealSession" onclick="executeFinalSessionClosingTransaction()"
-                    style="background: linear-gradient(135deg, #FF007F, #FF69B4); border: 2px solid #fff; border-radius: 16px; box-shadow: 0 0 15px rgba(255,0,127,0.4); text-shadow: 0 1px 3px #000;">
-                <i class="fa-solid fa-flag-checkered me-1"></i> 이번 회차 독서토론 공식 마감 및 다음 차수 진급 세우기
+            <button class="btn btn-princess w-100 p-3 fw-bold fs-6" id="btnSealSession" onclick="executeFinalSessionClosingTransaction()">
+                <i class="fa-solid fa-flag-checkered me-1"></i> 이번 티타임 공식 마감 및 다음 차수 오픈
             </button>
         </div>
 
         <div class="stat-card">
             <div class="card-header-custom">
-                <i class="fa-solid fa-calendar-days"></i> 예정된 티타임 일정 단독 변경
+                <i class="fa-solid fa-calendar-days"></i> 진행중인 티타임 일정 및 장소 변경
             </div>
             <div class="card-body-custom scrollable-panel">
                 <div id="discussionBookList">
@@ -109,12 +119,10 @@
 
         let currentActiveRound = 0; 
         let nextTargetRound = 0;
-        let activeMembersList = []; // 실시간 평점 수집용 공주 정예 명단
+        let activeMembersList = []; 
 
         document.addEventListener("DOMContentLoaded", async () => {
-            // 1. 최고 차수 정보 벼락 수색 기동
             await anchorRoundsEngine();
-            // 2. 종속 뷰포트 데이터 병렬 로드
             await Promise.all([
                 loadActiveMembersRatingForm(),
                 loadTargetRecommendations(),
@@ -122,33 +130,36 @@
             ]);
         });
 
-        // 차수 스캔 및 환경 변수 고정 엔진
         async function anchorRoundsEngine() {
             try {
                 const { data, error } = await _db
                     .from('books')
                     .select('round_no, title')
+                    .eq('is_closed', false) // 라이브 진행중인 타겟 서치
                     .order('round_no', { ascending: false })
                     .limit(1);
 
                 if (error) throw error;
 
-                currentActiveRound = data && data.length > 0 ? data[0].round_no : 0;
-                const currentTitle = data && data.length > 0 ? data[0].title : '지정도서 없음';
-                nextTargetRound = currentActiveRound + 1;
+                if (data && data.length > 0) {
+                    currentActiveRound = data[0].round_no;
+                    const currentTitle = data[0].title;
+                    nextTargetRound = currentActiveRound + 1;
+                    document.getElementById("currentRoundTitleLabel").textContent = `제 ${currentActiveRound}회차 [${currentTitle}]`;
+                } else {
+                    // 폴백 제어 보루
+                    const { data: maxB } = await _db.from('books').select('round_no, title').order('round_no', { ascending: false }).limit(1);
+                    currentActiveRound = maxB && maxB.length > 0 ? maxB[0].round_no : 0;
+                    nextTargetRound = currentActiveRound + 1;
+                    document.getElementById("currentRoundTitleLabel").textContent = `제 ${currentActiveRound}회차 지정 도서`;
+                }
 
-                document.getElementById("roundStatusBadge").innerHTML = 
-                    `<i class="fa-solid fa-gavel"></i> 라이브 진행 : 제 ${currentActiveRound}회차`;
-                
-                document.getElementById("currentRoundTitleLabel").textContent = `제 ${currentActiveRound}회차 [${currentTitle}]`;
-                
-                document.getElementById("nextRoundDateLabel").innerHTML = 
-                    `<i class="fa-solid fa-calendar-days text-pink"></i> 다음 [ 제 ${nextTargetRound}회차 ] 토론 개최 일자 선택`;
+                document.getElementById("roundStatusBadge").innerHTML = `<i class="fa-solid fa-gavel"></i> 라이브 차수 : 제 ${currentActiveRound}회`;
+                document.getElementById("nextRoundDateLabel").innerHTML = `<i class="fa-solid fa-calendar-days text-pink"></i> 다음 [ 제 ${nextTargetRound}회차 ] 토론 개최 일자 선택`;
 
             } catch (err) { console.error("차수 인프라 앵커링 실패:", err); }
         }
 
-        // 👑 이번 차수 멤버별 토론 후 최종 평점 입력 폼 렌더링
         async function loadActiveMembersRatingForm() {
             const container = document.getElementById("memberFinalRatingsContainer");
             try {
@@ -187,9 +198,9 @@
             } catch (err) { console.error(err); }
         }
 
-        // 다음 차수 전용 추천 후보작 리스트 로드 (라디오 선택지 트랜스폼)
+        // 👑 라디오 박스를 탈피하고 다중 선택 체크박스로 업그레이드 수립한 렌더러
         async function loadTargetRecommendations() {
-            const container = document.getElementById("candidateRadioContainer");
+            const container = document.getElementById("candidateCheckboxContainer");
             if (!nextTargetRound) return;
             
             try {
@@ -203,17 +214,17 @@
                 container.innerHTML = "";
 
                 if (!data || data.length === 0) {
-                    container.innerHTML = `<p class="text-center text-muted small py-2 m-0">공주들이 다음 ${nextTargetRound}회차 타겟으로 기입해둔 후보작이 없사옵니다.</p>`;
+                    container.innerHTML = `<p class="text-center text-muted small py-2 m-0">공주들이 대기방에 제출해둔 후보작이 없사옵니다.</p>`;
                     return;
                 }
 
-                data.forEach((item, index) => {
+                data.forEach((item) => {
                     container.innerHTML += `
                         <label class="p-2 rounded bg-black d-flex align-items-center border border-secondary" style="cursor:pointer; border-color: rgba(255,105,180,0.1) !important;">
-                            <input type="radio" name="nextBookCandidateRadio" class="form-check-input me-2" value="${item.id}" data-title="${escapeHtml(item.title)}" data-author="${escapeHtml(item.author)}" data-page="${item.page_count || 0}" data-by="${escapeHtml(item.member_name)}" ${index===0?'checked':''}>
+                            <input type="checkbox" name="nextBookCandidateCheckbox" class="form-check-input me-2" value="${item.id}" data-title="${escapeHtml(item.title)}" data-author="${escapeHtml(item.author)}" data-page="${item.page_count || 0}" data-by="${escapeHtml(item.member_name)}">
                             <div style="width:90%;">
                                 <div class="fw-bold text-white small text-truncate">📖 ${item.title}</div>
-                                <div class="text-muted" style="font-size:0.72rem;">픽:${item.member_name} | 작가:${item.author || '미상'} | ${item.page_count || 0}쪽 | "${item.nickname || '평범함'}"</div>
+                                <div class="text-muted" style="font-size:0.72rem;">픽:${item.member_name} | 작가:${item.author || '미상'} | ${item.page_count || 0}쪽</div>
                             </div>
                         </label>
                     `;
@@ -221,105 +232,113 @@
             } catch (err) { console.error(err); }
         }
 
-        // 즉석 직접 입력 토글 변환 스위치 기믹
-        function toggleSpontaneousForm() {
-            const isChecked = document.getElementById("spontaneousToggle").checked;
-            const candWrapper = document.getElementById("candidateSelectionWrapper");
-            const sponWrapper = document.getElementById("spontaneousFormWrapper");
-
-            if (isChecked) {
-                candWrapper.classList.add("d-none");
-                sponWrapper.classList.remove("d-none");
+        // 터치했을 때 영역이 확장되는 서랍식 토글러 기믹
+        function toggleSpontaneousFormDropdown() {
+            const wrapper = document.getElementById("spontaneousFormWrapper");
+            if (wrapper.classList.contains("d-none")) {
+                wrapper.classList.remove("d-none");
             } else {
-                candWrapper.classList.remove("d-none");
-                sponWrapper.classList.add("d-none");
+                wrapper.classList.add("d-none");
             }
         }
 
-        // 👑 [Zoro's Supreme Transaction Closing] 독서토론 최종 마감 매듭 짓기 대작전
+        // 👑 [명세 4번 탑재 완료] 이번 회차 is_closed=true 전환 및 다중 도서 새 Row 처리 총집결 트랜잭션
         async function executeFinalSessionClosingTransaction() {
-            // 날짜 검증 타격
-            const nextDiscussionDate = document.getElementById("nextRoundDateInput").value;
-            if (!nextDiscussionDate) {
-                alert(`선장! 다음 [ 제 ${nextTargetRound}회차 ] 독서토론 일정을 먼저 캘린더에서 완벽히 선택하셔야 최종 마감이 가동되옵니다! 📅✨`);
+            const nextRoundDate = document.getElementById("nextRoundDateInput").value;
+            const nextRoundLocation = document.getElementById("nextRoundLocationInput").value.trim();
+
+            if (!nextRoundDate) {
+                alert(`선장! 다음 [ 제 ${nextTargetRound}회차 ] 토론 일정을 캘린더에서 완벽히 선택하셔야 최종 마감이 가동되옵니다! 📅✨`);
                 document.getElementById("nextRoundDateInput").focus();
                 return;
             }
 
-            const masterConfirm = confirm(`정말로 이번 제 ${currentActiveRound}회차 토론을 영구 마감하고, 지정하신 내용으로 다음 제 ${nextTargetRound}회차 성벽을 전진시키겠사옵니까?`);
+            const masterConfirm = confirm(`정말로 이번 제 ${currentActiveRound}회차 토론을 영구 마감(is_closed=true)하고 다음 차수를 공식 출범시키겠사옵니다?`);
             if (!masterConfirm) return;
 
             try {
-                // 파이프라인 A: 이번 차수 개인별 최종 평점(rating_after) 일제히 Upsert 수집 수립
+                // 1. 이번 차수 공주별 토론 후 별점(rating_after) 일제히 Upsert 적재 약속 수립
                 const ratingPromises = activeMembersList.map(m => {
-                    const finalRatingScore = parseFloat(document.getElementById(`rating_after_${m.member_name}`).value);
+                    const finalScore = parseFloat(document.getElementById(`rating_after_${m.member_name}`).value);
                     return _db.from('reviews_ratings').upsert({
                         round_no: currentActiveRound,
                         member_name: m.member_name,
-                        rating_after: finalRatingScore
+                        rating_after: finalScore
                     }, { onConflict: 'round_no, member_name' });
                 });
 
-                // 파이프라인 B: 다음 회차 도서 스펙 발라내기 기믹
-                const isSpontaneous = document.getElementById("spontaneousToggle").checked;
-                let nextBookPayload = {
-                    round_no: nextTargetRound,
-                    discussion_date: nextDiscussionDate
-                };
-                let selectedRecId = null;
+                // 2. 다음 회차 다중 배치를 위한 페이로드 수집 파이프라인
+                let nextBooksPayloads = [];
+                const checkedBoxes = document.querySelectorAll('input[name="nextBookCandidateCheckbox"]:checked');
+                
+                checkedBoxes.forEach(cb => {
+                    nextBooksPayloads.push({
+                        round_no: nextTargetRound,
+                        title: cb.getAttribute('data-title'),
+                        author: cb.getAttribute('data-author'),
+                        page_count: parseInt(cb.getAttribute('data-page')),
+                        recommended_by: cb.getAttribute('data-by'),
+                        main_category: '인문/사회',
+                        custom_category: '공감/치유',
+                        discussion_date: nextRoundDate,
+                        location: nextRoundLocation || null, // 명세 반영 장르 삽입
+                        is_closed: false
+                    });
+                });
 
-                if (isSpontaneous) {
-                    // 수동 양식 긁기
-                    const title = document.getElementById("sponTitle").value.trim();
-                    const author = document.getElementById("sponAuthor").value.trim();
-                    const page_count = parseInt(document.getElementById("sponPage").value);
-                    if (!title || !author || !page_count) {
-                        alert("즉석 추가 도서의 제목, 작가, 쪽수를 단 한 칸도 빠짐없이 기입하셔야 하옵니다!");
+                // 3. 확장 폼 영역에 즉석 직접 기입 항목이 기재되어 있는지 파악해서 병렬 이식
+                const sponTitle = document.getElementById("sponTitle").value.trim();
+                if (sponTitle) {
+                    const sponAuthor = document.getElementById("sponAuthor").value.trim();
+                    const sponPage = parseInt(document.getElementById("sponPage").value);
+                    if (!sponAuthor || !sponPage) {
+                        alert("즉석 직접 기입 도서의 작가와 쪽수 스펙까지 명확히 채워주셔야 하옵니다!");
                         return;
                     }
-                    nextBookPayload.title = title;
-                    nextBookPayload.author = author;
-                    nextBookPayload.page_count = page_count;
-                    nextBookPayload.recommended_by = document.getElementById("sponBy").value.trim() || '즉석지정';
-                    nextBookPayload.main_category = document.getElementById("sponMainCat").value.trim() || '인문/사회';
-                    nextBookPayload.custom_category = document.getElementById("sponCustomCat").value.trim() || '공감/치유';
-                } else {
-                    // 라디오 선택박스 스펙 낚아채기
-                    const checkedRadio = document.querySelector('input[name="nextBookCandidateRadio"]:checked');
-                    if (!checkedRadio) {
-                        alert("다음 차수 후보방에 책이 없사오니 즉석 직접 입력 토글을 켜고 등록해 주셔요!");
-                        return;
-                    }
-                    selectedRecId = parseInt(checkedRadio.value);
-                    nextBookPayload.title = checkedRadio.getAttribute('data-title');
-                    nextBookPayload.author = checkedRadio.getAttribute('data-author');
-                    nextBookPayload.page_count = parseInt(checkedRadio.getAttribute('data-page'));
-                    nextBookPayload.recommended_by = checkedRadio.getAttribute('data-by');
-                    nextBookPayload.main_category = '인문/사회';
-                    nextBookPayload.custom_category = '공감/치유';
+                    nextBooksPayloads.push({
+                        round_no: nextTargetRound,
+                        title: sponTitle,
+                        author: sponAuthor,
+                        page_count: sponPage,
+                        recommended_by: document.getElementById("sponBy").value.trim() || '즉석지정',
+                        main_category: document.getElementById("sponMainCat").value.trim() || '인문/사회',
+                        custom_category: document.getElementById("sponCustomCat").value.trim() || '공감/치유',
+                        discussion_date: nextRoundDate,
+                        location: nextRoundLocation || null,
+                        is_closed: false
+                    });
                 }
 
-                // 파이프라인 C: 다음 회차 새 도서 Row 공식 인서트(INSERT) 약속 수립
-                const bookInsertPromise = _db.from('books').insert([nextBookPayload]);
+                if (nextBooksPayloads.length === 0) {
+                    alert("다음 회차 도서를 최소 한 권 이상 체크박스로 선택하시거나 즉석 기입란에 채우셔야 하옵니다!");
+                    return;
+                }
 
-                // 대의적인 일괄 연쇄 동시 폭파 집행!
-                const results = await Promise.all([...ratingPromises, bookInsertPromise]);
+                // 4. 명세 핵심 요구: 현재 최신 차수 책의 이력을 완벽하게 TRUE(마감)로 잠금 처리하는 약속 수립
+                const closeCurrentRoundPromise = _db.from('books').update({ is_closed: true }).eq('round_no', currentActiveRound);
                 
-                // 에러 레이스 체 스캔
+                // 5. 다음 회차 다중 새 도서 생성 인서트(INSERT) 약속 수립
+                const insertNextBooksPromise = _db.from('books').insert(nextBooksPayloads);
+
+                // 일제히 마감 폭파 집행!
+                const results = await Promise.all([...ratingPromises, closeCurrentRoundPromise, insertNextBooksPromise]);
                 for(let r of results) { if(r.error) throw r.error; }
 
-                // 파이프라인 D: 후보작 풀방에서 올라왔다면 이력 플래그 true 마킹 마무리
-                if (selectedRecId) {
-                    await _db.from('recommendations').update({ is_selected: true }).eq('id', selectedRecId);
+                // 6. 선정 완료된 정식 추천작들의 진급 플래그 true 마킹
+                const selectedRecIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+                if (selectedRecIds.length > 0) {
+                    await _db.from('recommendations').update({ is_selected: true }).in('id', selectedRecIds);
                 }
 
-                alert(`🎉 대성황 마감! 제 ${currentActiveRound}회차 토론이 성대하게 마무리되었으며, 다음 제 ${nextTargetRound}회차 공식 요새(INSERT)가 정상 오픈되었습니다! 📅✨`);
+                alert(`🎉 티타임 셧다운 완료! 제 ${currentActiveRound}회차 토론방이 공식 잠금(is_closed=true) 처리되었으며, 제 ${nextTargetRound}회차 새 왕좌의 도서 기록들이 성대하게 등재 완료되었습니다! 📅✨`);
                 
-                // 마스터 제어판 리프레시 엔진 리로드
+                // 마스터 UI 동적 동기화 초기화
                 document.getElementById("nextRoundDateInput").value = "";
-                document.getElementById("spontaneousToggle").checked = false;
-                toggleSpontaneousForm();
-                if(document.getElementById("sponRound")) document.getElementById("spontaneousForm").reset();
+                document.getElementById("nextRoundLocationInput").value = "";
+                document.getElementById("spontaneousFormWrapper").classList.add("d-none");
+                document.getElementById("sponTitle").value = "";
+                document.getElementById("sponAuthor").value = "";
+                document.getElementById("sponPage").value = "";
 
                 await anchorRoundsEngine();
                 await Promise.all([
@@ -329,42 +348,52 @@
                 ]);
 
             } catch (err) {
-                console.error("최종 세션 마감 대재앙 에러:", err);
-                alert("공식 마감 트랜잭션 도중 치명적 에러가 터졌다, 선장.");
+                console.error(err);
+                alert("공식 세션 클로징 도중 치명적 에러 발생.");
             }
         }
 
-        // 하단 미래 티타임 일정 단독 변경 리스트
+        // 👑 [명세 5번 탑재 완료] is_closed가 false인 열려있는 활성 도서의 날짜와 장소를 실시간 조율
         async function loadDiscussionBooks() {
             const container = document.getElementById("discussionBookList");
             try {
                 const { data, error } = await _db
                     .from('books')
-                    .select('id, round_no, title, discussion_date')
-                    .gte('round_no', currentActiveRound)
+                    .select('id, round_no, title, discussion_date, location')
+                    .eq('is_closed', false) // 👑 오직 열려있는 미완료 차트 row만 타격 사냥!
                     .order('round_no', { ascending: false });
 
                 if (error) throw error;
                 container.innerHTML = "";
 
                 if (!data || data.length === 0) {
-                    container.innerHTML = `<p class="text-center text-muted small py-3">조율 대상 티타임이 없사옵니다.</p>`;
+                    container.innerHTML = `<p class="text-center text-muted small py-3 m-0">현재 실시간 조율 가능한 미완료 티타임 도서가 없사옵니다.</p>`;
                     return;
                 }
 
                 data.forEach(book => {
                     const dateVal = book.discussion_date || "";
+                    const locVal = book.location || "";
                     container.innerHTML += `
                         <div class="p-3 mb-2 rounded bg-dark border border-secondary" style="border-color: rgba(255,0,127,0.15) !important;">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="badge bg-danger" style="background-color: var(--neon-pink) !important;">제 ${book.round_no}회차</span>
                                 <span class="text-white small fw-bold text-truncate" style="max-width:65%;">${book.title}</span>
                             </div>
-                            <div class="d-flex gap-2 align-items-center">
-                                <input type="date" class="form-control form-control-custom py-1 px-2 text-center text-white" id="dateInput_${book.id}" value="${dateVal}" style="font-size:0.85rem; background:#000 !important;">
-                                <button class="btn btn-sm btn-princess px-2 py-1 flex-shrink-0" onclick="updateDiscussionDate(${book.id})">
-                                    <i class="fa-solid fa-calendar-check"></i> 일정 변경
-                                </button>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="text-pink small fw-bold flex-shrink-0" style="width:30px;">날짜</span>
+                                    <input type="date" class="form-control form-control-custom py-1 px-2 text-center text-white" id="dateInput_${book.id}" value="${dateVal}" style="font-size:0.85rem; background:#000 !important;">
+                                </div>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="text-pink small fw-bold flex-shrink-0" style="width:30px;">장소</span>
+                                    <input type="text" class="form-control form-control-custom py-1 px-2 text-white" id="locInput_${book.id}" value="${locVal}" placeholder="개최지 장소 입력" style="font-size:0.85rem; background:#000 !important;">
+                                </div>
+                                <div class="mt-1">
+                                    <button class="btn btn-sm btn-princess w-100 py-1" onclick="updateDiscussionSchedule(${book.id})">
+                                        <i class="fa-solid fa-calendar-check text-pink"></i> 일정 및 장소 실시간 변경 반영
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -372,25 +401,31 @@
             } catch (err) { console.error(err); }
         }
 
-        async function updateDiscussionDate(bookId) {
+        // 날짜와 장소 일괄 수정 반영 파이프라인
+        async function updateDiscussionSchedule(bookId) {
             const newDate = document.getElementById(`dateInput_${bookId}`).value;
+            const newLoc = document.getElementById(`locInput_${bookId}`).value.trim();
+
             if (!newDate) {
-                alert("변경 조율할 날짜를 올바르게 사수하셔요!");
+                alert("조율할 티타임 일정을 똑바로 정해주셔요!");
                 return;
             }
 
             try {
                 const { error } = await _db
                     .from('books')
-                    .update({ discussion_date: newDate })
+                    .update({ 
+                        discussion_date: newDate,
+                        location: newLoc || null 
+                    })
                     .eq('id', bookId);
 
                 if (error) throw error;
-                alert("독서 토론 일정이 무사히 리스케줄링 되었습니다! 📅✨");
+                alert("해당 진행 차수의 개최 일정과 티타임 장소가 우아하게 실시간 리스케줄링 완료되었습니다! 📅📍");
                 loadDiscussionBooks();
             } catch (err) {
                 console.error(err);
-                alert("날짜 단독 변경 실패.");
+                alert("라이브 일정 수정 갱신 에러.");
             }
         }
 
