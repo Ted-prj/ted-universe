@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.4.6</title>
+    <title>BLACKPINK WORKOUT v5.4.7</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -31,7 +31,7 @@
             will-change: transform, opacity;
         }
 
-        /* 고도화 명세 1: 운동 종목 순서 조정을 위한 블랙핑크 오버레이 팝업 스타일 */
+        /* 운동 종목 순서 조정을 위한 블랙핑크 오버레이 팝업 스타일 */
         .reorder-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 4000; align-items: center; justify-content: center; padding: 20px; }
         .reorder-modal-card { background: #111; border: 2px solid #222; border-radius: 24px; padding: 20px; width: 100%; max-width: 450px; max-height: 80vh; display: flex; flex-direction: column; }
         .reorder-list-scroll { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; padding-right: 5px; }
@@ -457,7 +457,6 @@
             </div>`;
         }
 
-        // 고도화 명세 2: 저장 및 업데이트 단계에서 '수지컬 업데이트' 기법 적용 (리로딩 현상 완전 박멸)
         async function saveSetRow(id) {
             const btn = document.getElementById(`save-btn-${id}`);
             const s = ACTIVE_SETS.find(x => x.id === id);
@@ -482,7 +481,6 @@
             
             const { error } = await _db.schema('workout').from('active_workout').update(up).eq('id', id);
             if(!error) {
-                // 핀포인트 DOM 조작: 화면 전체 리렌더링 함수를 전면 제거하고 엘리먼트 상태만 직접 갱신
                 btn.innerText = 'SAVED'; btn.classList.remove('st-update'); btn.classList.add('st-saved');
                 document.getElementById(`set-row-content-${id}`).classList.add('saved-row');
                 
@@ -490,13 +488,12 @@
                 if (ta) ta.style.height = '28px';
 
                 Object.assign(s, up); 
-                updateProgress(); // 상단 프로그레스 바 텍스트만 영리하게 갱신
+                updateProgress(); 
             } else {
                 alert("저장 실패: " + error.message);
             }
         }
 
-        // 고도화 명세 1: 실전 헬스장 환경 대응 전용 순서 변경 모달 비즈니스 로직 인젝션
         function openReorderModal() {
             const blocks = [];
             const blockMap = {};
@@ -548,7 +545,7 @@
 
         function closeReorderModal() { document.getElementById('reorder-overlay').style.display = 'none'; }
 
-        // 고도화 명세 1: 바뀐 리스트 순서를 무결성 보장 기반으로 DB(active_workout)에 실시간 트랜잭션 주입
+        // 고도화 완치: IDENTITY ALWAYS 오류 방지를 위해 기존 행을 솎아 일괄 지우고, 원하는 새로운 정렬 순서대로 클린하게 일괄 INSERT 재적재 처리
         async function saveNewOrder() {
             if (!window.CURRENT_REORDER_BLOCKS || window.CURRENT_REORDER_BLOCKS.length === 0) return;
             
@@ -564,28 +561,24 @@
             
             if (allSetsNewOrder.length === 0) return closeReorderModal();
             
-            const originalIds = ACTIVE_SETS.map(s => s.id).sort((a, b) => a - b);
-            const minId = originalIds[0];
+            const originalIds = ACTIVE_SETS.map(s => s.id);
+
+            // 1. 순서가 조립 완료된 순위 기준으로 IDENTITY ID 컬럼값 및 타임스탬프를 덜어내어 클린 인서트 페이로드 가공
+            const payload = allSetsNewOrder.map(s => {
+                const { id, created_at, ...rest } = s;
+                return rest;
+            });
             
-            // 알고리즘 단계 1: 유니크 제약조건 충돌 우회를 위해 일괄 임시 음수 ID값으로 격리 업데이트 실행
-            for(let i = 0; i < allSetsNewOrder.length; i++) {
-                const s = allSetsNewOrder[i];
-                const tempNegId = -(i + 1);
-                const { error } = await _db.schema('workout').from('active_workout').update({ id: tempNegId }).eq('id', s.id);
-                if(error) return alert("순서 배치 마이그레이션 오류(1단계): " + error.message);
-                s.id = tempNegId; 
-            }
+            // 2. 기존 임시 행 일괄 격리 삭제 단행
+            const { error: delError } = await _db.schema('workout').from('active_workout').delete().in('id', originalIds);
+            if(delError) return alert("순서 배치 마이그레이션 오류(삭제 단계): " + delError.message);
             
-            // 알고리즘 단계 2: 정렬 기준 컬럼(id)에 맞춰 순차적 양수 정수 시퀀스로 최종 치환 복원 실행
-            for(let i = 0; i < allSetsNewOrder.length; i++) {
-                const s = allSetsNewOrder[i];
-                const finalId = minId + i;
-                const { error } = await _db.schema('workout').from('active_workout').update({ id: finalId }).eq('id', s.id);
-                if(error) return alert("순서 배치 마이그레이션 오류(2단계): " + error.message);
-            }
+            // 3. 원하는 순차적 배열 형태 그대로 수지컬 INSERT (DB 엔진이 순서대로 정수 일련번호 자동 재배정 수행)
+            const { error: insError } = await _db.schema('workout').from('active_workout').insert(payload);
+            if(insError) return alert("순서 배치 마이그레이션 오류(재적재 단계): " + insError.message);
             
             closeReorderModal();
-            await refreshActiveList(); // 순서가 구조적으로 바뀌었을 때만 한정하여 단 1회 돔 리렌더링 수행
+            await refreshActiveList(); 
         }
 
         function handleTouchStart(e) { touchStartX = e.touches[0].clientX; }
@@ -606,7 +599,7 @@
             } else resetSwipeGroup(blockId); 
         }
         
-        function resetSwipeGroup(blockId) { document.getElementById(`group-content-${blockId}`).style.transform = 'translateX(0)'; document.getElementById(`del-group-bg-${blockId}`).style.right = '-100%'; }
+        function resetSwipeGroup(blockId) { document.getElementById('group-content-' + blockId).style.transform = 'translateX(0)'; document.getElementById('del-group-bg-' + blockId).style.right = '-100%'; }
         function handleTouchMoveSet(e, id) { const diffX = e.touches[0].clientX - touchStartX; if (diffX < 0) { document.getElementById(`set-row-content-${id}`).style.transform = `translateX(${Math.max(diffX, -80)}px)`; document.getElementById(`del-set-bg-${id}`).style.right = '0'; } }
         async function handleTouchEndSet(e, id, exName) { const diffX = e.changedTouches[0].clientX - touchStartX; if (diffX < -120) { if(confirm("이 세트를 삭제할까요?")) { await _db.schema('workout').from('active_workout').delete().eq('id', id); await refreshActiveList(); } else resetSwipeSet(id); } else resetSwipeSet(id); }
         function resetSwipeSet(id) { document.getElementById(`set-row-content-${id}`).style.transform = 'translateX(0)'; document.getElementById(`del-set-bg-${id}`).style.right = '-100%'; }
