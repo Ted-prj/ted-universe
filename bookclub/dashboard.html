@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -60,6 +61,17 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="stat-card">
+                    <div class="card-header-custom" style="color: var(--royal-gold) !important;">
+                        <i class="fa-solid fa-trophy me-1" style="color: var(--royal-gold) !important;"></i> 공주별 추천 도서 왕좌 (선정 횟수)
+                    </div>
+                    <div class="card-body-custom p-3" id="recommendationCrownContainer">
+                        <div class="text-center py-3"><div class="spinner-border spinner-pink" role="status"></div></div>
                     </div>
                 </div>
             </div>
@@ -144,20 +156,7 @@
         </div>
     </div>
 
-    <div class="bottom-nav">
-        <a href="feed.html" class="bottom-nav-item">
-            <i class="fa-solid fa-rss"></i>
-            <span>소통 피드</span>
-        </a>
-        <a href="write.html" class="bottom-nav-item">
-            <i class="fa-solid fa-pen-to-square"></i>
-            <span>비밀 기록</span>
-        </a>
-        <a href="dashboard.html" class="bottom-nav-item active">
-            <i class="fa-solid fa-crown"></i>
-            <span>핑크 라운지</span>
-        </a>
-    </div>
+    <div id="global-nav" data-active="dashboard"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase_config.js"></script>
@@ -166,6 +165,10 @@
     <script>
         checkAuth();
 
+        // 👑 [Zoro's Cross Mapping Cache] 하위 도서 리스트 매핑을 위한 전역 스코프 자물쇠
+        let globalBooksData = [];
+        let globalBookRatings = {};
+
         document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("currentUserLabel").textContent = getLoggedInMember();
             document.getElementById("myDashAvatar").src = `images/${localStorage.getItem("login_member_image") || 'default_princess.png'}`;
@@ -173,8 +176,23 @@
         });
 
         async function fetchAllDashboardData() {
+            try {
+                // 아코디언 서랍 개방 시 벼락 노출을 위해 전권 마스터 데이터 사전 캐싱 수색!
+                const { data: bData } = await _db.from('books').select('round_no, title, main_category, custom_category');
+                globalBooksData = bData || [];
+                
+                const { data: rData } = await _db.from('v_book_stats').select('*');
+                globalBookRatings = {};
+                if (rData) {
+                    rData.forEach(row => {
+                        globalBookRatings[`${row.round_no}-${row.title}`] = row.avg_rating;
+                    });
+                }
+            } catch(e) { console.error("선행 통계 마스터 캐싱 실패:", e); }
+
             await Promise.all([
                 fetchMemberStats(),
+                fetchRecommendationCrownStats(),
                 fetchBookStats(),
                 fetchMainCategoryStats(),
                 fetchCustomCategoryStats()
@@ -211,6 +229,68 @@
             }
         }
 
+        async function fetchRecommendationCrownStats() {
+            const container = document.getElementById("recommendationCrownContainer");
+            try {
+                const { data: activeMembers, error: memErr } = await _db
+                    .from('members')
+                    .select('member_name, image_name')
+                    .eq('is_active', true)
+                    .order('member_name', { ascending: true });
+
+                if (memErr) throw memErr;
+
+                const { data: selectedBooks, error: bkErr } = await _db
+                    .from('books')
+                    .select('round_no, title, recommended_by')
+                    .order('round_no', { ascending: false });
+
+                if (bkErr) throw bkErr;
+
+                container.innerHTML = "";
+
+                if (!activeMembers || activeMembers.length === 0) {
+                    container.innerHTML = `<div class="text-center text-muted small py-2">활성 명단 공백</div>`;
+                    return;
+                }
+
+                activeMembers.forEach(member => {
+                    const name = member.member_name;
+                    const matchingBooks = selectedBooks.filter(b => b.recommended_by === name);
+                    const count = matchingBooks.length;
+                    const safeId = name.replace(/\s+/g, '_');
+
+                    container.innerHTML += `
+                        <div class="mb-2 border-bottom border-secondary pb-2" style="border-color: rgba(255,0,127,0.1) !important;">
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-black" 
+                                 style="cursor: pointer; border: 1px solid rgba(255,0,127,0.15);" 
+                                 onclick="toggleAccordion('panel_${safeId}', 'arrow_${safeId}')">
+                                <div class="fw-bold text-pink" style="font-size:0.9rem;">
+                                    <img src="images/${member.image_name}" class="princess-avatar-sm" onerror="this.src='images/default_princess.png'">
+                                    ${name} 공주
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge" style="background: linear-gradient(135deg, var(--royal-gold), #DAA520); color:#000; font-weight:800; font-size:0.75rem;">
+                                        🏆 총 ${count}권 선정
+                                    </span>
+                                    <i class="fa-solid fa-chevron-down ms-2 text-muted" id="arrow_panel_${safeId}" style="font-size:0.8rem; transition: transform 0.2s;"></i>
+                                </div>
+                            </div>
+                            
+                            <div id="panel_${safeId}" class="d-none mt-2 px-3 py-2 rounded-3" style="background-color: #150910; border: 1px dashed rgba(255,105,180,0.25);">
+                                ${count > 0 ? matchingBooks.map(b => `
+                                    <div class="small py-1 text-white d-flex align-items-center" style="font-size:0.82rem; font-weight:400;">
+                                        <span class="text-warning fw-bold me-2 flex-shrink-0">[제 ${b.round_no}회차]</span>
+                                        <span class="text-truncate">${b.title}</span>
+                                    </div>
+                                `).join('') : `<div class="small text-muted py-1 text-center">선정 히스토리가 없사옵니다. 🥀</div>`}
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (err) { console.error(err); }
+        }
+
         async function fetchBookStats() {
             try {
                 const { data, error } = await _db.from('v_book_stats').select('*');
@@ -225,7 +305,7 @@
                     const ratingHtml = row.avg_rating > 0 ? `<div class="rating-badge" style="background: transparent; border: 1px solid var(--neon-pink); color: var(--neon-pink); box-shadow: none;">★${row.avg_rating.toFixed(1)}</div>` : `<span class="text-muted">평가전</span>`;
                     tbody.innerHTML += `
                         <tr>
-                            <td><span class="badge bg-dark border border-secondary">${row.round_no} 픽</span></td>
+                            <td><span class="badge bg-dark border border-secondary">제 ${row.round_no}회차</span></td>
                             <td class="text-start text-wrap" style="word-break: break-all;">${row.title}</td>
                             <td>${ratingHtml}</td>
                         </tr>
@@ -237,6 +317,7 @@
             }
         }
 
+        // 👑 대분류 대칭 인라인 테이블 서랍 아코디언 제련
         async function fetchMainCategoryStats() {
             try {
                 const { data, error } = await _db.from('v_main_category_stats').select('*');
@@ -247,12 +328,35 @@
                     tbody.innerHTML = `<tr><td colspan="3" class="text-muted py-3">컬렉션 없음</td></tr>`;
                     return;
                 }
-                data.forEach(row => {
+                data.forEach((row, index) => {
+                    const safeId = `main_cat_${index}`;
+                    // 캐싱된 마스터 풀방에서 해당 대분류 장르에 매핑되는 도서들 정밀 슬라이스 체 거르기
+                    const targetBooks = globalBooksData.filter(b => b.main_category === row.main_category);
+
                     tbody.innerHTML += `
-                        <tr>
-                            <td class="text-start fw-medium" style="color: #fff !important;"><i class="fa-regular fa-star text-pink me-1" style="color:var(--bp-pink);"></i>${row.main_category}</td>
+                        <tr onclick="toggleAccordion('panel_${safeId}', 'arrow_panel_${safeId}')" style="cursor: pointer; transition: background 0.2s;">
+                            <td class="text-start fw-medium" style="color: #fff !important;">
+                                <i class="fa-regular fa-star text-pink me-1" style="color:var(--bp-pink);"></i>${row.main_category}
+                                <i class="fa-solid fa-chevron-down ms-1 text-muted" id="arrow_panel_${safeId}" style="font-size:0.7rem; transition: transform 0.2s;"></i>
+                            </td>
                             <td><span class="count-badge">${row.book_count}권</span></td>
                             <td><span class="rating-badge">★${row.avg_rating.toFixed(1)}</span></td>
+                        </tr>
+                        <tr id="panel_${safeId}" class="d-none" style="background-color: #190B13;">
+                            <td colspan="3" class="text-start px-3 py-2" style="border-bottom: 1px solid rgba(255,0,127,0.15) !important;">
+                                ${targetBooks.length > 0 ? targetBooks.map(b => {
+                                    const score = globalBookRatings[`${b.round_no}-${b.title}`];
+                                    const scoreStr = score > 0 ? `★${score.toFixed(1)}` : '평가전';
+                                    return `
+                                        <div class="d-flex justify-content-between align-items-center small py-1" style="border-bottom: 1px solid rgba(255,255,255,0.04); font-size:0.82rem;">
+                                            <span class="text-white text-truncate" style="max-width: 75%;">
+                                                <span class="text-warning fw-bold me-1">[제 ${b.round_no}회차]</span> ${b.title}
+                                            </span>
+                                            <span class="badge bg-dark border border-pink text-pink" style="font-size: 0.68rem;">${scoreStr}</span>
+                                        </div>
+                                    `;
+                                }).join('') : `<div class="small text-muted text-center py-1">소속 도서 정보 가공전</div>`}
+                            </td>
                         </tr>
                     `;
                 });
@@ -262,6 +366,7 @@
             }
         }
 
+        // 👑 비밀 맞춤 분류 서랍 아코디언 제련
         async function fetchCustomCategoryStats() {
             try {
                 const { data, error } = await _db.from('v_custom_category_stats').select('*');
@@ -272,18 +377,69 @@
                     tbody.innerHTML = `<tr><td colspan="3" class="text-muted py-3">데이터 없음</td></tr>`;
                     return;
                 }
-                data.forEach(row => {
+                data.forEach((row, index) => {
+                    const safeId = `custom_cat_${index}`;
+                    const targetBooks = globalBooksData.filter(b => b.custom_category === row.custom_category);
+
                     tbody.innerHTML += `
-                        <tr>
-                            <td class="text-start fw-medium" style="color: #fff !important;"><i class="fa-solid fa-sparkles me-1" style="color:var(--neon-pink);"></i>${row.custom_category}</td>
+                        <tr onclick="toggleAccordion('panel_${safeId}', 'arrow_panel_${safeId}')" style="cursor: pointer; transition: background 0.2s;">
+                            <td class="text-start fw-medium" style="color: #fff !important;"><i class="fa-solid fa-sparkles me-1" style="color:var(--neon-pink);"></i>${row.custom_category}
+                                <i class="fa-solid fa-chevron-down ms-1 text-muted" id="arrow_panel_${safeId}" style="font-size:0.7rem; transition: transform 0.2s;"></i>
+                            </td>
                             <td><span class="count-badge">${row.book_count}권</span></td>
                             <td><span class="rating-badge">★${row.avg_rating.toFixed(1)}</span></td>
+                        </tr>
+                        <tr id="panel_${safeId}" class="d-none" style="background-color: #190B13;">
+                            <td colspan="3" class="text-start px-3 py-2" style="border-bottom: 1px solid rgba(255,0,127,0.15) !important;">
+                                ${targetBooks.length > 0 ? targetBooks.map(b => {
+                                    const score = globalBookRatings[`${b.round_no}-${b.title}`];
+                                    const scoreStr = score > 0 ? `★${score.toFixed(1)}` : '평가전';
+                                    return `
+                                        <div class="d-flex justify-content-between align-items-center small py-1" style="border-bottom: 1px solid rgba(255,255,255,0.04); font-size:0.82rem;">
+                                            <span class="text-white text-truncate" style="max-width: 75%;">
+                                                <span class="text-warning fw-bold me-1">[제 ${b.round_no}회차]</span> ${b.title}
+                                            </span>
+                                            <span class="badge bg-dark border border-pink text-pink" style="font-size: 0.68rem;">${scoreStr}</span>
+                                        </div>
+                                    `;
+                                }).join('') : `<div class="small text-muted text-center py-1">소속 도서 정보 가공전</div>`}
+                            </td>
                         </tr>
                     `;
                 });
             } catch (err) {
                 console.error(err);
                 document.getElementById("customCatStatsBody").innerHTML = `<tr><td colspan="3" class="text-danger">로드 실패</td></tr>`;
+            }
+        }
+
+        // 👑 통합형 아코디언 가속 스위칭 마스터 기믹 함수
+        function toggleAccordion(panelId, arrowId) {
+            const panel = document.getElementById(panelId);
+            const arrow = document.getElementById(arrowId);
+            
+            if (panel.classList.contains("d-none")) {
+                panel.classList.remove("d-none");
+                if(arrow) {
+                    arrow.style.transform = "rotate(180deg)";
+                    arrow.classList.remove("text-muted");
+                    arrow.classList.add("text-pink");
+                }
+            } else {
+                panel.classList.add("d-none");
+                if(arrow) {
+                    arrow.style.transform = "rotate(0deg)";
+                    arrow.classList.remove("text-pink");
+                    arrow.classList.add("text-muted");
+                }
+            }
+        }
+
+        function handleLogout() {
+            if(confirm("핑크 라운지에서 퇴장하시겠사옵니다?")) {
+                localStorage.removeItem("login_member");
+                localStorage.removeItem("login_member_image");
+                window.location.href = "index.html";
             }
         }
     </script>

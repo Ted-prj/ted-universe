@@ -21,7 +21,7 @@
                     <span class="badge bg-dark border border-pink text-pink p-2" id="userBadge" style="color: var(--bp-pink) !important;">공주님</span>
                 </div>
             </div>
-            <p class="text-muted mt-2 m-0">오직 이번 달 티타임과 다음 달 픽만 실시간 큐레이션하옵니다 💖</p>
+            <p class="text-muted mt-2 m-0">오직 이번 티타임과 다음 티타임 픽만 실시간 큐레이션하옵니다 💖</p>
         </div>
 
         <div class="stat-card border-danger mb-3 animate-pulse" id="naggingPanel" style="border-color: var(--neon-pink) !important; background: linear-gradient(135deg, #1A0510, #141414);">
@@ -35,7 +35,7 @@
 
         <div class="stat-card">
             <div class="card-header-custom" id="recHeaderTitle">
-                <i class="fa-solid fa-paper-plane"></i> 다음 달 추천 릴레이 현황
+                <i class="fa-solid fa-paper-plane"></i> 다음 티타임 추천 릴레이 현황
             </div>
             <div class="card-body-custom">
                 <div id="recommendationFeedList">
@@ -46,7 +46,7 @@
 
         <div class="stat-card mt-3">
             <div class="card-header-custom" id="reviewHeaderTitle">
-                <i class="fa-solid fa-comments"></i> 이번 달 공주님들의 생생 별점 & 총평
+                <i class="fa-solid fa-comments"></i> 이번 티타임 공주님들의 생생 별점 & 총평
             </div>
             <div class="card-body-custom">
                 <div id="reviewFeedList">
@@ -56,20 +56,7 @@
         </div>
     </div>
 
-    <div class="bottom-nav">
-        <a href="feed.html" class="bottom-nav-item active">
-            <i class="fa-solid fa-rss"></i>
-            <span>소통 피드</span>
-        </a>
-        <a href="write.html" class="bottom-nav-item">
-            <i class="fa-solid fa-pen-to-square"></i>
-            <span>비밀 기록</span>
-        </a>
-        <a href="dashboard.html" class="bottom-nav-item">
-            <i class="fa-solid fa-crown"></i>
-            <span>핑크 라운지</span>
-        </a>
-    </div>
+    <div id="global-nav" data-active="feed"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase_config.js"></script>
@@ -77,7 +64,7 @@
     <script>
         checkAuth();
         const memberImages = {}; 
-        let allMembersList = []; // 활성 공주님들 풀만 캐싱할 저장소
+        let allMembersList = []; 
 
         let submittedRecs = [];
         let submittedReviews = [];
@@ -86,18 +73,16 @@
             document.getElementById("userBadge").textContent = `👸 ${getLoggedInMember()} 공주`;
             document.getElementById("myAvatarHeader").src = `images/${localStorage.getItem("login_member_image") || 'default_princess.png'}`;
             
-            // 활성 상태의 공주님 아바타 맵 동기화 후 타겟 피드 가동
             await syncMemberAvatars();
             loadTargetFeeds();
         });
 
-        // 👑 현재 살아 숨 쉬는 활성 공주님들 명단만 패치!
         async function syncMemberAvatars() {
             try {
                 const { data } = await _db
                     .from('members')
                     .select('member_name, image_name')
-                    .eq('is_active', true); // 비활성 철새 멤버는 명단에서 가차 없이 컷!
+                    .eq('is_active', true);
                     
                 if (data) {
                     allMembersList = data.map(m => m.member_name);
@@ -105,17 +90,11 @@
                         memberImages[m.member_name] = m.image_name;
                     });
                 }
-            } catch(e) { console.error("아바타 맵 동기화 실패:", e); }
+            } catch(e) { console.error("아바타 동기화 실패:", e); }
         }
 
         async function loadTargetFeeds() {
             try {
-                const now = new Date();
-                const future = new Date(now.getFullYear(), now.getMonth() + 1, 1); // 지난번 문법 홀로그램 에러 수정 완료!
-                const nextMonthStr = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}`;
-                
-                document.getElementById("recHeaderTitle").innerHTML = `<i class="fa-solid fa-paper-plane"></i> 💌 다음 달(${future.getMonth() + 1}월) 추천 릴레이 현황`;
-
                 const { data: bookData } = await _db
                     .from('books')
                     .select('round_no, title')
@@ -125,27 +104,30 @@
                 const latestRound = bookData && bookData.length > 0 ? bookData[0].round_no : 0;
                 const latestTitle = bookData && bookData.length > 0 ? bookData[0].title : '지정 도서 없음';
 
-                document.getElementById("reviewHeaderTitle").innerHTML = `<i class="fa-solid fa-comments"></i> ☕ 이번 달(${latestRound}회차) 공주님들의 생생 별점 & 총평`;
+                const nextRound = latestRound + 1;
 
+                document.getElementById("recHeaderTitle").innerHTML = `<i class="fa-solid fa-paper-plane"></i> 💌 다음 (제 ${nextRound}회차) 티타임 추천 릴레이 현황`;
+                document.getElementById("reviewHeaderTitle").innerHTML = `<i class="fa-solid fa-comments"></i> ☕ 이번 (제 ${latestRound}회차) 티타임 공주님들의 생생 별점 & 총평`;
+
+                // 👑 날짜 연산코드 매핑 조각을 완전 제거하고 순수 차수(nextRound)를 던져서 추적!
                 await Promise.all([
-                    fetchFilteredRecommendations(nextMonthStr, future.getMonth() + 1),
+                    fetchFilteredRecommendations(nextRound),
                     fetchFilteredReviews(latestRound, latestTitle)
                 ]);
 
-                renderPrincessNagging(future.getMonth() + 1, latestRound);
+                renderPrincessNagging(nextRound, latestRound);
 
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error("피드 차수 바인딩 에러:", err); }
         }
 
-        async function fetchFilteredRecommendations(targetMonth, nextMonthNum) {
+        // 👑 target_round를 기준으로 후보작 리스트 정밀 타격 스캔
+        async function fetchFilteredRecommendations(nextRoundNum) {
             const container = document.getElementById("recommendationFeedList");
             try {
                 const { data, error } = await _db
                     .from('recommendations')
                     .select('*')
-                    .eq('target_month', targetMonth)
+                    .eq('target_round', nextRoundNum)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
@@ -153,7 +135,11 @@
                 submittedRecs = [];
 
                 if (!data || data.length === 0) {
-                    container.innerHTML = `<div class="text-center py-4 text-muted small">아직 추천작이 없사옵니다.</div>`;
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-muted small">
+                            <i class="fa-solid fa-envelope-open-text d-block fs-3 mb-2" style="color: rgba(255,105,180,0.3);"></i>
+                            아직 공주님들이 다음 (제 ${nextRoundNum}회차) 티타임 후보작을 내지 않으셨사옵니다.
+                        </div>`;
                     return;
                 }
 
@@ -168,7 +154,7 @@
                             <div class="w-100">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="fw-bold text-pink" style="color: var(--bp-pink) !important;">👸 ${item.member_name} 공주 픽</span>
-                                    <span class="badge bg-secondary" style="font-size:0.7rem; background-color: rgba(255,0,127,0.15) !important; color: var(--bp-pink) !important;">${nextMonthNum}월 모임용</span>
+                                    <span class="badge bg-secondary" style="font-size:0.7rem; background-color: rgba(255,0,127,0.15) !important; color: var(--bp-pink) !important;">제 ${nextRoundNum}회차 후보</span>
                                 </div>
                                 <h6 class="text-white fw-bold mb-1"><i class="fa-solid fa-book-sparkles me-1 text-warning"></i> ${item.title}</h6>
                                 <div class="d-flex flex-wrap text-muted small gap-2" style="font-size:0.8rem; color: var(--text-muted) !important;">
@@ -197,13 +183,17 @@
                 submittedReviews = [];
 
                 if (!data || data.length === 0) {
-                    container.innerHTML = `<div class="text-center py-4 text-muted small">총평 피드가 비어있사옵니다.</div>`;
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-muted small">
+                            <i class="fa-solid fa-mug-tea d-block fs-3 mb-2" style="color: rgba(255,105,180,0.3);"></i>
+                            이번 제 ${roundNo}회차 티타임 도서 [${bookTitle}]에 달린 평이 아직 없사옵니다.
+                        </div>`;
                     return;
                 }
 
                 container.innerHTML = `
                     <div class="small mb-3 px-2 py-1 rounded bg-black text-center border border-secondary text-truncate" style="color: var(--bp-pink) !important; border-color: rgba(255,105,180,0.2) !important;">
-                        📖 이번 달 선정 도서 : <b>${bookTitle}</b>
+                        📖 이번 티타임 지정 도서 : <b>${bookTitle}</b>
                     </div>
                 `;
 
@@ -232,10 +222,8 @@
             } catch (err) { console.error(err); }
         }
 
-        function renderPrincessNagging(nextMonthNum, roundNo) {
+        function renderPrincessNagging(nextRound, roundNo) {
             const container = document.getElementById("naggingContainer");
-            
-            // 오직 살아남은 활성 공주 풀을 기준으로 미제출자 색출! (지잼은 완벽 분리)
             const missingRecs = allMembersList.filter(m => !submittedRecs.includes(m));
             const missingReviews = allMembersList.filter(m => !submittedReviews.includes(m));
 
@@ -250,11 +238,10 @@
             }
 
             let html = `<div class="text-start small" style="line-height:1.6;">`;
-            
             if (missingRecs.length > 0) {
                 html += `
                     <div class="mb-2">
-                        <span class="text-warning fw-bold">🎀 다음 달(${nextMonthNum}월) 추천 안 던진 기지배들 :</span> <br>
+                        <span class="text-warning fw-bold">🎀 다음 (제 ${nextRound}회차) 티타임 추천 안 던진 기지배들 :</span> <br>
                         <span class="fw-bold text-white" style="font-size:0.95rem; color:var(--bp-pink) !important;">
                             ${missingRecs.map(m => `❌${m}`).join(', ')}
                         </span> <br>
@@ -262,11 +249,10 @@
                     </div>
                 `;
             }
-
             if (missingReviews.length > 0) {
                 html += `
                     <div>
-                        <span class="text-warning fw-bold">☕ 이번 달(${roundNo}회차) 총평 꿀 먹은 기지배들 :</span> <br>
+                        <span class="text-warning fw-bold">☕ 이번 (제 ${roundNo}회차) 티타임 총평 꿀 먹은 기지배들 :</span> <br>
                         <span class="fw-bold text-white" style="font-size:0.95rem; color:var(--neon-pink) !important;">
                             ${missingReviews.map(m => `🥀${m}`).join(', ')}
                         </span> <br>
@@ -274,7 +260,6 @@
                     </div>
                 `;
             }
-
             html += `</div>`;
             container.innerHTML = html;
         }

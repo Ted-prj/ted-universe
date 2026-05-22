@@ -1,6 +1,6 @@
 /* =========================================================================
-   [독한녀들 Book Club - 모바일 최적화 공주풍 스타일시트]
-   설명: 100% 모바일 퍼스트 대응, 글자 시인성 절대 강제 오버라이딩, 공주풍 네온 이펙트
+   [독한녀들 Book Club - 모바일 최적화 공주풍 스타일시트 통합판]
+   설명: 100% 모바일 퍼스트 대응, 글자 시인성 강제 오버라이딩, 횡스크롤 가로 확장형 하단 바 이식 완료
    ========================================================================= */
 
 :root {
@@ -19,7 +19,8 @@ body {
     background-color: var(--bp-black);
     color: #FFFFFF !important;
     font-family: 'Noto Sans KR', sans-serif;
-    padding: 1rem 0.5rem 80px 0.5rem; /* 하단 바 공간 확보 */
+    /* 하단 바 가로 스크롤 영역이 입체적으로 늘어남에 따라 하단 패딩 안전 마진 확장 */
+    padding: 1rem 0.5rem calc(85px + env(safe-area-inset-bottom)) 0.5rem;
     font-size: 0.95rem;
 }
 
@@ -203,49 +204,63 @@ body {
 }
 
 /* =========================================================================
-   [모바일 전용 블랙핑크 바텀 내비게이션 바]
+   📱 횡방향 가로스크롤 고성능 Bottom Tab Bar CSS 엔진 (Zoro-DIET Hub Architecture 이식)
+   설명: 하단 고정형 3등분 레이아웃을 폐기하고 무한 확장 및 가속 스크롤이 가능한 컨테이너 장착
    ========================================================================= */
-.bottom-nav {
+.bottom-nav-container {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 65px;
     background-color: #0D0D0D;
     border-top: 2px solid var(--neon-pink);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
+    padding: 6px 0;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom));
     z-index: 2000;
     box-shadow: 0 -5px 15px rgba(255, 0, 127, 0.25);
-    padding-bottom: env(safe-area-inset-bottom);
 }
 
-.bottom-nav-item {
+.bottom-nav-scroll-wrapper {
+    display: flex;
+    flex-wrap: nowrap; /* 👑 탭 개수가 10개로 늘어나도 줄바꿈을 절대적으로 찍어 누르는 초정밀 기믹 */
+    overflow-x: auto;  /* 가로 영역 탈출 시 스와이프 스크롤 유연성 확보 */
+    -webkit-overflow-scrolling: touch; /* iOS 환경 모바일 드래그 가속 물리엔진 활성화 */
+    padding: 0 5px;
+}
+
+.bottom-nav-scroll-wrapper::-webkit-scrollbar {
+    display: none; /* 모바일 크롬, 사파리 등의 지저분한 순정 가로 스크롤바를 흔적도 없이 베어버림 */
+}
+
+.bottom-nav-item-link {
+    flex: 1 0 auto;
+    min-width: 85px; /* 공간 협소화 발생 시 각 메뉴 아이콘이 납작하게 찌그러지는 현상 방지 보루 */
     color: #888888;
     text-decoration: none !important;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     font-weight: 700;
     transition: all 0.2s ease;
-    width: 33.33%;
+    padding: 6px 2px;
     text-align: center;
 }
 
-.bottom-nav-item i {
-    font-size: 1.35rem;
+.bottom-nav-item-link i {
+    font-size: 1.2rem;
     margin-bottom: 3px;
 }
 
-.bottom-nav-item:hover {
+.bottom-nav-item-link:hover {
     color: var(--bp-pink);
 }
 
-.bottom-nav-item.active {
+.bottom-nav-item-link.active {
     color: var(--neon-pink) !important;
     text-shadow: 0 0 8px var(--neon-pink);
+    background: rgba(255, 0, 127, 0.05);
+    border-radius: 10px;
 }
 
 /* =========================================================================
