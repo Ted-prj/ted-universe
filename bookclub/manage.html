@@ -9,6 +9,64 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* 👑 [Zoro's Multi-Member Star Swipe Architecture] */
+        .star-rating-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 4px 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .star-input-container {
+            position: relative;
+            width: 115px;
+            height: 24px;
+            user-select: none;
+        }
+        .star-input-stars-outer {
+            color: #242424;
+            font-size: 1.25rem;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+        .star-input-stars-inner {
+            color: var(--royal-gold, #FFD700);
+            font-size: 1.25rem;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            width: 80%; /* 기본값 4.0 */
+            pointer-events: none;
+            letter-spacing: 2px;
+            line-height: 1;
+            transition: width 0.05s linear;
+        }
+        .star-range-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            margin: 0;
+            padding: 0;
+            -webkit-appearance: none;
+        }
+    </style>
 </head>
 <body>
 
@@ -85,7 +143,7 @@
                         <div class="col-12">
                             <label class="form-label text-warning small fw-bold m-0 mb-1">추천 공주명 선택</label>
                             <select class="form-select form-select-custom text-white" id="sponBySelect" style="background:#000 !important;">
-                                </select>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -160,9 +218,10 @@
             } catch (err) { console.error("차수 인프라 앵커링 실패:", err); }
         }
 
+        // 👑 각 멤버별로 완전히 독립적으로 구동되는 0.1 정밀도 슬라이드 스와이프 별점 기판 바인딩 개조
         async function loadActiveMembersRatingForm() {
             const container = document.getElementById("memberFinalRatingsContainer");
-            const sponBySelect = document.getElementById("sponBySelect"); // 즉석지정 셀렉트 박스 앵커링
+            const sponBySelect = document.getElementById("sponBySelect"); 
             try {
                 const { data: members, error: memErr } = await _db
                     .from('members')
@@ -174,32 +233,28 @@
                 activeMembersList = members || [];
 
                 container.innerHTML = "";
-                if (sponBySelect) sponBySelect.innerHTML = ""; // 초기화
+                if (sponBySelect) sponBySelect.innerHTML = ""; 
 
                 activeMembersList.forEach(m => {
-                    // 1. 별점 수거 드롭다운 바인딩
+                    const safeName = m.member_name;
                     container.innerHTML += `
                         <div class="p-2 rounded bg-black d-flex justify-content-between align-items-center border border-secondary" style="border-color: rgba(255,105,180,0.15) !important;">
                             <div class="fw-bold text-white small">
                                 <img src="images/${m.image_name}" class="princess-avatar-sm" onerror="this.src='images/default_princess.png'">
-                                ${m.member_name} 공주
+                                ${safeName} 공주
                             </div>
-                            <div style="width: 45%;">
-                                <select class="form-select form-select-custom py-1 px-2" id="rating_after_${m.member_name}" style="font-size:0.8rem;">
-                                    <option value="5.0">★★★★★ (5.0)</option>
-                                    <option value="4.5">★★★★☆ (4.5)</option>
-                                    <option value="4.0" selected>★★★★ (4.0)</option>
-                                    <option value="3.5">★★★☆ (3.5)</option>
-                                    <option value="3.0">★★★ (3.0)</option>
-                                    <option value="2.5">★★☆ (2.5)</option>
-                                    <option value="2.0">★★ (2.0)</option>
-                                    <option value="1.0">★ (1.0)</option>
-                                </select>
+                            <div class="star-rating-wrapper">
+                                <div class="star-input-container">
+                                    <div class="star-input-stars-outer">★★★★★</div>
+                                    <div class="star-input-stars-inner" id="innerStar_${safeName}">★★★★★</div>
+                                    <input type="range" class="star-range-input" id="rating_after_${safeName}" min="0" max="5" step="0.1" value="4.0" 
+                                           oninput="document.getElementById('innerStar_${safeName}').style.width = (this.value / 5 * 100) + '%'; document.getElementById('textStar_${safeName}').textContent = parseFloat(this.value).toFixed(1);">
+                                </div>
+                                <span class="rating-value text-warning fw-bold small" id="textStar_${safeName}" style="min-width: 22px; display: inline-block; text-align: right;">4.0</span>
                             </div>
                         </div>
                     `;
 
-                    // 2. 👑 즉석지정용 공주 선택 셀렉트 박스에 무결점 숫자 ID 옵션 적재
                     if (sponBySelect) {
                         const opt = document.createElement("option");
                         opt.value = m.id;
@@ -253,7 +308,6 @@
             }
         }
 
-        // 👑 [Golden Schema 완결 트랜잭션]: books 테이블의 recommended_by 필드에 텍스트 대신 완벽한 고유 숫자 ID(bigint) 적재!
         async function executeFinalSessionClosingTransaction() {
             const nextRoundDate = document.getElementById("nextRoundDateInput").value;
             const nextRoundLocation = document.getElementById("nextRoundLocationInput").value.trim();
@@ -268,8 +322,9 @@
             if (!masterConfirm) return;
 
             try {
-                // 1. 이번 차수 공주별 토론 후 별점(rating_after)을 member_id 외래키 기반으로 업서트
+                // 1. 이번 차수 공주별 토론 후 별점(rating_after) 수거 연쇄 커밋
                 const ratingPromises = activeMembersList.map(m => {
+                    // 👑 수동 조작된 개별 렌지 슬라이더 인풋 엘리먼트의 실수값을 한 치의 오차도 없이 다이렉트로 추적 수확!
                     const finalScore = parseFloat(document.getElementById(`rating_after_${m.member_name}`).value);
                     return _db.from('reviews_ratings').upsert({
                         round_no: currentActiveRound,
@@ -278,7 +333,6 @@
                     }, { onConflict: 'round_no, member_id' }); 
                 });
 
-                // 2. 다음 회차 다중 배치를 위한 페이로드 수집 파이프라인
                 let nextBooksPayloads = [];
                 const checkedBoxes = document.querySelectorAll('input[name="nextBookCandidateCheckbox"]:checked');
                 
@@ -288,7 +342,6 @@
                         title: cb.getAttribute('data-title'),
                         author: cb.getAttribute('data-author'),
                         page_count: parseInt(cb.getAttribute('data-page')),
-                        // 👑 [Golden Schema 변환]: recommended_by 컬럼에 이름 대신 체크박스에 숨겨둔 고유 고유 숫자 ID(bigint)를 밀어 넣는다!
                         recommended_by: parseInt(cb.getAttribute('data-by-id')), 
                         main_category: '인문/사회',
                         custom_category: '공감/치유',
@@ -298,14 +351,14 @@
                     });
                 });
 
-                // 3. 확장 폼 영역에 즉석 직접 기입 항목이 기재되어 있는지 파악해서 병렬 이식
                 const sponTitle = document.getElementById("sponTitle").value.trim();
                 if (sponTitle) {
                     const sponAuthor = document.getElementById("sponAuthor").value.trim();
                     const sponPage = parseInt(document.getElementById("sponPage").value);
-                    const sponById = parseInt(document.getElementById("sponBySelect").value); // 👑 드롭다운 고유 ID 검거
+                    const sponPageValue = isNaN(sponPage) ? null : sponPage;
+                    const sponById = parseInt(document.getElementById("sponBySelect").value); 
 
-                    if (!sponAuthor || !sponPage || !sponById) {
+                    if (!sponAuthor || !sponPageValue || !sponById) {
                         alert("즉석 직접 기입 도서의 작가, 쪽수, 그리고 추천 공주 선택까지 명확히 채워주셔야 하옵니다!");
                         return;
                     }
@@ -313,8 +366,7 @@
                         round_no: nextTargetRound,
                         title: sponTitle,
                         author: sponAuthor,
-                        page_count: sponPage,
-                        // 👑 [Golden Schema 변환]: 주관식 텍스트 대신 드롭다운에서 선택된 숫자 ID 박제 삽입!
+                        page_count: sponPageValue,
                         recommended_by: sponById,
                         main_category: document.getElementById("sponMainCat").value.trim() || '인문/사회',
                         custom_category: document.getElementById("sponCustomCat").value.trim() || '공감/치유',
@@ -329,17 +381,12 @@
                     return;
                 }
 
-                // 4. 현재 최신 차수 책의 이력을 완벽하게 TRUE(마감)로 잠금 처리
                 const closeCurrentRoundPromise = _db.from('books').update({ is_closed: true }).eq('round_no', currentActiveRound);
-                
-                // 5. 다음 회차 다중 새 도서 생성 인서트
                 const insertNextBooksPromise = _db.from('books').insert(nextBooksPayloads);
 
-                // 일제히 세션 마감 대폭파 집행!
                 const results = await Promise.all([...ratingPromises, closeCurrentRoundPromise, insertNextBooksPromise]);
                 for(let r of results) { if(r.error) throw r.error; }
 
-                // 6. 선정 완료된 정식 추천작들의 진급 플래그 true 마킹
                 const selectedRecIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
                 if (selectedRecIds.length > 0) {
                     await _db.from('recommendations').update({ is_selected: true }).in('id', selectedRecIds);
@@ -347,7 +394,6 @@
 
                 alert(`🎉 티타임 셧다운 완료! 제 ${currentActiveRound}회차 토론방이 공식 잠금(is_closed=true) 처리되었으며, 제 ${nextTargetRound}회차 새 왕좌의 도서 기록들이 숫자 ID 연동 체제로 완벽하게 등재 완료되었습니다! 📅✨`);
                 
-                // 마스터 UI 초기화 리셋
                 document.getElementById("nextRoundDateInput").value = "";
                 document.getElementById("nextRoundLocationInput").value = "";
                 document.getElementById("spontaneousFormWrapper").classList.add("d-none");

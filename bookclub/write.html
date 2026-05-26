@@ -9,6 +9,64 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* 👑 [Zoro's Custom Star Swipe Input Infrastructure] */
+        .star-rating-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 105, 180, 0.15);
+        }
+        .star-input-container {
+            position: relative;
+            width: 140px;
+            height: 30px;
+            user-select: none;
+        }
+        .star-input-stars-outer {
+            color: #2b2b2b;
+            font-size: 1.5rem;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            letter-spacing: 3px;
+            line-height: 1;
+        }
+        .star-input-stars-inner {
+            color: var(--royal-gold, #FFD700);
+            font-size: 1.5rem;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            width: 80%; /* 기본값 4.0 대응 */
+            pointer-events: none;
+            letter-spacing: 3px;
+            line-height: 1;
+            transition: width 0.05s linear;
+        }
+        .star-range-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            margin: 0;
+            padding: 0;
+            -webkit-appearance: none;
+        }
+    </style>
 </head>
 <body>
 
@@ -79,18 +137,16 @@
                         </select>
                     </div>
 
-                    <div class="mb-2">
-                        <label class="form-label text-pink small fw-bold">토론 전 마음의 별점 점수</label>
-                        <select class="form-select form-select-custom" id="ratingSelect" required>
-                            <option value="5.0">★★★★★ (5.0점 최고여요)</option>
-                            <option value="4.5">★★★★☆ (4.5점 아주 좋아용)</option>
-                            <option value="4.0" selected>★★★★ (4.0점 볼만해요)</option>
-                            <option value="3.5">★★★☆ (3.5점 낫배드)</option>
-                            <option value="3.0">★★★ (3.0점 평범해요)</option>
-                            <option value="2.5">★★☆ (2.5점 아쉬워요)</option>
-                            <option value="2.0">★★ (2.0점 별로여요)</option>
-                            <option value="1.0">★ (1.0점 시간낭비)</option>
-                        </select>
+                    <div class="mb-3 text-start">
+                        <label class="form-label text-pink small fw-bold d-block mb-1.5">토론 전 마음의 별점 점수 (손가락으로 문지르셔요)</label>
+                        <div class="star-rating-wrapper">
+                            <div class="star-input-container">
+                                <div class="star-input-stars-outer">★★★★★</div>
+                                <div class="star-input-stars-inner" id="writeStarInner">★★★★★</div>
+                                <input type="range" class="star-range-input" id="ratingSelect" min="0" max="5" step="0.1" value="4.0" oninput="syncWriteStarSlider(this.value)">
+                            </div>
+                            <span class="rating-value text-warning fw-bold fs-5" id="writeStarText" style="min-width: 32px; display: inline-block; text-align: right;">4.0</span>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -130,6 +186,12 @@
             loadExistingReview();
         });
 
+        // 👑 스와이프 시 실시간으로 황금 별을 채워주고 점수를 갱신하는 렌더 엔진 유틸
+        function syncWriteStarSlider(val) {
+            document.getElementById("writeStarInner").style.width = (parseFloat(val) / 5 * 100) + "%";
+            document.getElementById("writeStarText").textContent = parseFloat(val).toFixed(1);
+        }
+
         function setupTargetRounds() {
             const select = document.getElementById("targetRoundSelect");
             select.innerHTML = ""; 
@@ -159,7 +221,6 @@
             } catch(e) { console.error(e); }
         }
 
-        // 👑 [Golden Schema 리팩토링]: member_name 대신 세션 배낭의 고유 숫자 id 기반 낙방작 수색 처리
         async function huntLastUnselectedRecommendation() {
             const member_id = parseInt(localStorage.getItem("login_member_id"));
             if (!member_id) return;
@@ -168,7 +229,7 @@
                 const { data, error } = await _db
                     .from('recommendations')
                     .select('title, author, page_count, nickname, is_selected')
-                    .eq('member_id', member_id) // 👑 문자열 필터 완전 소멸
+                    .eq('member_id', member_id) 
                     .eq('is_selected', false) 
                     .order('created_at', { ascending: false })
                     .limit(1);
@@ -201,7 +262,6 @@
             document.getElementById("recTitle").focus();
         }
 
-        // 👑 [Golden Schema 리팩토링]: 기존 기입작 로드 엔진 또한 고유 member_id 필터링 기믹으로 무장
         async function loadExistingRecommendation() {
             const member_id = parseInt(localStorage.getItem("login_member_id"));
             const target_round = document.getElementById("targetRoundSelect").value;
@@ -211,7 +271,7 @@
                 const { data, error } = await _db
                     .from('recommendations')
                     .select('id, title, author, nickname, page_count')
-                    .eq('member_id', member_id) // 👑 정석 고유 ID 바인딩
+                    .eq('member_id', member_id) 
                     .eq('target_round', parseInt(target_round))
                     .order('created_at', { ascending: false })
                     .limit(1);
@@ -243,7 +303,6 @@
             } catch (err) { console.error(err); }
         }
 
-        // 👑 [Golden Schema 리팩토링]: 기존 별점 리뷰 로드도 member_id 필터 연동 체제 전환
         async function loadExistingReview() {
             const member_id = parseInt(localStorage.getItem("login_member_id"));
             const roundNoEl = document.getElementById("roundNoSelect");
@@ -255,34 +314,37 @@
                 const { data, error } = await _db
                     .from('reviews_ratings')
                     .select('rating_before, review_text') 
-                    .eq('member_id', member_id) // 👑 정석 고유 ID 바인딩
+                    .eq('member_id', member_id) 
                     .eq('round_no', round_no)
                     .limit(1);
 
                 if (error) throw error;
 
                 const submitBtn = document.getElementById("reviewSubmitBtn");
-                const ratingSelect = document.getElementById("ratingSelect");
-                const reviewText = document.getElementById("reviewText");
+                const ratingSlider = document.getElementById("ratingSelect");
 
                 if (data && data.length > 0) {
                     const rev = data[0];
-                    ratingSelect.value = rev.rating_before ? rev.rating_before.toFixed(1) : "4.0";
-                    reviewText.value = rev.review_text || "";
-
+                    const existingScore = rev.rating_before !== null ? rev.rating_before : 4.0;
+                    
+                    // 👑 기입 데이터 기반 슬라이더 및 황금 광채 별 연동 세팅
+                    ratingSlider.value = existingScore;
+                    syncWriteStarSlider(existingScore);
+                    
+                    document.getElementById("reviewText").value = rev.review_text || "";
                     submitBtn.innerHTML = `<i class="fa-solid fa-pen-fancy"></i> 티타임 총평 우아하게 수정하기`;
                     submitBtn.style.background = "linear-gradient(135deg, #FF007F, #FF69B4)";
                 } else {
-                    ratingSelect.value = "4.0";
-                    reviewText.value = "";
-
+                    ratingSlider.value = 4.0;
+                    syncWriteStarSlider(4.0);
+                    
+                    document.getElementById("reviewText").value = "";
                     submitBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 리뷰 & 별점 굽기 완료`;
                     submitBtn.style.background = "";
                 }
             } catch (err) { console.error(err); }
         }
 
-        // 👑 [Golden Schema 리팩토링]: 추천작 저장 핸들러에서 member_name 대신 member_id를 공식 인서트 처리!
         async function saveRecommendation(e) {
             e.preventDefault();
             const member_id = parseInt(localStorage.getItem("login_member_id"));
@@ -300,7 +362,6 @@
 
             try {
                 if (currentRecId) {
-                    // 수정 업데이트 구역
                     const { error } = await _db
                         .from('recommendations')
                         .update({ title, author, page_count, nickname, target_round })
@@ -309,7 +370,6 @@
                     if (error) throw error;
                     alert("추천 도서 정보가 차수별로 완벽하게 수정되었사옵니다! ✨");
                 } else {
-                    // 👑 신규 인서트 기믹: member_name 명단 걷어내고 member_id 필드 안착 시전!
                     const { error } = await _db
                         .from('recommendations')
                         .insert([{ target_month, target_round, member_id, title, author, page_count, nickname }]);
@@ -326,24 +386,23 @@
             }
         }
 
-        // 👑 [Golden Schema 리팩토링]: 평점 업서트 페이로드와 제약조건(onConflict) 타격을 member_id 기반으로 정밀 개조!
         async function saveReviewRating(e) {
             e.preventDefault();
             const member_id = parseInt(localStorage.getItem("login_member_id"));
             if (!member_id) { alert("세션 만료! 다시 로그인해 주셔요."); return; }
 
             const round_no = parseInt(document.getElementById("roundNoSelect").value);
+            // 👑 슬라이더 인풋에 누적된 0.1 정밀도 실수를 그대로 적재 파이프라인에 바인딩!
             const rating_before = parseFloat(document.getElementById("ratingSelect").value); 
             const review_text = document.getElementById("reviewText").value.trim();
 
             try {
-                // 👑 신규 업서트 기믹: member_name 매핑 폐기, member_id 필드 및 onConflict 제약조건 대상 전격 교체!
                 const { error } = await _db.from('reviews_ratings').upsert({ 
                     round_no, 
                     member_id, 
                     rating_before, 
                     review_text 
-                }, { onConflict: 'round_no, member_id' }); // 👑 정석 유니크 인덱스 타격
+                }, { onConflict: 'round_no, member_id' }); 
                 
                 if (error) throw error;
                 alert("토론 전 마음의 별점과 리뷰 총평이 성공적으로 장전되었습니다! ☕");
