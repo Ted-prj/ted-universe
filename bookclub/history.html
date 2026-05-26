@@ -14,7 +14,7 @@
         /* 👑 [Zoro's Epic History Mobile-Optimized Master Styles] */
         .history-card {
             background: linear-gradient(135deg, #121212, #1a1a1a);
-            border: 1px solid rgba(255, 105, 180, 0.15) !important;
+            border: 1px solid rgba(255, 105, 180, 0.2) !important;
             border-radius: 18px;
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
             padding: 16px !important;
@@ -57,7 +57,6 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.6);
             z-index: 10;
         }
-        /* 👑 원본 폭발 방지 전용 모바일 슬림 공주 칩 정렬 인프라 */
         .attendee-badge-list {
             display: flex;
             flex-wrap: wrap;
@@ -65,13 +64,13 @@
             width: 100%;
         }
         .attendee-mini-chip {
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 105, 180, 0.2) !important;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 105, 180, 0.25) !important;
             padding: 4px 10px;
             border-radius: 30px;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
         .attendee-mini-avatar {
             width: 26px !important;
@@ -81,6 +80,33 @@
             border: 1.5px solid var(--neon-pink) !important;
             flex-shrink: 0;
             display: block;
+        }
+
+        /* 👑 [선장의 UI 조도 상향 오더 반영]: 침침한 글자 무리를 완전히 몰아내기 위한 고대비 마스터 스타일 */
+        .history-vivid-label {
+            color: #ff69b4 !important; /* 눈에 번쩍 뜨이는 고선명 비비드 핑크 강제 인젝션 */
+            font-weight: 700 !important;
+            font-size: 0.78rem !important;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-history-vivid-edit {
+            color: #ffffff !important;
+            background-color: rgba(255, 0, 127, 0.15) !important;
+            border: 1px solid #ff007f !important;
+            font-size: 0.72rem !important;
+            font-weight: 600 !important;
+            padding: 2px 8px !important;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .btn-history-vivid-edit:hover, .btn-history-vivid-edit.active {
+            background-color: #ff007f !important;
+            color: #000000 !important;
+            box-shadow: 0 0 8px rgba(255, 0, 127, 0.4);
         }
     </style>
 </head>
@@ -206,9 +232,10 @@
 
                 const roundNumbers = histories.map(h => h.round_no);
 
+                // 👑 [평점 수확 엔진 장착]: 이름과 아바타 매핑뿐 아니라, 수거된 rating_after 및 rating_before 필드까지 한 묶음으로 전격 사냥!
                 const [booksResponse, attendeesResponse] = await Promise.all([
                     _db.from('books').select('round_no, title, discussion_date, location').in('round_no', roundNumbers),
-                    _db.from('reviews_ratings').select('round_no, member_id, members(member_name, image_name)').in('round_no', roundNumbers)
+                    _db.from('reviews_ratings').select('round_no, member_id, rating_after, rating_before, members(member_name, image_name)').in('round_no', roundNumbers)
                 ]);
 
                 if (booksResponse.error) throw booksResponse.error;
@@ -231,7 +258,7 @@
             }
         }
 
-        // 👑 모바일 대정밀 큐레이션 최적화 카드 빌더 (프사 폭발 완벽 진압본)
+        // 👑 프사 격파 및 숫자 평점 동적 바인딩형 모바일 전용 카드 카드 레이아웃 빌더
         function buildHistoryCardHtml(hist, books, attendees) {
             const roundNo = hist.round_no;
             const bookTitles = books.map(b => `<span class="text-warning fw-bold">[${b.title}]</span>`).join(' & ');
@@ -241,20 +268,27 @@
             const uniqueAttendanceMap = new Map();
             attendees.forEach(a => {
                 if (a.members && !uniqueAttendanceMap.has(a.member_id)) {
-                    uniqueAttendanceMap.set(a.member_id, a.members);
+                    // 토론 후 평점을 우선시하되, 공백 시 토론 전 마음의 별점 점수로 정밀 백업 연동
+                    const validScore = a.rating_after !== null ? a.rating_after : (a.rating_before !== null ? a.rating_before : null);
+                    uniqueAttendanceMap.set(a.member_id, {
+                        info: a.members,
+                        score: validScore
+                    });
                 }
             });
 
-            // 👑 [선장의 프사 폭발 진압 오더]: 크기를 강제 잠금하고 한 줄 가로 배치가 흐르도록 빌딩
+            // 👑 [선장의 핵심 오더 반영]: 아바타와 닉네임 바로 뒤에 눈부신 황금빛 소수점 점수 안착!
             let attendeeChipsHtml = "";
             if (uniqueAttendanceMap.size === 0) {
                 attendeeChipsHtml = `<span class="text-muted small">출석 명단 공백</span>`;
             } else {
-                uniqueAttendanceMap.forEach((memberInfo) => {
+                uniqueAttendanceMap.forEach((memberData) => {
+                    const scoreDisplay = memberData.score !== null ? Number(memberData.score).toFixed(1) : '-';
                     attendeeChipsHtml += `
                         <div class="attendee-mini-chip">
-                            <img src="images/${memberInfo.image_name || 'default_princess.png'}" class="attendee-mini-avatar" onerror="this.src='images/default_princess.png'">
-                            <span class="text-white fw-bold" style="font-size:0.75rem;">${memberInfo.member_name}</span>
+                            <img src="images/${memberData.info.image_name || 'default_princess.png'}" class="attendee-mini-avatar" onerror="this.src='images/default_princess.png'">
+                            <span class="text-white fw-bold" style="font-size:0.75rem;">${memberData.info.member_name}</span>
+                            <span class="text-warning fw-black small ms-1" style="font-size:0.72rem;">${scoreDisplay}</span>
                         </div>
                     `;
                 });
@@ -274,6 +308,7 @@
                 photosHtml = `<div class="text-muted small py-2 id-empty-photo-${roundNo}" style="font-size:0.78rem;"><i class="fa-regular fa-images me-1"></i> 현장 사진첩이 비어있사옵니다.</div>`;
             }
 
+            // 👑 [선장의 고광채 오더 반영]: btn-history-vivid-edit 및 history-vivid-label 전격 배정 구역
             return `
                 <div class="card history-card text-start" id="card_master_${roundNo}">
                     <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-2 mb-2.5" style="border-color: rgba(255,0,127,0.15) !important;">
@@ -281,7 +316,7 @@
                             <span class="badge bg-danger px-2.5 py-1" style="background-color: var(--neon-pink) !important; font-size: 0.78rem; font-weight:700;">제 ${roundNo}회차</span>
                             <span class="text-muted small ms-2" style="font-size:0.75rem;"><i class="fa-solid fa-calendar-day"></i> ${targetDate}</span>
                         </div>
-                        <button class="btn btn-outline-pink btn-sm py-0.5 px-2" id="editTriggerBtn_${roundNo}" onclick="toggleHistoryCardEditMode(${roundNo})" style="font-size:0.72rem; font-weight:500;">
+                        <button class="btn btn-history-vivid-edit btn-sm" id="editTriggerBtn_${roundNo}" onclick="toggleHistoryCardEditMode(${roundNo})">
                             <i class="fa-solid fa-file-pen"></i> 역사 수정
                         </button>
                     </div>
@@ -295,12 +330,12 @@
                     </div>
 
                     <div class="mb-3">
-                        <div class="fw-bold text-pink small mb-1.5" style="font-size:0.72rem; letter-spacing:0.5px;"><i class="fa-solid fa-users-rectangle"></i> 티타임 참석 공주 명단</div>
+                        <div class="history-vivid-label"><i class="fa-solid fa-users-rectangle"></i> 티타임 참석 공주 명단</div>
                         <div class="attendee-badge-list">${attendeeChipsHtml}</div>
                     </div>
 
                     <div class="mb-3">
-                        <div class="fw-bold text-pink small mb-1.5" style="font-size:0.72rem; letter-spacing:0.5px;"><i class="fa-solid fa-camera-retro"></i> 현장 아카이브 앨범</div>
+                        <div class="history-vivid-label"><i class="fa-solid fa-camera-retro"></i> 현장 아카이브 앨범</div>
                         <div class="history-photo-grid" id="photoGridMaster_${roundNo}">${photosHtml}</div>
                         
                         <div class="mt-2 d-none" id="addPhotoUploadArea_${roundNo}">
@@ -309,7 +344,7 @@
                     </div>
 
                     <div class="mt-1">
-                        <div class="fw-bold text-pink small mb-1.5" style="font-size:0.72rem; letter-spacing:0.5px;"><i class="fa-solid fa-brain"></i> AI 토론 종합 분석 요약문</div>
+                        <div class="history-vivid-label"><i class="fa-solid fa-brain"></i> AI 토론 종합 분석 요약문</div>
                         
                         <div class="text-white bg-black p-3 rounded-3" id="summaryViewZone_${roundNo}" style="font-size:0.82rem; line-height:1.6; border: 1px solid rgba(255,255,255,0.04); max-height:240px; overflow-y:auto; font-weight:300; white-space: pre-wrap;">${escapeHtml(hist.summary_text)}</div>
                         
@@ -324,7 +359,6 @@
             `;
         }
 
-        // 👑 [Zoro 정밀 디버깅 컴파일]: 불능 상태에 빠진 수정 모드 전환 엔진 전면적 무결점 재구조화!
         function toggleHistoryCardEditMode(roundNo, isCancel = false) {
             console.log("Zoro Linker Engaged -> Round:", roundNo, "CancelTrigger:", isCancel);
             
@@ -340,9 +374,7 @@
                 return;
             }
 
-            // d-none 속성 여부를 정교하게 스캔해서 상태 기믹 연동
             if (editInput.classList.contains("d-none") && !isCancel) {
-                // 1. 에디터 폼 개방 모드 진입
                 editInput.value = viewZone.textContent || "";
                 editInput.classList.remove("d-none");
                 viewZone.classList.add("d-none");
@@ -356,7 +388,6 @@
                 
                 deleteBadges.forEach(b => b.classList.remove("d-none"));
             } else {
-                // 2. 에디터 폼 잠금 및 뷰 모드 회군
                 editInput.classList.add("d-none");
                 viewZone.classList.remove("d-none");
                 actionPanel.classList.add("d-none");
@@ -370,7 +401,6 @@
                 deleteBadges.forEach(b => b.classList.add("d-none"));
                 
                 if (isCancel) {
-                    // 취소 시 변수 원상복구를 위한 고속 마스터 프레임 리프레시 정밀 강타
                     const container = document.getElementById("historyMasterContainer");
                     container.innerHTML = "";
                     currentPageOffset = 0;
@@ -423,7 +453,7 @@
                 const emptyMsg = document.querySelector(`.id-empty-photo-${roundNo}`);
                 if (emptyMsg) emptyMsg.style.display = "none";
 
-                alert(`✨ 압축 완료! ${files.length}장의 사진이 초경량 상태로 장전되었습니다. 하단 [개정 역사 확정 저장]을 누르셔야 최종 반영되옵니다!`);
+                alert("✨ 압축 완료! 사진이 초경량 상태로 장전되었습니다. 하단 [개정 역사 확정 저장]을 누르셔야 최종 반영되옵니다!");
             } catch(e) {
                 console.error(e);
                 alert("가변 이미지 연쇄 압축 실패.");
