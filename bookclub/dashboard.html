@@ -176,12 +176,11 @@
 
         async function fetchAllDashboardData() {
             try {
-                // 서랍 내부 하위 리스트 목록도 최근 차수부터 역순 정렬하도록 미리 세팅
                 const { data: bData } = await _db
                     .from('books')
                     .select('round_no, title, main_category, custom_category')
                     .eq('is_closed', true)
-                    .order('round_no', { ascending: false }); // 👑 서랍 내 도서 역순 정렬 스펙 상속
+                    .order('round_no', { ascending: false }); 
                 
                 globalBooksData = bData || [];
                 
@@ -234,12 +233,13 @@
             }
         }
 
+        // 👑 [Golden Schema 변환]: books.recommended_by가 숫자 ID로 변환되었으므로 매칭 필터 엔진 교정!
         async function fetchRecommendationCrownStats() {
             const container = document.getElementById("recommendationCrownContainer");
             try {
                 const { data: activeMembers, error: memErr } = await _db
                     .from('members')
-                    .select('member_name, image_name')
+                    .select('id, member_name, image_name') // id 확보 사수!
                     .eq('is_active', true)
                     .order('member_name', { ascending: true });
 
@@ -247,7 +247,7 @@
 
                 const { data: selectedBooks, error: bkErr } = await _db
                     .from('books')
-                    .select('round_no, title, recommended_by')
+                    .select('round_no, title, recommended_by') // recommended_by는 이제 숫자형 고유 ID!
                     .order('round_no', { ascending: false });
 
                 if (bkErr) throw bkErr;
@@ -261,7 +261,9 @@
 
                 activeMembers.forEach(member => {
                     const name = member.member_name;
-                    const matchingBooks = selectedBooks.filter(b => b.recommended_by === name);
+                    
+                    // 👑 문자열 대조(b.recommended_by === name)에서 고유 숫자 ID 대조 직격 변경!
+                    const matchingBooks = selectedBooks.filter(b => b.recommended_by === member.id);
                     const count = matchingBooks.length;
                     const safeId = name.replace(/\s+/g, '_');
 
@@ -296,13 +298,12 @@
             } catch (err) { console.error(err); }
         }
 
-        // 👑 파트 3: 명예의 도서별 별점 로그 (명세 반영: 차수 기준 최근 차수가 무조건 최상단 노출되도록 강제 정렬)
         async function fetchBookStats() {
             try {
                 const { data, error } = await _db
                     .from('v_book_stats')
                     .select('*')
-                    .order('round_no', { ascending: false }); // 👑 최근 차수 정밀 타격 내림차순 정렬 완료!
+                    .order('round_no', { ascending: false }); 
 
                 if (error) throw error;
                 const tbody = document.getElementById("bookStatsBody");
@@ -328,13 +329,12 @@
             }
         }
 
-        // 👑 파트 4: 취향 컬렉션별 분석 대분류 (명세 반영: 수집 권수 기준 가장 높은 카운트가 최상단 노출되도록 강제 정렬)
         async function fetchMainCategoryStats() {
             try {
                 const { data, error } = await _db
                     .from('v_main_category_stats')
                     .select('*')
-                    .order('book_count', { ascending: false }); // 👑 가장 많은 소집 권수 탑 정렬 완료!
+                    .order('book_count', { ascending: false }); 
 
                 if (error) throw error;
                 const tbody = document.getElementById("mainCatStatsBody");
@@ -381,13 +381,12 @@
             }
         }
 
-        // 👑 파트 5: 시크릿 목적별 분석 맞춤 (명세 반영: 수집 권수 기준 가장 높은 카운트가 최상단 노출되도록 강제 정렬)
         async function fetchCustomCategoryStats() {
             try {
                 const { data, error } = await _db
                     .from('v_custom_category_stats')
                     .select('*')
-                    .order('book_count', { ascending: false }); // 👑 가장 많은 소집 권수 탑 정렬 완료!
+                    .order('book_count', { ascending: false }); 
 
                 if (error) throw error;
                 const tbody = document.getElementById("customCatStatsBody");
