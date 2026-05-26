@@ -83,8 +83,9 @@
                             <input type="text" class="form-control form-control-custom" id="sponCustomCat" value="공감/치유">
                         </div>
                         <div class="col-12">
-                            <label class="form-label text-warning small fw-bold m-0 mb-1">추천 공주명</label>
-                            <input type="text" class="form-control form-control-custom" id="sponBy" value="즉석지정">
+                            <label class="form-label text-warning small fw-bold m-0 mb-1">추천 공주명 선택</label>
+                            <select class="form-select form-select-custom text-white" id="sponBySelect" style="background:#000 !important;">
+                                </select>
                         </div>
                     </div>
                 </div>
@@ -159,13 +160,13 @@
             } catch (err) { console.error("차수 인프라 앵커링 실패:", err); }
         }
 
-        // 👑 [Golden Schema 리팩토링]: 최종 별점 수거 시 맵핑의 축이 될 고유 고유 id 컬럼 전격 추가 수색!
         async function loadActiveMembersRatingForm() {
             const container = document.getElementById("memberFinalRatingsContainer");
+            const sponBySelect = document.getElementById("sponBySelect"); // 즉석지정 셀렉트 박스 앵커링
             try {
                 const { data: members, error: memErr } = await _db
                     .from('members')
-                    .select('id, member_name, image_name') // 👑 고유 id 필수 추가 사냥!
+                    .select('id, member_name, image_name') 
                     .eq('is_active', true)
                     .order('member_name', { ascending: true });
 
@@ -173,7 +174,10 @@
                 activeMembersList = members || [];
 
                 container.innerHTML = "";
+                if (sponBySelect) sponBySelect.innerHTML = ""; // 초기화
+
                 activeMembersList.forEach(m => {
+                    // 1. 별점 수거 드롭다운 바인딩
                     container.innerHTML += `
                         <div class="p-2 rounded bg-black d-flex justify-content-between align-items-center border border-secondary" style="border-color: rgba(255,105,180,0.15) !important;">
                             <div class="fw-bold text-white small">
@@ -194,11 +198,18 @@
                             </div>
                         </div>
                     `;
+
+                    // 2. 👑 즉석지정용 공주 선택 셀렉트 박스에 무결점 숫자 ID 옵션 적재
+                    if (sponBySelect) {
+                        const opt = document.createElement("option");
+                        opt.value = m.id;
+                        opt.textContent = `👸 ${m.member_name} 공주`;
+                        sponBySelect.appendChild(opt);
+                    }
                 });
             } catch (err) { console.error(err); }
         }
 
-        // 👑 [Golden Schema 리팩토링]: recommendations 테이블에서 member_name이 소멸되었으므로 members JOIN 처리!
         async function loadTargetRecommendations() {
             const container = document.getElementById("candidateCheckboxContainer");
             if (!nextTargetRound) return;
@@ -206,7 +217,7 @@
             try {
                 const { data, error } = await _db
                     .from('recommendations')
-                    .select('*, members(member_name)') // 👑 실시간 이름 조인 기믹 이식!
+                    .select('*, members(member_name)') 
                     .eq('target_round', nextTargetRound)
                     .eq('is_selected', false);
 
@@ -222,7 +233,7 @@
                     const recommenderName = item.members ? item.members.member_name : '즉석지정';
                     container.innerHTML += `
                         <label class="p-2 rounded bg-black d-flex align-items-center border border-secondary" style="cursor:pointer; border-color: rgba(255,105,180,0.1) !important;">
-                            <input type="checkbox" name="nextBookCandidateCheckbox" class="form-check-input me-2" value="${item.id}" data-title="${escapeHtml(item.title)}" data-author="${escapeHtml(item.author)}" data-page="${item.page_count || 0}" data-by="${escapeHtml(recommenderName)}">
+                            <input type="checkbox" name="nextBookCandidateCheckbox" class="form-check-input me-2" value="${item.id}" data-title="${escapeHtml(item.title)}" data-author="${escapeHtml(item.author)}" data-page="${item.page_count || 0}" data-by-id="${item.member_id}">
                             <div style="width:90%;">
                                 <div class="fw-bold text-white small text-truncate">📖 ${item.title}</div>
                                 <div class="text-muted" style="font-size:0.72rem;">픽:${recommenderName} | 작가:${item.author || '미상'} | ${item.page_count || 0}쪽</div>
@@ -242,7 +253,7 @@
             }
         }
 
-        // 👑 [Golden Schema 리팩토링]: 평점 최종 수거 및 다중 진급 마감 일괄 트랜잭션 엔진 개조 완료
+        // 👑 [Golden Schema 완결 트랜잭션]: books 테이블의 recommended_by 필드에 텍스트 대신 완벽한 고유 숫자 ID(bigint) 적재!
         async function executeFinalSessionClosingTransaction() {
             const nextRoundDate = document.getElementById("nextRoundDateInput").value;
             const nextRoundLocation = document.getElementById("nextRoundLocationInput").value.trim();
@@ -257,14 +268,14 @@
             if (!masterConfirm) return;
 
             try {
-                // 1. 👑 이번 차수 공주별 토론 후 별점(rating_after)을 member_id 외래키 기반으로 업서트 장전!
+                // 1. 이번 차수 공주별 토론 후 별점(rating_after)을 member_id 외래키 기반으로 업서트
                 const ratingPromises = activeMembersList.map(m => {
                     const finalScore = parseFloat(document.getElementById(`rating_after_${m.member_name}`).value);
                     return _db.from('reviews_ratings').upsert({
                         round_no: currentActiveRound,
-                        member_id: m.id, // 👑 이름 탈피 ➡️ 고유 숫자 ID 꽂아 넣기!
+                        member_id: m.id, 
                         rating_after: finalScore
-                    }, { onConflict: 'round_no, member_id' }); // 👑 유니크 제약 축 전격 교체!
+                    }, { onConflict: 'round_no, member_id' }); 
                 });
 
                 // 2. 다음 회차 다중 배치를 위한 페이로드 수집 파이프라인
@@ -277,7 +288,8 @@
                         title: cb.getAttribute('data-title'),
                         author: cb.getAttribute('data-author'),
                         page_count: parseInt(cb.getAttribute('data-page')),
-                        recommended_by: cb.getAttribute('data-by'), // 지정 도서는 메인 텍스트 이름 그대로 상속 유지
+                        // 👑 [Golden Schema 변환]: recommended_by 컬럼에 이름 대신 체크박스에 숨겨둔 고유 고유 숫자 ID(bigint)를 밀어 넣는다!
+                        recommended_by: parseInt(cb.getAttribute('data-by-id')), 
                         main_category: '인문/사회',
                         custom_category: '공감/치유',
                         discussion_date: nextRoundDate,
@@ -286,13 +298,15 @@
                     });
                 });
 
-                // 3. 확장 폼 영역에 즉석 직접 기입 항목 병렬 이식
+                // 3. 확장 폼 영역에 즉석 직접 기입 항목이 기재되어 있는지 파악해서 병렬 이식
                 const sponTitle = document.getElementById("sponTitle").value.trim();
                 if (sponTitle) {
                     const sponAuthor = document.getElementById("sponAuthor").value.trim();
                     const sponPage = parseInt(document.getElementById("sponPage").value);
-                    if (!sponAuthor || !sponPage) {
-                        alert("즉석 직접 기입 도서의 작가와 쪽수 스펙까지 명확히 채워주셔야 하옵니다!");
+                    const sponById = parseInt(document.getElementById("sponBySelect").value); // 👑 드롭다운 고유 ID 검거
+
+                    if (!sponAuthor || !sponPage || !sponById) {
+                        alert("즉석 직접 기입 도서의 작가, 쪽수, 그리고 추천 공주 선택까지 명확히 채워주셔야 하옵니다!");
                         return;
                     }
                     nextBooksPayloads.push({
@@ -300,7 +314,8 @@
                         title: sponTitle,
                         author: sponAuthor,
                         page_count: sponPage,
-                        recommended_by: document.getElementById("sponBy").value.trim() || '즉석지정',
+                        // 👑 [Golden Schema 변환]: 주관식 텍스트 대신 드롭다운에서 선택된 숫자 ID 박제 삽입!
+                        recommended_by: sponById,
                         main_category: document.getElementById("sponMainCat").value.trim() || '인문/사회',
                         custom_category: document.getElementById("sponCustomCat").value.trim() || '공감/치유',
                         discussion_date: nextRoundDate,
@@ -330,7 +345,7 @@
                     await _db.from('recommendations').update({ is_selected: true }).in('id', selectedRecIds);
                 }
 
-                alert(`🎉 티타임 셧다운 완료! 제 ${currentActiveRound}회차 토론방이 공식 잠금(is_closed=true) 처리되었으며, 제 ${nextTargetRound}회차 새 왕좌의 도서 기록들이 성대하게 등재 완료되었습니다! 📅✨`);
+                alert(`🎉 티타임 셧다운 완료! 제 ${currentActiveRound}회차 토론방이 공식 잠금(is_closed=true) 처리되었으며, 제 ${nextTargetRound}회차 새 왕좌의 도서 기록들이 숫자 ID 연동 체제로 완벽하게 등재 완료되었습니다! 📅✨`);
                 
                 // 마스터 UI 초기화 리셋
                 document.getElementById("nextRoundDateInput").value = "";
