@@ -323,19 +323,23 @@
             }
         }
 
-        // 👑 [Zoro's Core Asset Compression Engine]: 용량 테러 방지 0.1초 캔버스 압축 및 업로드 스크립트
+        // 👑 [Zoro's Masterpiece Async Sequencer Engine]: 비동기 역전 레이스 트랩을 완벽히 분쇄해낸 무결점 세션 마감 압축 함수
         async function compressAndUploadPhoto(file, roundNo, index) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.readAsDataURL(file);
+                
+                // 1. 이벤트 리스너 감지기를 1순위로 선제 장전하여 비동기 트랩 전면 봉쇄!
                 reader.onload = (event) => {
                     const img = new Image();
-                    img.src = event.target.result;
+                    
+                    // 2. 이미지 객체 로딩 완료 이벤트 또한 src 할당보다 반드시 앞자리에 위치 사수!
                     img.onload = async () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 1200; // 가로 최대폭 1200px 제한 걸어 용량 선제 타격
-                        let width = img.width;
-                        let height = img.height;
+                        const MAX_WIDTH = 1200; 
+                        
+                        // 3. 0x0 유령 캔버스 생성 원천 차단 가드 보루 탑재
+                        let width = img.width || 300;
+                        let height = img.height || 300;
 
                         if (width > MAX_WIDTH) {
                             height *= MAX_WIDTH / width;
@@ -347,14 +351,12 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
 
-                        // 압축률 75%의 초경량 가성비 JPEG 변환 시전
                         canvas.toBlob(async (blob) => {
                             if (!blob) {
                                 reject("이미지 변환에 실패했사옵니다.");
                                 return;
                             }
                             
-                            // 파일 경로 체계: 버킷/회차/시간코드_인덱스.jpg
                             const uniqueFileName = `${roundNo}/${Date.now()}_${index}.jpg`;
                             try {
                                 const { data, error } = await _db.storage
@@ -363,7 +365,6 @@
 
                                 if (error) throw error;
 
-                                // 전역 배포용 공공 URL 인출 스캔
                                 const { data: urlData } = _db.storage
                                     .from('discussion-photos')
                                     .getPublicUrl(uniqueFileName);
@@ -374,12 +375,16 @@
                             }
                         }, 'image/jpeg', 0.75);
                     };
+                    
+                    img.onerror = () => reject("이미지 가공 로드 대실패");
+                    img.src = event.target.result; // 👑 리스너 선포 완료 아랫줄에 안착시켜 로딩 가동!
                 };
-                reader.onerror = error => reject(error);
+                
+                reader.onerror = error => reject("로컬 파일 스캔 장해 발생");
+                reader.readAsDataURL(file); // 👑 리스너 선포 완료 아랫줄에 안착시켜 파일 리딩 가동!
             });
         }
 
-        // 👑 [Golden Schema 완결 트랜잭션]: 별점 수거 + 다중 도서 진급 + 이미지 압축 업로드 + 히스토리 대량 연쇄 폭파 엔진
         async function executeFinalSessionClosingTransaction() {
             const nextRoundDate = document.getElementById("nextRoundDateInput").value;
             const nextRoundLocation = document.getElementById("nextRoundLocationInput").value.trim();
@@ -401,14 +406,12 @@
             const masterConfirm = confirm(`정말로 이번 제 ${currentActiveRound}회차 토론을 영구 마감(is_closed=true)하고 대서사시 히스토리와 함께 다음 차수를 공식 출범시키겠사옵니다?`);
             if (!masterConfirm) return;
 
-            // 버튼 제어 락을 걸고 스피너 연출 실행
             const sealBtn = document.getElementById("btnSealSession");
             const originalBtnHtml = sealBtn.innerHTML;
             sealBtn.disabled = true;
             sealBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> 이미지 초고속 압축 및 대서사시 적재 중...`;
 
             try {
-                // [선제 타격]: 사진첩 파일 존재 시 루프를 돌려 캔버스 압축 엔진을 거쳐 스토리지로 일제히 적재
                 let uploadedPhotoUrls = [];
                 if (photoFiles && photoFiles.length > 0) {
                     for (let i = 0; i < photoFiles.length; i++) {
@@ -417,7 +420,6 @@
                     }
                 }
 
-                // 1. 이번 차수 공주별 토론 후 별점(rating_after) 업서트 프로미스 수립
                 const ratingPromises = activeMembersList.map(m => {
                     const finalScore = parseFloat(document.getElementById(`rating_after_${m.member_name}`).value);
                     return _db.from('reviews_ratings').upsert({
@@ -427,7 +429,6 @@
                     }, { onConflict: 'round_no, member_id' }); 
                 });
 
-                // 2. 다음 회차 다중 배치를 위한 페이로드 수집 파이프라인
                 let nextBooksPayloads = [];
                 const checkedBoxes = document.querySelectorAll('input[name="nextBookCandidateCheckbox"]:checked');
                 
@@ -446,7 +447,6 @@
                     });
                 });
 
-                // 3. 확장 폼 영역에 즉석 직접 기입 항목 병렬 이식
                 const sponTitle = document.getElementById("sponTitle").value.trim();
                 if (sponTitle) {
                     const sponAuthor = document.getElementById("sponAuthor").value.trim();
@@ -481,20 +481,15 @@
                     return;
                 }
 
-                // 4. 현재 최신 차수 책의 이력을 완벽하게 TRUE(마감)로 잠금 처리
                 const closeCurrentRoundPromise = _db.from('books').update({ is_closed: true }).eq('round_no', currentActiveRound);
-                
-                // 5. 다음 회차 다중 새 도서 생성 인서트
                 const insertNextBooksPromise = _db.from('books').insert(nextBooksPayloads);
 
-                // 6. 👑 [새로운 역사 성벽 추가]: 수집된 요약본과 압축 사진 URL 주소 배열을 히스토리 테이블에 직격 INSERT 박기!
                 const insertHistoryPromise = _db.from('discussion_histories').insert([{
                     round_no: currentActiveRound,
                     summary_text: summaryText,
                     photo_urls: uploadedPhotoUrls
                 }]);
 
-                // 일제히 세션 마감 대폭파 집행! (히스토리 인서트 프로미스까지 완벽 스택 병합)
                 const results = await Promise.all([
                     ...ratingPromises, 
                     closeCurrentRoundPromise, 
@@ -503,7 +498,6 @@
                 ]);
                 for(let r of results) { if(r.error) throw r.error; }
 
-                // 7. 선정 완료된 정식 추천작들의 진급 플래그 true 마킹
                 const selectedRecIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
                 if (selectedRecIds.length > 0) {
                     await _db.from('recommendations').update({ is_selected: true }).in('id', selectedRecIds);
@@ -511,7 +505,6 @@
 
                 alert(`🎉 대서사시 기록 보관 완료! 제 ${currentActiveRound}회차 토론방 셧다운 및 앨범 저장이 공식 잠금 완료되었으며, 제 ${nextTargetRound}회차 새 무결점 차수가 공식 출범되었습니다! 📅✨`);
                 
-                // 마스터 UI 초기화 리셋
                 document.getElementById("nextRoundDateInput").value = "";
                 document.getElementById("nextRoundLocationInput").value = "";
                 document.getElementById("historySummaryText").value = "";
