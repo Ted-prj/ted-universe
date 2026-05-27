@@ -16,6 +16,7 @@ const DIET_TABLES = [
     { schema: 'diet', id: 'project_schedules', name: '9. 프로젝트 스케줄', dateCol: 'plan_date', allowAdd: true },
     { schema: 'diet', id: 'sleep_logs', name: '10. 수면 로그', dateCol: 'log_date' },
     { schema: 'diet', id: 'supplements', name: '11. 섭취 영양제 리스트', dateCol: false },
+    { schema: 'diet', id: 'dinner_menus', name: '12. 식단 저녁 메뉴', dateCol: false },
     { schema: 'workout', id: 'session_logs', name: 'W1. 운동 세션 로그', dateCol: 'workout_date' },
     { schema: 'workout', id: 'logs', name: 'W2. 운동 상세 로그', dateCol: 'workout_date' },
     { schema: 'workout', id: 'active_workout', name: 'W3. 오늘의 운동', dateCol: 'created_at' }
