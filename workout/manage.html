@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>MANAGE - WORKOUT v5.4.1</title>
+    <title>MANAGE - WORKOUT v5.4.2</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -19,7 +19,7 @@
     <div class="container-app">
         <div class="mgmt-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 style="color:var(--bp-pink); font-weight:900; margin:0;">⚙️ 운동 마스터 관리 v5.4.1</h5>
+                <h5 style="color:var(--bp-pink); font-weight:900; margin:0;">⚙️ 운동 마스터 관리 v5.4.2</h5>
                 <div class="d-flex gap-2">
                     <button id="btn-master-delete" class="btn-delete" onclick="prepareDelete()">삭제</button>
                     <button class="btn btn-sm btn-outline-light" onclick="resetMgmtTab()">Refresh</button>
@@ -64,7 +64,7 @@
                     <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_heart_rate"><label class="use-switch-label" for="use_heart_rate">심박수</label></div></div>
                     <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_machine_lv"><label class="use-switch-label" for="use_machine_lv">머신 강도</label></div></div>
                     <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_machine_speed"><label class="use-switch-label" for="use_machine_speed">머신 속도</label></div></div>
-                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_pause_count"><label class="use-switch-label" for="use_pause_count" style="color:var(--bp-pink);">포즈 수</label></div></div>
+                    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="use_pause_count"><label class="use-switch-label" for="use_pause_count">포즈 수</label></div></div>
                 </div>
             </div>
             <button class="btn-pink w-100" onclick="saveMasterData()">저장 / 업데이트</button>
@@ -82,7 +82,7 @@
             </div>
         </div>
 
-        <div id="global-nav" data-active="workout"></div>
+        <div id="global-nav" data-active="manage"></div>
     </div>
 
     <script src="supabase_config.js"></script>
@@ -152,7 +152,6 @@
             syncField('grip', e.use_grip, e.grip_type, 'GRIP');
             syncField('lying', e.use_lying, e.lying_type, 'LYING');
 
-            // 고도화: 동적 체크박스 스캔 리스트에 use_pause_count를 추가 연동하여 값 복원 제어
             ['use_exercise_time', 'use_weight', 'use_set_no', 'use_reps', 'use_set_time', 'use_heart_rate', 'use_machine_lv', 'use_machine_speed', 'use_pause_count'].forEach(f => {
                 const el = document.getElementById(f);
                 if(el) el.checked = e[f] === true; 
@@ -232,7 +231,6 @@
                 use_heart_rate: !!document.getElementById('use_heart_rate').checked,
                 use_machine_lv: !!document.getElementById('use_machine_lv').checked,
                 use_machine_speed: !!document.getElementById('use_machine_speed').checked,
-                // 고도화: 저장 인서트 페이로드 파이프라인에 use_pause_count 매핑 추가
                 use_pause_count: !!document.getElementById('use_pause_count').checked
             };
 
