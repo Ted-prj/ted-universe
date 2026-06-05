@@ -8,9 +8,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { 
-            --bp-pink: rgb(232, 142, 163); 
-            --diet-mint: #20c997; 
-            --workout-neon: #ff6b6b;
             --bg-black: #000; 
             --card-bg: #111; 
             --text-dim: #999;
@@ -45,7 +42,7 @@
             gap: 20px;
         }
 
-        /* --- 확장형 앱 카드 --- */
+        /* --- 확장형 애니메이션 카드 --- */
         .app-card {
             background: var(--card-bg);
             border-radius: 24px;
@@ -56,10 +53,6 @@
             overflow: hidden;
             position: relative;
         }
-        
-        .card-finance { border-left: 6px solid var(--bp-pink); }
-        .card-diet { border-left: 6px solid var(--diet-mint); }
-        .card-workout { border-left: 6px solid var(--workout-neon); }
 
         .card-header {
             display: flex;
@@ -113,10 +106,6 @@
         
         .auth-input:focus { outline: none; box-shadow: none !important; }
 
-        .card-finance.active .auth-input:focus { border-color: var(--bp-pink) !important; color: var(--bp-pink) !important; }
-        .card-diet.active .auth-input:focus { border-color: var(--diet-mint) !important; color: var(--diet-mint) !important; }
-        .card-workout.active .auth-input:focus { border-color: var(--workout-neon) !important; color: var(--workout-neon) !important; }
-
         .auth-msg {
             font-size: 0.75rem;
             font-weight: 800;
@@ -133,121 +122,97 @@
 
     <div class="gateway-title">TED'S UNIVERSE</div>
 
-    <div class="app-container">
-        
-        <!-- 1. FINANCE (Nami) -->
-        <div class="app-card card-finance" onclick="activateApp('FINANCE', this)">
-            <div class="card-header">
-                <div class="app-icon">🖤</div>
-                <div class="app-info">
-                    <div class="app-title" style="color: var(--bp-pink);">FINANCE</div>
-                    <div class="app-desc">자산 및 가계부 관리 (by Nami)</div>
-                </div>
-            </div>
-            <div class="auth-section" onclick="event.stopPropagation()">
-                <input type="password" class="form-control auth-input" data-app="FINANCE" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="handlePinInput(this)">
-                <div class="auth-msg"></div>
-            </div>
-        </div>
-
-        <!-- 2. DIET (Sanji) -->
-        <div class="app-card card-diet" onclick="activateApp('DIET', this)">
-            <div class="card-header">
-                <div class="app-icon">🥗</div>
-                <div class="app-info">
-                    <div class="app-title" style="color: var(--diet-mint);">DIET</div>
-                    <div class="app-desc">식단 및 체중 관리 (by Sanji)</div>
-                </div>
-            </div>
-            <div class="auth-section" onclick="event.stopPropagation()">
-                <input type="password" class="form-control auth-input" data-app="DIET" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="handlePinInput(this)">
-                <div class="auth-msg"></div>
-            </div>
-        </div>
-
-        <!-- 3. WORKOUT (Robin) -->
-        <div class="app-card card-workout" onclick="activateApp('WORKOUT', this)">
-            <div class="card-header">
-                <div class="app-icon">💪</div>
-                <div class="app-info">
-                    <div class="app-title" style="color: var(--workout-neon);">WORKOUT</div>
-                    <div class="app-desc">루틴 및 운동 기록 (by Robin)</div>
-                </div>
-            </div>
-            <div class="auth-section" onclick="event.stopPropagation()">
-                <input type="password" class="form-control auth-input" data-app="WORKOUT" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="handlePinInput(this)">
-                <div class="auth-msg"></div>
-            </div>
-        </div>
-
-    </div>
+    <div class="app-container" id="app-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="gateway_config.js"></script>
     <script>
-        // Supabase 초기화 (기본 public 스키마를 바라봅니다)
         const SUPABASE_URL = 'https://vaamifqzjsrflmprihgv.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZhYW1pZnF6anNyZmxtcHJpaGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzODc2NzksImV4cCI6MjA5MTk2MzY3OX0.qUUs3aoWQMEVjTQkYTZtA8CMjMF_MrgBFa4UfiiEWzI';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        function activateApp(appName, cardElement) {
+        // DOM이 로드되면 설정을 읽어들여 화면을 동적으로 생성
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('app-container');
+            
+            // 공통 설정을 한 바퀴 돌며 HTML 카드 빌드 및 주입
+            container.innerHTML = GATEWAY_APPS.map(app => `
+                <div class="app-card" id="card-${app.id}" onclick="activateApp('${app.id}')" style="border-left: 6px solid ${app.color};">
+                    <div class="card-header">
+                        <div class="app-icon">${app.icon}</div>
+                        <div class="app-info">
+                            <div class="app-title" style="color: ${app.color};">${app.title}</div>
+                            <div class="app-desc">${app.desc}</div>
+                        </div>
+                    </div>
+                    <div class="auth-section" onclick="event.stopPropagation()">
+                        <input type="password" class="form-control auth-input" 
+                               id="input-${app.id}" data-id="${app.id}" 
+                               maxlength="4" inputmode="numeric" pattern="[0-9]*" 
+                               oninput="handlePinInput(this)">
+                        <div class="auth-msg" id="msg-${app.id}"></div>
+                    </div>
+                </div>
+            `).join('');
+        });
+
+        // 카드 탭 인터랙션 제어
+        function activateApp(appId) {
             document.querySelectorAll('.app-card').forEach(card => {
-                if (card !== cardElement) {
+                const currentId = card.id.replace('card-', '');
+                if (currentId !== appId) {
                     card.classList.remove('active');
-                    const input = card.querySelector('.auth-input');
-                    input.value = '';
-                    card.querySelector('.auth-msg').innerText = '';
-                    card.querySelector('.auth-msg').className = 'auth-msg';
+                    const input = document.getElementById(`input-${currentId}`);
+                    if(input) input.value = '';
+                    const msg = document.getElementById(`msg-${currentId}`);
+                    if(msg) { msg.innerText = ''; msg.className = 'auth-msg'; }
                 }
             });
 
-            if (!cardElement.classList.contains('active')) {
-                cardElement.classList.add('active');
-                setTimeout(() => {
-                    cardElement.querySelector('.auth-input').focus();
-                }, 350);
+            const targetCard = document.getElementById(`card-${appId}`);
+            if (!targetCard.classList.contains('active')) {
+                targetCard.classList.add('active');
+                
+                // 카드 인라인 포커스 연동 시 색상 스타일 실시간 동기화
+                const app = GATEWAY_APPS.find(a => a.id === appId);
+                const input = document.getElementById(`input-${appId}`);
+                if (input) {
+                    input.onfocus = () => { input.style.borderColor = app.color; input.style.color = app.color; };
+                    setTimeout(() => input.focus(), 350);
+                }
             }
         }
 
         function handlePinInput(inputEl) {
             if (inputEl.value.length === 4) {
                 inputEl.blur();
-                verifyAppAccess(inputEl.dataset.app, inputEl.value, inputEl.nextElementSibling, inputEl);
+                verifyAppAccess(inputEl.dataset.id, inputEl.value);
             }
         }
 
-        // 중앙 집중형 원패스(One-Pass) 라우팅 로직
-        async function verifyAppAccess(appName, pin, msgEl, inputEl) {
+        // 설정(Metadata) 기반의 동적 토큰 발행 및 라우팅 허브
+        async function verifyAppAccess(appId, pin) {
+            const msgEl = document.getElementById(`msg-${appId}`);
+            const inputEl = document.getElementById(`input-${appId}`);
+            const app = GATEWAY_APPS.find(a => a.id === appId);
+            
             msgEl.className = 'auth-msg msg-loading';
             msgEl.innerText = "VERIFYING...";
 
             try {
-                // public 스키마에서 공통 비밀번호 검증
+                // 공통 스키마 검증
                 const { data, error } = await _supabase.from('settings').select('value').eq('code', 'ACCESS_PW').single();
                 if (error) throw error;
                 
                 if (data.value === pin) {
                     msgEl.innerText = "ACCESS GRANTED";
+                    msgEl.style.color = app.color;
                     
-                    if (appName === 'FINANCE') {
-                        sessionStorage.setItem('is_auth', 'true'); // 나미 앱 세션
-                        msgEl.style.color = "var(--bp-pink)";
-                        setTimeout(() => location.href = 'finance/out.html', 300); // 메인으로 직행!
-                        
-                    } else if (appName === 'DIET') {
-                        // 상디 앱의 경우 특별한 세션키 명시가 없었으므로 범용 세션 저장
-                        sessionStorage.setItem('diet_auth', 'true'); 
-                        msgEl.style.color = "var(--diet-mint)";
-                        // diet/index.html 건너뛰고 바로 export.html로 직행!
-                        setTimeout(() => location.href = 'diet/export.html', 300); 
-                        
-                    } else if (appName === 'WORKOUT') {
-                        // 로빈 앱이 요구하는 정확한 세션키 발급!
-                        sessionStorage.setItem('workout_auth', 'true'); 
-                        msgEl.style.color = "var(--workout-neon)";
-                        // workout/index.html 건너뛰고 바로 workout.html로 직행!
-                        setTimeout(() => location.href = 'workout/workout.html', 300); 
-                    }
+                    // 🌟 아키텍처의 핵심: 하드코딩 없이 설정에 명시된 고유 키와 패스로 토큰 배인딩 및 직행!
+                    sessionStorage.setItem(app.sessionKey, 'true');
+                    setTimeout(() => location.href = app.targetUrl, 300);
                 } else {
                     throw new Error("WRONG PASSWORD");
                 }
