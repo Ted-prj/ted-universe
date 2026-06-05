@@ -4,488 +4,279 @@
     <meta charset="UTF-8">
     <base target="_top">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>Blackpink Money - Golden v1.0.4</title>
+    <title>TED'S UNIVERSE - Gateway</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { 
             --bp-pink: rgb(232, 142, 163); 
-            --bp-black: #000; 
-            --bp-dark-gray: #121212; 
-            --pink-light: #ffb6c1; 
-            --text-dim: #999; 
-            --asset-pink: #e83e8c; 
-            --neon-pink: #FF3F7E;
+            --diet-mint: #20c997; 
+            --workout-neon: #ff6b6b;
+            --bg-black: #000; 
+            --card-bg: #111; 
+            --text-dim: #999;
         }
         body { 
-            padding: 10px;
-            background-color: var(--bp-black); 
+            background-color: var(--bg-black); 
             color: #fff; 
             font-family: 'Pretendard', -apple-system, sans-serif; 
             -webkit-tap-highlight-color: transparent; 
-            overflow-x: hidden; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            min-height: 100vh;
         }
-        /* --- 보안 레이어 스타일 --- */
-        #auth-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: var(--bp-black); z-index: 9999; 
-            display: flex; align-items: center; justify-content: center; 
+
+        .gateway-title {
+            font-size: 1.2rem;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: #fff;
+            margin-bottom: 40px;
+            text-align: center;
+            opacity: 0.9;
         }
-        .auth-box { width: 100%; max-width: 300px; text-align: center; }
+
+        .app-container {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* --- 확장형 앱 카드 --- */
+        .app-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid #222;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 각 프로젝트별 고유 컬러 브랜딩 */
+        .card-finance { border-left: 6px solid var(--bp-pink); }
+        .card-diet { border-left: 6px solid var(--diet-mint); }
+        .card-workout { border-left: 6px solid var(--workout-neon); }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            pointer-events: none; /* 클릭 이벤트 중복 방지 */
+        }
+
+        .app-icon { font-size: 2.2rem; line-height: 1; }
+        .app-info { display: flex; flex-direction: column; }
+        .app-title { font-size: 1.4rem; font-weight: 900; letter-spacing: 2px; }
+        .app-desc { font-size: 0.75rem; color: var(--text-dim); font-weight: 700; margin-top: 2px; }
+
+        /* --- 인라인 인증 영역 (기본 숨김) --- */
+        .auth-section {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: all 0.4s ease-in-out;
+            text-align: center;
+        }
+
+        .app-card.active {
+            background: #0a0a0a;
+            border-color: #333;
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .app-card.active .auth-section {
+            max-height: 150px; /* 입력창이 열릴 충분한 높이 */
+            opacity: 1;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid #222;
+        }
+
         .auth-input {
-            max-width: 200px; font-size: 1.5rem; letter-spacing: 10px; 
-            background: #000 !important; border: 2px solid #333 !important;
-            text-align: center; margin: 20px auto; color: var(--bp-pink) !important;
+            width: 100%;
+            max-width: 220px;
+            background: #000 !important;
+            border: 2px solid #333 !important;
+            color: #fff !important;
+            text-align: center;
+            font-size: 1.5rem;
+            letter-spacing: 12px;
+            margin: 0 auto;
+            border-radius: 16px;
+            padding: 10px;
+            font-weight: 900;
+            transition: border-color 0.3s;
         }
         
-        /* --- 컨테이너 및 탭 --- */
-        .container { 
-            width: 100%; max-width: 500px; 
-            background: var(--bp-dark-gray); 
-            padding: 15px; 
-            border-radius: 28px; 
-            border: 1px solid rgba(232, 142, 163, 0.2); 
-            margin-bottom: 30px; 
-            margin-left: auto; margin-right: auto; 
-            display: none; 
-        }
-        
-        .nav-pills { background: #000; border-radius: 16px; padding: 4px; margin-bottom: 20px !important; display: flex; }
-        .nav-pills .nav-link { 
-            border-radius: 12px; font-weight: 800; color: var(--bp-pink); font-size: 0.65rem; 
-            flex: 1; padding: 12px 2px; border: none; background: transparent; transition: 0.3s; 
-        }
-        .nav-pills .nav-link.active { background-color: var(--bp-pink) !important; color: #000 !important; font-weight: 900; }
-        
-        /* --- 폼 요소 --- */
-        .form-control, .form-select { 
-            background-color: #080808 !important; border: 1.5px solid #252525 !important; 
-            color: #fff !important; border-radius: 18px; padding: 12px 14px; font-size: 0.9rem;
-            font-weight: 600; transition: all 0.2s ease;
-        }
-        .form-control:focus, .form-select:focus { 
-            border-color: var(--bp-pink) !important; box-shadow: 0 0 8px rgba(232, 142, 163, 0.15) !important; outline: none; 
-        }
+        .auth-input:focus { outline: none; box-shadow: none !important; }
 
-        input[type="date"], input[type="month"] { color: var(--bp-pink) !important; font-weight: 900; }
+        /* 활성화 시 입력창 테두리 컬러 동기화 */
+        .card-finance.active .auth-input:focus { border-color: var(--bp-pink) !important; color: var(--bp-pink) !important; }
+        .card-diet.active .auth-input:focus { border-color: var(--diet-mint) !important; color: var(--diet-mint) !important; }
+        .card-workout.active .auth-input:focus { border-color: var(--workout-neon) !important; color: var(--workout-neon) !important; }
 
-        .btn-pink { 
-            width: 100%; padding: 18px; font-weight: 900; border-radius: 20px; border: none !important; 
-            background-color: var(--bp-pink) !important; color: #000 !important; font-size: 1.05rem; 
-            box-shadow: 0 6px 20px rgba(232, 142, 163, 0.2); margin-bottom: 25px; display: block; 
-            text-transform: uppercase; letter-spacing: 1px;
+        .auth-msg {
+            font-size: 0.75rem;
+            font-weight: 800;
+            margin-top: 12px;
+            min-height: 18px;
         }
-        .btn-edit-save { background: var(--bp-pink) !important; color: #000 !important; flex: 1; border-radius: 15px; font-weight: 900; font-size: 0.85rem; padding: 14px; border: none !important; }
-        .btn-edit-cancel { background: #252525 !important; color: #aaa !important; flex: 1; border-radius: 15px; font-weight: 900; font-size: 0.85rem; padding: 14px; border: none !important; }
-        .btn-query { background: var(--bp-pink) !important; color: #000 !important; border: none; border-radius: 12px; padding: 0 12px; font-weight: 900; font-size: 0.7rem; height: 34px; flex-shrink: 0; }
+        .msg-error { color: #ff4d4d; }
+        .msg-loading { color: var(--text-dim); animation: pulse 1.5s infinite; }
 
-        .slim-filter { 
-            background: #000; border-radius: 22px; padding: 8px; margin-bottom: 15px; 
-            border: 1px solid #222; display: flex; align-items: center; gap: 5px; 
-        }
-        .slim-filter input { background: #0a0a0a !important; border: 1px solid #333 !important; color: var(--bp-pink) !important; border-radius: 12px; padding: 6px 2px; font-size: 0.7rem; flex: 1; text-align: center; font-weight: 800; }
-        .total-summary-row { text-align: right; padding: 0 8px 12px 0; font-size: 0.8rem; font-weight: 900; color: var(--bp-pink); opacity: 0.9; }
-
-        /* --- 카드 시스템 --- */
-        .custom-card { 
-            position: relative; background: var(--bp-black); border-radius: 24px; padding: 18px; 
-            border-left: 6px solid var(--bp-pink); border-top: 1px solid #222; border-right: 1px solid #222; 
-            border-bottom: 1px solid #222; margin-bottom: 14px; transition: transform 0.3s ease; 
-            overflow: hidden; cursor: pointer; 
-        }
-        .card-refund { border-left-color: #fff !important; box-shadow: inset 0 0 15px rgba(232, 142, 163, 0.1); }
-        .card-refund .val-amt { color: #fff !important; text-shadow: 0 0 8px var(--bp-pink); }
-        .card-refund .acc-main { color: var(--bp-pink) !important; }
-
-        .label-mini { font-size: 0.62rem; color: var(--text-dim) !important; font-weight: 900; margin-bottom: 4px; letter-spacing: 0.5px; }
-        .acc-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
-        .acc-main { color: #fff !important; font-weight: 700; font-size: 1.05rem; }
-        .acc-amount { color: var(--pink-light) !important; font-weight: 900; font-size: 1.3rem; }
-        .val-text { font-size: 0.82rem; font-weight: 700; color: #fff !important; min-height: 18px; }
-        .val-amt { font-size: 1.1rem; font-weight: 900; color: var(--pink-light) !important; }
-        .card-balance-badge { font-weight: 800; font-size: 0.6rem; color: var(--bp-pink) !important; opacity: 0.9; margin-top: 4px; text-align: right; display: block; }
-        .card-note-area { font-size: 0.7rem; color: #aaa !important; border-top: 1px solid #222; margin-top: 8px; padding-top: 8px; }
-        
-        .loan-detail-box { 
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; 
-            background: rgba(232, 142, 163, 0.05); padding: 15px; 
-            border-radius: 18px; margin-top: 12px; border: 1px solid rgba(232, 142, 163, 0.15); 
-        }
-        .loan-item { display: flex; flex-direction: column; }
-        .loan-label { font-size: 0.6rem; color: var(--text-dim); font-weight: 800; margin-bottom: 2px; }
-        .loan-val { font-size: 0.85rem; font-weight: 900; color: var(--pink-light); }
-
-        .tr-row-wrap { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #222; margin-top: 8px; padding: 10px 0 0 0; gap: 4px; }
-        .tr-col { flex: 1; min-width: 0; }
-        .tr-amt-col { flex: 1; text-align: center; min-width: 0; }
-        
-        .card-grid { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 10px; }
-        .card-full { grid-column: span 2; }
-        .edit-mode { border: 1.5px solid var(--bp-pink) !important; background: #050505 !important; cursor: default; }
-        .edit-btn-group { display: flex; gap: 10px; margin-top: 18px; }
-        .live-balance-box { font-size: 0.68rem; font-weight: 800; color: var(--bp-pink); margin-top: 4px; text-align: right; }
-
-        /* --- 확장 영역 및 히스토리 --- */
-        .expand-container { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
-        .expand-container.expanded { max-height: 5000px; padding-bottom: 10px; }
-        .ah-row { 
-            display: flex; flex-direction: column; 
-            padding: 10px; background: #0a0a0a; border-radius: 12px; margin-bottom: 8px; 
-            border: 1px solid #222; border-left: 3px solid var(--bp-pink);
-            cursor: pointer; transition: 0.2s;
-        }
-        .ah-main { display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
-        .ah-date { font-size: 0.65rem; color: var(--bp-pink); font-weight: 800; width: 40px; }
-        .ah-note { font-size: 0.75rem; color: #fff; flex: 1; margin: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ah-amt { font-size: 0.8rem; font-weight: 900; color: var(--pink-light); }
-        .ah-balance { font-size: 0.6rem; color: var(--text-dim); text-align: right; margin-top: 2px; }
-
-        /* --- 통계 --- */
-        .stats-stack { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-        .stats-card { background: var(--bp-black); border-radius: 20px; padding: 20px; border: 1px solid #222; border-top: 4px solid var(--bp-pink); cursor: pointer; }
-        .stats-label { font-size: 0.7rem; color: var(--text-dim); font-weight: 800; letter-spacing: 1.5px; }
-        .stats-val { font-size: 1.7rem; font-weight: 900; color: var(--pink-light); }
-        .stat-item-card { background: #0a0a0a; border-radius: 18px; padding: 15px; border: 1px solid #222; margin-top: 10px; cursor: pointer; }
-        .progress { background-color: #1a1a1a; height: 6px !important; border-radius: 10px; }
-        .bar-income { background: #fff !important; }
-        .bar-asset { background: var(--asset-pink) !important; }
-        .bar-expense { background: var(--bp-pink) !important; }
-        .fixed-chip { background: rgba(232, 142, 163, 0.1); padding: 6px 12px; border-radius: 12px; font-size: 0.65rem; border: 1px solid rgba(232, 142, 163, 0.2); color: var(--pink-light); display: inline-block; margin: 3px; font-weight: 700; }
-
-        /* --- 스와이프 개선 --- */
-        .swipe-container { position: relative; overflow: hidden; border-radius: 20px; margin-bottom: 12px; background: #000; display: flex; align-items: stretch; }
-        .swipe-actions-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; z-index: 1; }
-        /* 왼쪽 액션 (삭제) */
-        .actions-left { justify-content: flex-end; background: #300; }
-        /* 오른쪽 액션 (취소) */
-        .actions-right { justify-content: flex-start; background: #1a1a1a; }
-        .swipe-btn { height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.75rem; width: 100px; }
-        .btn-delete { color: #f88; }
-        .btn-cancel-tx { color: var(--bp-pink); }
-        
-        .swipe-target { z-index: 2; position: relative; width: 100%; margin-bottom: 0 !important; transition: transform 0.2s ease-out; }
-        
-        .loading-inline { text-align: center; padding: 40px 0; color: var(--bp-pink); font-weight: 900; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
     </style>
 </head>
 <body>
-    <div id="auth-overlay">
-        <div class="auth-box">
-            <h4 style="color: var(--bp-pink); font-weight: 900; letter-spacing: 3px;">IDENTITY</h4>
-            <input type="password" id="access-pw-input" class="form-control auth-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" autofocus oninput="handleAutoVerify(this)">
-            <div id="auth-msg" style="font-size: 0.7rem; color: #844; margin-top: 10px; font-weight: 800; min-height: 15px;"></div>
-        </div>
-    </div>
 
-    <div class="container mt-2" id="main-app-container">
-        <div class="text-center mb-3">
-            <h4 style="color: var(--bp-pink); font-weight: 900; letter-spacing: 3px; cursor:pointer;" onclick="location.reload()">TED'S FINANCE</h4>
-        </div>
+    <div class="gateway-title">TED'S UNIVERSE</div>
+
+    <div class="app-container">
         
-        <ul class="nav nav-pills nav-fill" id="mainTab" role="tablist">
-            <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#view-out" id="tab-out-btn">OUT</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#view-in" id="tab-in-btn">IN</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#view-tr" id="tab-tr-btn">MOVE</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#view-acc" id="tab-acc-btn">ASSETS</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#view-db" id="tab-db-btn">STATS</button></li>
-        </ul>
-
-        <div class="tab-content pt-2">
-            <div class="tab-pane fade show active" id="view-out">
-                <button class="btn-pink" onclick="addNewCard('OUT')">+ NEW EXPENSE</button>
-                <div class="slim-filter"><input type="date" id="out-start"><input type="date" id="out-end"><button class="btn-query" onclick="loadHistoryTab('OUT', true)">조회</button></div>
-                <div id="out-total-area" class="total-summary-row"></div>
-                <div id="out-new-card-area"></div><div id="out-history-container"></div>
-            </div>
-            <div class="tab-pane fade" id="view-in">
-                <button class="btn-pink" onclick="addNewCard('IN')">+ NEW INCOME</button>
-                <div class="slim-filter"><input type="date" id="in-start"><input type="date" id="in-end"><button class="btn-query" onclick="loadHistoryTab('IN', true)">조회</button></div>
-                <div id="in-total-area" class="total-summary-row"></div>
-                <div id="in-new-card-area"></div><div id="in-history-container"></div>
-            </div>
-            <div class="tab-pane fade" id="view-tr">
-                <button class="btn-pink" onclick="addNewCard('TR')">+ NEW TRANSFER</button>
-                <div class="slim-filter"><input type="date" id="tr-start"><input type="date" id="tr-end"><button class="btn-query" onclick="loadHistoryTab('TR', true)">조회</button></div>
-                <div id="tr-new-card-area"></div><div id="tr-history-container"></div>
-            </div>
-            <div class="tab-pane fade" id="view-acc"><div id="acc-balance-list"></div></div>
-            <div class="tab-pane fade" id="view-db">
-                <div class="slim-filter"><span style="font-size: 0.65rem; color: var(--bp-pink); font-weight: 900; margin-left: 5px;">MONTH</span><input type="month" id="stats-month" onchange="loadStats()"><button class="btn-query" onclick="loadStats()">조회</button></div>
-                <div class="stats-stack" id="stats-summary-area"></div>
-                <div id="db-sections">
-                    <div class="section-header" onclick="toggleStatSection('section-income')" style="background:#111; border:1px solid #333; border-left:4px solid var(--bp-pink); padding:16px 20px; border-radius:18px; display:flex; justify-content:space-between; margin-top:15px; cursor:pointer;"><span style="font-size:0.85rem; font-weight:900;">INCOME STATUS</span><span>▼</span></div><div id="section-income" class="expand-container"></div>
-                    <div class="section-header" onclick="toggleStatSection('section-asset')" style="background:#111; border:1px solid #333; border-left:4px solid var(--bp-pink); padding:16px 20px; border-radius:18px; display:flex; justify-content:space-between; margin-top:15px; cursor:pointer;"><span style="font-size:0.85rem; font-weight:900;">ASSET BUILDING</span><span>▼</span></div><div id="section-asset" class="expand-container"></div>
-                    <div class="section-header" onclick="toggleStatSection('section-expense')" style="background:#111; border:1px solid #333; border-left:4px solid var(--bp-pink); padding:16px 20px; border-radius:18px; display:flex; justify-content:space-between; margin-top:15px; cursor:pointer;"><span style="font-size:0.85rem; font-weight:900;">EXPENSE STATUS</span><span>▼</span></div><div id="section-expense" class="expand-container"></div>
+        <!-- 1. FINANCE (Nami) -->
+        <div class="app-card card-finance" onclick="activateApp('FINANCE', this)">
+            <div class="card-header">
+                <div class="app-icon">🖤</div>
+                <div class="app-info">
+                    <div class="app-title" style="color: var(--bp-pink);">FINANCE</div>
+                    <div class="app-desc">자산 및 가계부 관리 (by Nami)</div>
                 </div>
             </div>
+            <div class="auth-section" onclick="event.stopPropagation()">
+                <input type="password" class="form-control auth-input" data-app="FINANCE" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="handlePinInput(this)">
+                <div class="auth-msg"></div>
+            </div>
         </div>
+
+        <!-- 2. DIET (Sanji) -->
+        <div class="app-card card-diet" onclick="activateApp('DIET', this)">
+            <div class="card-header">
+                <div class="app-icon">🥗</div>
+                <div class="app-info">
+                    <div class="app-title" style="color: var(--diet-mint);">DIET</div>
+                    <div class="app-desc">식단 및 체중 관리 (by Sanji)</div>
+                </div>
+            </div>
+            <div class="auth-section" onclick="event.stopPropagation()">
+                <input type="password" class="form-control auth-input" data-app="DIET" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="handlePinInput(this)">
+                <div class="auth-msg"></div>
+            </div>
+        </div>
+
+        <!-- 3. WORKOUT (Robin) -->
+        <div class="app-card card-workout" onclick="activateApp('WORKOUT', this)">
+            <div class="card-header">
+                <div class="app-icon">💪</div>
+                <div class="app-info">
+                    <div class="app-title" style="color: var(--workout-neon);">WORKOUT</div>
+                    <div class="app-desc">루틴 및 운동 기록 (by Robin)</div>
+                </div>
+            </div>
+            <div class="auth-section" onclick="event.stopPropagation()">
+                <input type="password" class="form-control auth-input" data-app="WORKOUT" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="handlePinInput(this)">
+                <div class="auth-msg"></div>
+            </div>
+        </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Supabase 통합 설정 (루트 레벨에서는 스키마를 고정하지 않고, API 호출 시 동적으로 스키마 지정)
         const SUPABASE_URL = 'https://vaamifqzjsrflmprihgv.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZhYW1pZnF6anNyZmxtcHJpaGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzODc2NzksImV4cCI6MjA5MTk2MzY3OX0.qUUs3aoWQMEVjTQkYTZtA8CMjMF_MrgBFa4UfiiEWzI';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        let dropdownCache = { accounts: [], accounts_raw: [], categories: [], categories_raw: [], trTypes: [], trTypes_raw: [], fixedList: [] };
-        let touchStartX = 0; let touchStartY = 0; window.tempOriginalRowHtml = "";
 
-        window.onload = () => { const pwInput = document.getElementById('access-pw-input'); if(pwInput) pwInput.focus(); };
-        function handleAutoVerify(input) { if (input.value.length === 4) verifyAccess(); }
-        async function verifyAccess() {
-            const pwInput = document.getElementById('access-pw-input'); const inputPw = pwInput.value; const msg = document.getElementById('auth-msg');
-            msg.innerText = "VERIFYING...";
-            try {
-                const { data, error } = await _supabase.from('settings').select('value').eq('code', 'ACCESS_PW').single();
-                if (error) throw error;
-                if (data.value === inputPw) { sessionStorage.setItem('is_auth', 'true'); document.getElementById('auth-overlay').style.display = 'none'; document.getElementById('main-app-container').style.display = 'block'; await initApp(); }
-                else { msg.innerText = "WRONG PASSWORD"; pwInput.value = ""; pwInput.focus(); }
-            } catch (e) { msg.innerText = "CONNECTION ERROR"; }
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (sessionStorage.getItem('is_auth') === 'true') { document.getElementById('auth-overlay').style.display = 'none'; document.getElementById('main-app-container').style.display = 'block'; await initApp(); }
-            else { setTimeout(() => { if(document.getElementById('access-pw-input')) document.getElementById('access-pw-input').focus(); }, 500); }
-            document.querySelectorAll('.nav-link').forEach(el => {
-                el.addEventListener('click', function(e) {
-                    e.preventDefault(); new bootstrap.Tab(this).show();
-                    if(this.id === 'tab-out-btn') loadHistoryTab('OUT'); else if(this.id === 'tab-in-btn') loadHistoryTab('IN'); else if(this.id === 'tab-tr-btn') loadHistoryTab('TR'); else if(this.id === 'tab-acc-btn') loadAssets(); else if(this.id === 'tab-db-btn') loadStats();
-                });
+        // 카드 활성화 로직
+        function activateApp(appName, cardElement) {
+            // 다른 열려있는 카드들 모두 닫기 및 초기화
+            document.querySelectorAll('.app-card').forEach(card => {
+                if (card !== cardElement) {
+                    card.classList.remove('active');
+                    const input = card.querySelector('.auth-input');
+                    input.value = '';
+                    card.querySelector('.auth-msg').innerText = '';
+                    card.querySelector('.auth-msg').className = 'auth-msg';
+                }
             });
-        });
 
-        async function initApp() {
-            const now = new Date(); const monthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0'); const dateStr = monthStr + '-' + String(now.getDate()).padStart(2, '0');
-            document.querySelectorAll('input[type="date"]').forEach(ipt => ipt.value = dateStr); if(document.getElementById('stats-month')) document.getElementById('stats-month').value = monthStr;
-            const [accRes, catRes, setRes, fixRes] = await Promise.all([
-                _supabase.from('accounts').select('code, name').order('id'), _supabase.from('categories').select('code, name, is_stats').order('id'),
-                _supabase.from('settings').select('code, value').eq('category', 'TR_TYPE'), _supabase.from('fixed_expenses').select('*').eq('is_active', true).order('payment_day')
-            ]);
-            dropdownCache = { accounts_raw: accRes.data || [], accounts: (accRes.data || []).map(a => a.name), categories_raw: catRes.data || [], categories: (catRes.data || []).map(c => c.name), trTypes_raw: setRes.data || [], trTypes: (setRes.data || []).map(s => s.value), fixedList: (fixRes.data || []).map(f => ({ id: f.fixed_link, name: f.name, amt: f.amount, day: f.payment_day, acc: f.account_code, cat: f.category_code })) };
-            loadHistoryTab('OUT');
+            // 현재 선택한 카드 열기
+            if (!cardElement.classList.contains('active')) {
+                cardElement.classList.add('active');
+                
+                // 트랜지션 애니메이션이 끝난 후 포커스 주입 (모바일 키보드 팝업)
+                setTimeout(() => {
+                    cardElement.querySelector('.auth-input').focus();
+                }, 350);
+            }
         }
 
-        async function saveEdit(btn, source, id) {
-            const card = btn.closest('.custom-card'); const inputs = card.querySelectorAll('.edit-input'); let formData = {}; inputs.forEach(ipt => formData[ipt.dataset.field] = ipt.value);
-            btn.innerHTML = "..."; btn.disabled = true;
+        // 핀 번호 자동 감지 및 인증 라우터 호출
+        function handlePinInput(inputEl) {
+            if (inputEl.value.length === 4) {
+                inputEl.blur(); // 키보드 숨기기
+                verifyAppAccess(inputEl.dataset.app, inputEl.value, inputEl.nextElementSibling, inputEl);
+            }
+        }
+
+        // 인증 로직 허브
+        async function verifyAppAccess(appName, pin, msgEl, inputEl) {
+            msgEl.className = 'auth-msg msg-loading';
+            msgEl.innerText = "VERIFYING...";
+
             try {
-                const amount = parseInt(String(formData.amount).replace(/[^0-9-]/g, "")) || 0; const commonData = { date: formData.date, amount: amount, note: formData.note };
-                if (source === 'TR' || source === 'MOVE') {
-                    const from_code = dropdownCache.accounts_raw.find(a => a.name === formData.fromAcc)?.code; const to_code = dropdownCache.accounts_raw.find(a => a.name === formData.toAcc)?.code; const type_code = dropdownCache.trTypes_raw.find(s => s.value === formData.type)?.code || 'TX_TRANSFER';
-                    const uniqueTransferCode = `TR_${new Date().getTime()}_${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-                    const payload = { ...commonData, from_account_code: from_code, to_account_code: to_code, type_code: type_code, transfer_code: (id === 'NEW') ? uniqueTransferCode : undefined };
-                    if(id !== 'NEW') delete payload.transfer_code;
-                    const { error } = (id === 'NEW') ? await _supabase.from('transfer').insert([payload]) : await _supabase.from('transfer').update(payload).eq('id', id);
+                if (appName === 'FINANCE') {
+                    // 🖤 나미의 Finance 스키마 인증 로직 (PostgreSQL Schema 지원 방식)
+                    const { data, error } = await _supabase.schema('finance').from('settings').select('value').eq('code', 'ACCESS_PW').single();
                     if (error) throw error;
-                } else {
-                    const acc_code = dropdownCache.accounts_raw.find(a => a.name === formData.acc)?.code; const cat_code = dropdownCache.categories_raw.find(c => c.name === formData.cat)?.code;
-                    let typeCode = (source === 'IN' ? 'TX_INCOME' : 'TX_EXPENSE');
-                    const payload = { ...commonData, account_code: acc_code, category_code: cat_code, type_code: typeCode, fixed_link: formData.fixedLinkId || null };
-                    const { error } = (id === 'NEW') ? await _supabase.from('transactions').insert([payload]) : await _supabase.from('transactions').update(payload).eq('id', id);
-                    if (error) throw error;
+                    
+                    if (data.value === pin) {
+                        sessionStorage.setItem('is_auth', 'true');
+                        msgEl.innerText = "ACCESS GRANTED";
+                        msgEl.style.color = "var(--bp-pink)";
+                        setTimeout(() => location.href = 'finance/out.html', 300);
+                    } else {
+                        throw new Error("WRONG PASSWORD");
+                    }
+                } 
+                else if (appName === 'DIET') {
+                    // 💚 상디(Sanji)의 Diet 인증 로직 위치
+                    // 예: await _supabase.schema('diet').from('...')...
+                    // 상디가 이 부분의 쿼리와 세션스토리지, 라우팅(location.href)을 채워 넣으면 됩니다!
+                    
+                    // [임시 하드코딩 테스트용 - 나중에 지우고 상디 로직으로 교체하세요]
+                    if (pin === '0000') {
+                        sessionStorage.setItem('is_auth_diet', 'true');
+                        setTimeout(() => location.href = 'diet/index.html', 300);
+                    } else throw new Error("WRONG PASSWORD");
+                } 
+                else if (appName === 'WORKOUT') {
+                    // 🔥 로빈(Robin)의 Workout 인증 로직 위치
+                    // 예: await _supabase.schema('workout').from('...')...
+                    // 로빈이 이 부분의 쿼리와 세션스토리지, 라우팅(location.href)을 채워 넣으면 됩니다!
+
+                    // [임시 하드코딩 테스트용 - 나중에 지우고 로빈 로직으로 교체하세요]
+                    if (pin === '0000') {
+                        sessionStorage.setItem('is_auth_workout', 'true');
+                        setTimeout(() => location.href = 'workout/index.html', 300);
+                    } else throw new Error("WRONG PASSWORD");
                 }
-                if(id === 'NEW') btn.closest('[id$="-new-card-area"]').innerHTML = "";
-                refreshView();
-            } catch (err) { alert("SAVE ERROR: " + err.message); btn.innerHTML = "SAVE"; btn.disabled = false; }
-        }
-
-        async function handleMainEdit(id, source, el, event) {
-            if (event.target.closest('.swipe-actions-bg')) return; const container = el.closest('.swipe-container') || el; window.tempOriginalRowHtml = container.outerHTML; container.innerHTML = `<div class="loading-inline">LOADING...</div>`;
-            try {
-                if (source === 'TX') {
-                    const { data } = await _supabase.from('transactions').select('*').eq('id', id).single();
-                    data.acc = dropdownCache.accounts_raw.find(a => a.code === data.account_code)?.name; data.cat = dropdownCache.categories_raw.find(c => c.code === data.category_code)?.name;
-                    container.outerHTML = renderTxEditCard(data, data.type_code === 'TX_INCOME' ? 'IN' : 'OUT');
-                } else {
-                    const { data } = await _supabase.from('transfer').select('*').eq('id', id).single();
-                    data.fromAcc = dropdownCache.accounts_raw.find(a => a.code === data.from_account_code)?.name; data.toAcc = dropdownCache.accounts_raw.find(a => a.code === data.to_account_code)?.name;
-                    data.type = dropdownCache.trTypes_raw.find(s => s.code === (data.transfer_code || data.type_code))?.value || '이체';
-                    container.outerHTML = renderTrEditCard(data);
-                }
-            } catch (e) { container.outerHTML = window.tempOriginalRowHtml; }
-        }
-
-        function renderTxEditCard(i, source) {
-            return `<div class="custom-card edit-mode" data-id="${i.id}"><div class="card-grid"><div class="card-full"><div class="label-mini">FIXED LINK</div><select class="form-select form-select-sm edit-input" data-field="fixedLinkId" onchange="onFixedLinkChange(this)"><option value="">-- 없음 --</option>${dropdownCache.fixedList.map(f => `<option value="${f.id}" ${i.fixed_link === f.id ? 'selected' : ''}>${f.day}일 | ${f.name}</option>`).join('')}</select></div><div><div class="label-mini">DATE</div><input type="date" class="form-control form-control-sm edit-input" data-field="date" value="${i.date}"></div><div class="text-end"><div class="label-mini">CAT</div><select class="form-select form-select-sm edit-input" data-field="cat">${dropdownCache.categories.map(c => `<option ${c === i.cat ? 'selected' : ''}>${c}</option>`).join('')}</select></div><div class="card-full"><div class="label-mini">ACC</div><select class="form-select form-select-sm edit-input" data-field="acc" onchange="updateLiveBalance(this)">${dropdownCache.accounts.map(a => `<option ${a === i.acc ? 'selected' : ''}>${a}</option>`).join('')}</select><div class="live-balance-main live-balance-box"></div></div><div class="card-full"><div class="label-mini">AMT</div><input type="text" class="form-control form-control-sm edit-input text-end" data-field="amount" value="${i.amount ? Number(i.amount).toLocaleString() : ''}" inputmode="numeric" oninput="formatAmountInput(this)"></div><div class="card-full"><div class="label-mini">NOTE</div><input type="text" class="form-control form-control-sm edit-input" data-field="note" value="${i.note || ''}" placeholder="메모 입력"></div><div class="card-full edit-btn-group"><button class="btn-edit-cancel" onclick="handleCancel('${i.id}', '${source}', this)">CANCEL</button><button class="btn-edit-save" onclick="saveEdit(this,'${source}','${i.id}')">SAVE</button></div></div></div>`;
-        }
-
-        function renderTrEditCard(i) {
-            return `<div class="custom-card edit-mode" style="border-left-color:#fff" data-id="${i.id}"><div class="card-grid"><div><div class="label-mini">DATE</div><input type="date" class="form-control form-control-sm edit-input" data-field="date" value="${i.date}"></div><div class="text-end"><div class="label-mini">TYPE</div><select class="form-select form-select-sm edit-input" data-field="type">${dropdownCache.trTypes.map(t => `<option ${t === i.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div><div class="card-full tr-row-wrap"><div class="tr-col"><div class="label-mini">FROM</div><select class="form-select form-select-sm edit-input" data-field="fromAcc" onchange="updateLiveBalance(this, 'from')">${dropdownCache.accounts.map(a => `<option ${a === i.fromAcc ? 'selected' : ''}>${a}</option>`).join('')}</select><div class="live-balance-from live-balance-box"></div></div><div class="tr-amt-col"><div class="label-mini">AMT</div><input type="text" class="form-control form-control-sm edit-input text-center" data-field="amount" value="${i.amount ? Number(i.amount).toLocaleString() : ''}" inputmode="numeric" oninput="formatAmountInput(this)"></div><div class="tr-col text-end"><div class="label-mini">TO</div><select class="form-select form-select-sm edit-input" data-field="toAcc" onchange="updateLiveBalance(this, 'to')">${dropdownCache.accounts.map(a => `<option ${a === i.toAcc ? 'selected' : ''}>${a}</option>`).join('')}</select><div class="live-balance-to live-balance-box"></div></div></div><div class="card-full"><div class="label-mini">NOTE</div><input type="text" class="form-control form-control-sm edit-input" data-field="note" value="${i.note || ''}" placeholder="메모 입력"></div><div class="card-full edit-btn-group"><button class="btn-edit-cancel" onclick="handleCancel('${i.id}', 'TR', this)">CANCEL</button><button class="btn-edit-save" onclick="saveEdit(this,'TR','${i.id}')">SAVE</button></div></div></div>`;
-        }
-
-        async function loadHistoryTab(type, isSearch = false) {
-            const pre = type.toLowerCase(); const container = document.getElementById(pre + '-history-container'); container.innerHTML = `<div class="loading-inline">...</div>`;
-            const start = isSearch ? document.getElementById(pre + '-start').value : null; const end = isSearch ? document.getElementById(pre + '-end').value : null;
-            let query;
-            if (type === 'TR') query = _supabase.from('transfer').select('*, from:accounts!from_account_code(name), to:accounts!to_account_code(name)');
-            else query = _supabase.from('v_running_balance').select('*').eq('type_code', type === 'IN' ? 'TX_INCOME' : 'TX_EXPENSE');
-            if (start) query = query.gte('date', start); if (end) query = query.lte('date', end);
-            const { data } = await query.order('date', { ascending: false }).order('id', { ascending: false }).limit(20);
-            
-            if(type === 'TR' && data?.length) {
-                for(let item of data) {
-                    const [{data:fb}, {data:tb}] = await Promise.all([
-                        _supabase.from('v_running_balance').select('running_balance').eq('id', item.id).eq('account_code', item.from_account_code).maybeSingle(),
-                        _supabase.from('v_running_balance').select('running_balance').eq('id', item.id).eq('account_code', item.to_account_code).maybeSingle()
-                    ]);
-                    item.from_bal = fb?.running_balance; item.to_bal = tb?.running_balance;
-                }
+            } catch (err) {
+                msgEl.className = 'auth-msg msg-error';
+                msgEl.innerText = "WRONG PASSWORD";
+                setTimeout(() => {
+                    inputEl.value = "";
+                    msgEl.innerText = "";
+                    inputEl.focus(); // 재입력을 위해 포커스 복원
+                }, 1000);
             }
-            if (document.getElementById(pre + '-total-area')) { const total = (data || []).reduce((acc, curr) => acc + Number(curr.amount || 0), 0); document.getElementById(pre + '-total-area').innerText = `TOTAL: ${total.toLocaleString()}원`; }
-            container.innerHTML = (data || []).map(i => type === 'TR' ? renderTrCardOriginal(i) : renderTxCardOriginal(i)).join('') || "<p class='text-center py-5 opacity-50'>No data</p>";
-        }
-
-        function renderTxCardOriginal(i) {
-            const isRefund = i.amount < 0;
-            return `<div class="swipe-container">
-                <div class="swipe-actions-bg actions-left"><div class="swipe-btn btn-delete" onclick="deleteEntry('TX', '${i.id}')">DEL</div></div>
-                <div class="swipe-actions-bg actions-right"><div class="swipe-btn btn-cancel-tx" onclick="generateRefund('${i.id}')">취소</div></div>
-                <div class="custom-card swipe-target ${isRefund ? 'card-refund' : ''}" data-id="${i.id}" data-source="TX" onclick="handleMainEdit('${i.id}', 'TX', this, event)" ontouchstart="handleSwipeStart(event)" ontouchmove="handleSwipeMove(event)" ontouchend="handleSwipeEnd(event)">
-                    <div class="card-grid">
-                        <div><div class="label-mini">DATE</div><div class="val-text">${i.date}</div></div>
-                        <div class="text-end"><div class="label-mini">CAT</div><div class="val-text">${i.category_name || '기타'}</div></div>
-                        <div class="card-full"><div class="label-mini">ACC</div><div class="val-text">${i.account_name}</div></div>
-                        <div class="card-full text-end"><div class="val-amt">${Math.round(i.amount).toLocaleString()}원</div><div class="card-balance-badge">Bal: ${Math.round(i.running_balance).toLocaleString()}원</div></div>
-                        <div class="card-full card-note-area">${i.note || '-'}</div>
-                    </div>
-                </div>
-            </div>`;
-        }
-
-        function renderTrCardOriginal(i) {
-            return `<div class="swipe-container">
-                <div class="swipe-actions-bg actions-left"><div class="swipe-btn btn-delete" onclick="deleteEntry('MOVE', '${i.id}')">DEL</div></div>
-                <div class="custom-card swipe-target" style="border-left-color:#fff" data-id="${i.id}" data-source="MOVE" onclick="handleMainEdit('${i.id}', 'MOVE', this, event)" ontouchstart="handleSwipeStart(event)" ontouchmove="handleSwipeMove(event)" ontouchend="handleSwipeEnd(event)">
-                    <div class="card-grid">
-                        <div><div class="label-mini">DATE</div><div class="val-text">${i.date}</div></div>
-                        <div class="text-end"><div class="label-mini">TYPE</div><div class="val-text">이체</div></div>
-                        <div class="card-full tr-row-wrap">
-                            <div class="tr-col"><div class="label-mini">FROM</div><div class="val-text">${i.from?.name || i.from_account_code}</div><div class="live-balance-box" style="text-align:left">Bal: ${Math.round(i.from_bal || 0).toLocaleString()}원</div></div>
-                            <div class="tr-amt-col"><div class="val-amt">${Math.round(i.amount).toLocaleString()}</div></div>
-                            <div class="tr-col text-end"><div class="label-mini">TO</div><div class="val-text">${i.to?.name || i.to_account_code}</div><div class="live-balance-box">Bal: ${Math.round(i.to_bal || 0).toLocaleString()}원</div></div>
-                        </div>
-                        <div class="card-full card-note-area">${i.note || '-'}</div>
-                    </div>
-                </div>
-            </div>`;
-        }
-
-        async function generateRefund(id) {
-            if (!confirm("이 내역에 대한 취소 전표(- 지출)를 오늘 날짜로 생성할까요?")) return;
-            try {
-                const { data: origin } = await _supabase.from('transactions').select('*').eq('id', id).single();
-                if (!origin) return;
-                const today = new Date().toISOString().split('T')[0];
-                const refundPayload = { date: today, amount: -origin.amount, account_code: origin.account_code, category_code: origin.category_code, type_code: origin.type_code, note: `[취소] ${origin.note || origin.date + ' 내역'}` };
-                const { error } = await _supabase.from('transactions').insert([refundPayload]);
-                if (error) throw error;
-                alert("취소 전표가 생성되었습니다."); refreshView();
-            } catch (e) { alert("전표 생성 실패: " + e.message); }
-        }
-
-        async function loadAssets() {
-            const list = document.getElementById('acc-balance-list'); list.innerHTML = `<div class="loading-inline">...</div>`;
-            const { data: assets } = await _supabase.from('v_account_balances').select(`*, loans!loans_account_code_fkey (*, linked_acc:accounts!linked_account_code (name))`).order('account_id');
-            const total = (assets || []).reduce((sum, acc) => sum + Number(acc.current_balance || 0), 0);
-            list.innerHTML = `<div class="text-end mb-4"><small class="label-mini">TOTAL ASSETS</small><h4 style="font-weight:900; font-size:2.1rem; color:var(--pink-light)">${Math.round(total).toLocaleString()}원</h4></div>` + (assets || []).map(acc => renderAssetCard(acc)).join('');
-        }
-
-        function renderAssetCard(acc) {
-            let borderColor = "var(--bp-pink)"; if (acc.account_type === "신용카드" || acc.account_type === "대출계좌") borderColor = "var(--asset-pink)";
-            const loan = (acc.loans && acc.loans.length > 0) ? acc.loans[0] : null; let loanHtml = "";
-            if (loan) {
-                let linkedAccName = "정보없음"; if (loan.linked_acc) linkedAccName = Array.isArray(loan.linked_acc) ? loan.linked_acc[0]?.name : (loan.linked_acc.name || "정보없음");
-                loanHtml = `<div class="loan-detail-box"><div class="loan-item"><div class="loan-label">금리</div><div class="loan-val">${loan.interest_rate}%</div></div><div class="loan-item"><div class="loan-label">월이자</div><div class="loan-val">${Math.round(loan.monthly_interest || 0).toLocaleString()}원</div></div><div class="loan-item"><div class="loan-label">납부일</div><div class="loan-val">${loan.payment_day}일</div></div><div class="loan-item"><div class="loan-label">만기일</div><div class="loan-val">${loan.expiry_date}</div></div><div style="grid-column: span 2; border-top: 1px solid rgba(232, 142, 163, 0.1); padding-top: 8px;"><div class="loan-label">연결계좌</div><div class="loan-val" style="color: var(--bp-pink);">${linkedAccName}</div></div></div>`;
-            }
-            return `<div class="custom-card mb-3" style="border-left-color: ${borderColor}" onclick="toggleAssetHistory('${acc.account_code}', this, event)"><div class="small opacity-50 mb-1">${acc.bank} | ${acc.account_type}</div><div class="acc-header"><div class="acc-main">${acc.account_name}</div><div class="acc-amount">${Math.round(acc.current_balance).toLocaleString()}원</div></div>${loanHtml}<div class="expand-container"><div class="history-list"></div></div></div>`;
-        }
-
-        async function loadStats() {
-            const targetMonth = document.getElementById('stats-month').value; const { data } = await _supabase.rpc('get_dashboard_data', { target_month: targetMonth }); if (!data) return;
-            const summaryArea = document.getElementById('stats-summary-area');
-            summaryArea.innerHTML = `<div class="stats-card" onclick="document.getElementById('balance-detail-wrapper').classList.toggle('expanded')"><div class="stats-label">MONTHLY BALANCE</div><div class="stats-val">${Math.round(data.summary.balance).toLocaleString()}원</div><div class="expand-container" id="balance-detail-wrapper"><div class="summary-detail-box mt-3" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:#0a0a0a; padding:15px; border-radius:15px; border:1px solid #222;"><div><div class="label-mini">INCOME</div><div style="font-weight:900;">${Math.round(data.summary.income).toLocaleString()}원</div></div><div><div class="label-mini">EXPENSE</div><div style="font-weight:900; color:var(--asset-pink);">${Math.round(data.summary.expense).toLocaleString()}원</div></div></div></div></div><div class="stats-card fixed" onclick="document.getElementById('fixed-list-wrapper').classList.toggle('expanded')"><div class="stats-label">FIXED REMAINING</div><div class="stats-val">${Math.round(data.fixedStats.remainingAmt).toLocaleString()}원</div><div class="expand-container" id="fixed-list-wrapper"><div id="fixed-list-container" class="mt-3">${(data.fixedStats.remainingItems || []).map(i => `<div class="fixed-chip">${i.day}일 | ${i.name}</div>`).join('') || "완료! 🌸"}</div></div></div>`;
-            const renderItems = (items, cls, groupType) => (items || []).map(c => `<div class="stat-item-card" onclick="toggleStatsHistory('${c.name}', '${groupType}', this)"><div class="d-flex justify-content-between mb-2"><span style="font-weight:800;">${c.name}</span><span style="color:var(--bp-pink); font-weight:900;">${c.percent}%</span></div><div class="progress mb-2"><div class="progress-bar ${cls}" style="width:${Math.min(c.percent, 100)}%"></div></div><div class="d-flex justify-content-between small opacity-75"><span>${Math.round(c.actual).toLocaleString()}원</span><span>예산 ${Math.round(c.budget).toLocaleString()}</span></div><div class="expand-container"><div class="history-list"></div></div></div>`).join('');
-            document.getElementById('section-income').innerHTML = renderItems(data.topExpenses.income, "bar-income", "income"); document.getElementById('section-asset').innerHTML = renderItems(data.topExpenses.asset, "bar-asset", "asset"); document.getElementById('section-expense').innerHTML = renderItems(data.topExpenses.expense, "bar-expense", "expense");
-        }
-
-        async function toggleAssetHistory(accCode, element, event) {
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT' || event.target.closest('.ah-row')) return;
-            const expandBox = element.querySelector('.expand-container'); if (expandBox.classList.contains('expanded')) { expandBox.classList.remove('expanded'); return; }
-            const historyList = expandBox.querySelector('.history-list'); historyList.innerHTML = `<div class="loading-inline" style="padding:10px;">...</div>`; expandBox.classList.add('expanded');
-            try { const { data } = await _supabase.from('v_running_balance').select('*').eq('account_code', accCode).order('date', { ascending: false }).order('id', { ascending: false }).limit(30); renderHistoryRows(data, historyList, 'asset'); } catch (e) { historyList.innerHTML = `<div class="text-danger py-2">Error: ${e.message}</div>`; }
-        }
-
-        async function toggleStatsHistory(catName, groupType, element) {
-            const expandBox = element.querySelector('.expand-container'); if (expandBox.classList.contains('expanded')) { expandBox.classList.remove('expanded'); return; }
-            const historyList = expandBox.querySelector('.history-list'); historyList.innerHTML = `<div class="loading-inline">...</div>`; expandBox.classList.add('expanded');
-            const targetMonth = document.getElementById('stats-month').value; const catCode = dropdownCache.categories_raw.find(c => c.name === catName)?.code;
-            try {
-                let query = _supabase.from('v_running_balance').select('*');
-                if (groupType === 'asset') { let code = catName === '대출원금' ? 'TX_LOAN_REPAY' : (catName === '저축' ? 'TX_SAVINGS' : 'TX_SUBSCRIPTION'); query = query.eq('type_code', code).gt('change_amount', 0); } else query = query.eq('category_code', catCode);
-                const { data } = await query.gte('date', `${targetMonth}-01`).lt('date', getNextMonthDate(targetMonth)).order('date', { ascending: false }).order('id', { ascending: false });
-                renderHistoryRows(data, historyList, 'stats');
-            } catch (e) { historyList.innerHTML = `<div class="text-danger py-2">Error: ${e.message}</div>`; }
-        }
-
-        function renderHistoryRows(data, container, mode) {
-            if (!data || data.length === 0) { container.innerHTML = `<div class="text-center opacity-50 py-3">No data</div>`; return; }
-            container.innerHTML = data.map(h => {
-                const isMove = (h.category_code === 'TRANSFER' || h.type_code.startsWith('TX_LOAN') || h.type_code === 'TX_SAVINGS' || h.type_code === 'TX_SUBSCRIPTION');
-                const source = isMove ? 'MOVE' : 'TX'; const amt = (mode === 'asset') ? h.change_amount : h.amount; const color = (amt < 0) ? 'var(--asset-pink)' : 'var(--pink-light)';
-                const isRefund = amt < 0 && !isMove;
-                return `<div class="ah-row ${isRefund ? 'card-refund' : ''}" onclick="handleMainEdit('${h.id}', '${source}', this, event)"><div class="ah-main"><div class="ah-date">${h.date.slice(5)}</div><div class="ah-note">${h.note || h.category_name || '-'}</div><div class="ah-amt" style="color: ${isRefund ? '#fff' : color}">${Math.round(amt).toLocaleString()}</div></div><div class="ah-balance">${mode === 'stats' ? h.account_name + ' | ' : ''}잔액: ${Math.round(h.running_balance).toLocaleString()}원</div></div>`;
-            }).join('');
-        }
-
-        function getNextMonthDate(monthStr) { let [y, m] = monthStr.split('-').map(Number); m++; if(m > 12) { m = 1; y++; } return `${y}-${String(m).padStart(2, '0')}-01`; }
-        function formatAmountInput(input) { let val = input.value.replace(/[^0-9-]/g, ""); if (val) input.value = Number(val).toLocaleString(); else input.value = ""; }
-        function addNewCard(type) { const area = document.getElementById(type.toLowerCase() + '-new-card-area'); if(!area || area.innerHTML !== "") return; const dummy = { id: 'NEW', date: new Date().toISOString().split('T')[0], amount: 0, note: '', type: (type === 'TR' ? dropdownCache.trTypes[0] : (type==='IN'?'수입':'지출')) }; if (type === 'TR') { dummy.fromAcc = dropdownCache.accounts[0]; dummy.toAcc = dropdownCache.accounts[1]; area.innerHTML = renderTrEditCard(dummy); } else { dummy.cat = dropdownCache.categories[0]; dummy.acc = dropdownCache.accounts[0]; area.innerHTML = renderTxEditCard(dummy, type); } }
-        function handleCancel(id, source, btn) { if (id === 'NEW') btn.closest('[id$="-new-card-area"]').innerHTML = ""; else if (window.tempOriginalRowHtml) { btn.closest('.custom-card').outerHTML = window.tempOriginalRowHtml; window.tempOriginalRowHtml = ""; } else refreshView(); }
-        async function deleteEntry(source, id) { if (confirm("삭제할까요?")) { await _supabase.from((source === 'MOVE') ? 'transfer' : 'transactions').delete().eq('id', id); refreshView(); } }
-        
-        /* --- 양방향 스와이프 로직 --- */
-        function handleSwipeStart(e) { 
-            touchStartX = e.touches[0].clientX; 
-            touchStartY = e.touches[0].clientY; 
-        }
-        function handleSwipeMove(e) { 
-            const diffX = touchStartX - e.touches[0].clientX;
-            const diffY = Math.abs(touchStartY - e.touches[0].clientY);
-            if (diffY > 30) return; // 상하 스크롤 시 무시
-            
-            if (diffX > 5) { // 왼쪽으로 밀기 (삭제)
-                e.currentTarget.style.transform = `translateX(-${Math.min(diffX, 100)}px)`;
-            } else if (diffX < -5) { // 오른쪽으로 밀기 (취소)
-                e.currentTarget.style.transform = `translateX(${Math.min(Math.abs(diffX), 100)}px)`;
-            }
-        }
-        function handleSwipeEnd(e) { 
-            const diffX = touchStartX - e.changedTouches[0].clientX;
-            if (diffX > 60) { // 삭제 실행
-                deleteEntry(e.currentTarget.dataset.source, e.currentTarget.dataset.id);
-            } else if (diffX < -60) { // 취소 전표 실행
-                if (e.currentTarget.dataset.source === 'TX') generateRefund(e.currentTarget.dataset.id);
-            }
-            e.currentTarget.style.transform = `translateX(0px)`; 
-        }
-
-        function toggleStatSection(id) { document.getElementById(id).classList.toggle('expanded'); }
-        function refreshView() { const aid = document.querySelector('.nav-link.active').id; if(aid === 'tab-acc-btn') loadAssets(); else if(aid === 'tab-db-btn') loadStats(); else if(aid.includes('out')) loadHistoryTab('OUT', true); else if(aid.includes('in')) loadHistoryTab('IN', true); else if(aid.includes('tr')) loadHistoryTab('TR', true); }
-        async function updateLiveBalance(selectEl, suffix = '') {
-            const accCode = dropdownCache.accounts_raw.find(a => a.name === selectEl.value)?.code; if(!accCode) return;
-            const { data } = await _supabase.from('v_account_balances').select('current_balance').eq('account_code', accCode).single();
-            const balanceArea = selectEl.closest('.custom-card').querySelector(suffix ? `.live-balance-${suffix}` : '.live-balance-main');
-            if (balanceArea) balanceArea.innerText = `Bal: ${Math.round(data?.current_balance || 0).toLocaleString()}원`;
-        }
-        function onFixedLinkChange(selectEl) {
-            const card = selectEl.closest('.custom-card'); const fixedId = selectEl.value; if (!fixedId) return;
-            const item = dropdownCache.fixedList.find(f => f.id === fixedId); if (!item) return;
-            card.querySelector('[data-field="amount"]').value = Number(item.amt).toLocaleString();
-            const now = new Date(); card.querySelector('[data-field="date"]').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(item.day).padStart(2, '0')}`;
-            const accName = dropdownCache.accounts_raw.find(a => a.code === item.acc)?.name;
-            if (accName) { const accSelect = card.querySelector('[data-field="acc"]') || card.querySelector('[data-field="fromAcc"]'); accSelect.value = accName; updateLiveBalance(accSelect, accSelect.dataset.field === 'fromAcc' ? 'from' : ''); }
-            const catName = dropdownCache.categories_raw.find(c => c.code === item.cat)?.name;
-            if (catName) card.querySelector('[data-field="cat"]').value = catName; card.querySelector('[data-field="note"]').value = item.name;
         }
     </script>
 </body>
