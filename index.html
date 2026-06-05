@@ -135,6 +135,7 @@
 
     <div class="app-container">
         
+        <!-- 1. FINANCE (Nami) -->
         <div class="app-card card-finance" onclick="activateApp('FINANCE', this)">
             <div class="card-header">
                 <div class="app-icon">🖤</div>
@@ -149,6 +150,7 @@
             </div>
         </div>
 
+        <!-- 2. DIET (Sanji) -->
         <div class="app-card card-diet" onclick="activateApp('DIET', this)">
             <div class="card-header">
                 <div class="app-icon">🥗</div>
@@ -163,6 +165,7 @@
             </div>
         </div>
 
+        <!-- 3. WORKOUT (Robin) -->
         <div class="app-card card-workout" onclick="activateApp('WORKOUT', this)">
             <div class="card-header">
                 <div class="app-icon">💪</div>
@@ -213,13 +216,13 @@
             }
         }
 
-        // 중앙 집중형 인증 시스템 (공통 public.settings 테이블 이용)
+        // 중앙 집중형 원패스(One-Pass) 라우팅 로직
         async function verifyAppAccess(appName, pin, msgEl, inputEl) {
             msgEl.className = 'auth-msg msg-loading';
             msgEl.innerText = "VERIFYING...";
 
             try {
-                // 🌟 공통 스키마(public)에서 비밀번호 무결성 판별
+                // public 스키마에서 공통 비밀번호 검증
                 const { data, error } = await _supabase.from('settings').select('value').eq('code', 'ACCESS_PW').single();
                 if (error) throw error;
                 
@@ -227,17 +230,23 @@
                     msgEl.innerText = "ACCESS GRANTED";
                     
                     if (appName === 'FINANCE') {
-                        sessionStorage.setItem('is_auth', 'true');
+                        sessionStorage.setItem('is_auth', 'true'); // 나미 앱 세션
                         msgEl.style.color = "var(--bp-pink)";
-                        setTimeout(() => location.href = 'finance/out.html', 300);
+                        setTimeout(() => location.href = 'finance/out.html', 300); // 메인으로 직행!
+                        
                     } else if (appName === 'DIET') {
-                        sessionStorage.setItem('is_auth_diet', 'true');
+                        // 상디 앱의 경우 특별한 세션키 명시가 없었으므로 범용 세션 저장
+                        sessionStorage.setItem('diet_auth', 'true'); 
                         msgEl.style.color = "var(--diet-mint)";
-                        setTimeout(() => location.href = 'diet/index.html', 300);
+                        // diet/index.html 건너뛰고 바로 export.html로 직행!
+                        setTimeout(() => location.href = 'diet/export.html', 300); 
+                        
                     } else if (appName === 'WORKOUT') {
-                        sessionStorage.setItem('is_auth_workout', 'true');
+                        // 로빈 앱이 요구하는 정확한 세션키 발급!
+                        sessionStorage.setItem('workout_auth', 'true'); 
                         msgEl.style.color = "var(--workout-neon)";
-                        setTimeout(() => location.href = 'workout/index.html', 300);
+                        // workout/index.html 건너뛰고 바로 workout.html로 직행!
+                        setTimeout(() => location.href = 'workout/workout.html', 300); 
                     }
                 } else {
                     throw new Error("WRONG PASSWORD");
