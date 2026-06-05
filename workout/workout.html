@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.4.7</title>
+    <title>BLACKPINK WORKOUT v5.4.8</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -293,11 +293,11 @@
             }
         }
 
+        // 고도화 버퍼 제어: 가상 메모리 공간(Detached DOM)에서 렌더링 후 한 번에 스왑하여 깜빡임 제거
         async function refreshActiveList() {
             const { data } = await _db.schema('workout').from('active_workout').select('*').order('id');
             ACTIVE_SETS = data || [];
             const area = document.getElementById('workout-list-area');
-            area.innerHTML = '';
             
             const blocks = [];
             const blockMap = {};
@@ -317,19 +317,30 @@
                 blockMap[key].sets.push(s);
             });
             
+            // 깜빡임 억제용 가상 메모리 임시 컨테이너 생성
+            const tempContainer = document.createElement('div');
+            
             for(const block of blocks) {
                 const card = document.createElement('div');
                 card.id = `block-card-${block.id}`;
                 card.className = `workout-card border-${getPartKey(SETTINGS_LOOKUP[block.sets[0].body_part])}`;
-                area.appendChild(card);
-                await renderBlockCard(card.id, block);
+                tempContainer.appendChild(card);
+                await renderBlockCard(card, block);
             }
+            
+            // 단 1프레임만에 화면 일괄 리프레시 (허연 빈 화면 방지 기믹)
+            area.innerHTML = tempContainer.innerHTML;
+            
+            // 실존 라이브 DOM 노드에 이벤트 리스너 재매핑 일괄 수동 가동
+            ACTIVE_SETS.forEach(s => addSetEventListeners(s.id));
+            
             updateProgress(); 
             updateSupersetDropdown();
         }
 
-        async function renderBlockCard(cardId, block) {
-            const card = document.getElementById(cardId);
+        async function renderBlockCard(cardIdOrEl, block) {
+            const card = typeof cardIdOrEl === 'string' ? document.getElementById(cardIdOrEl) : cardIdOrEl;
+            if (!card) return;
             
             if(block.isSuperset) {
                 block.sets.sort((a, b) => a.set_no - b.set_no || a.id - b.id);
@@ -374,7 +385,6 @@
             }
             html += `</div>`;
             card.innerHTML = html;
-            block.sets.forEach(s => addSetEventListeners(s.id));
         }
 
         async function detachSuperset(ssId) {
@@ -540,7 +550,6 @@
 
         function closeReorderModal() { document.getElementById('reorder-overlay').style.display = 'none'; }
 
-        // 고도화 완치: IDENTITY ALWAYS 오류 방지를 위해 기존 행을 솎아 일괄 지우고, 원하는 새로운 정렬 순서대로 클린하게 일괄 INSERT 재적재 처리
         async function saveNewOrder() {
             if (!window.CURRENT_REORDER_BLOCKS || window.CURRENT_REORDER_BLOCKS.length === 0) return;
             
@@ -558,17 +567,14 @@
             
             const originalIds = ACTIVE_SETS.map(s => s.id);
 
-            // 1. 순서가 조립 완료된 순위 기준으로 IDENTITY ID 컬럼값 및 타임스탬프를 덜어내어 클린 인서트 페이로드 가공
             const payload = allSetsNewOrder.map(s => {
                 const { id, created_at, ...rest } = s;
                 return rest;
             });
             
-            // 2. 기존 임시 행 일괄 격리 삭제 단행
             const { error: delError } = await _db.schema('workout').from('active_workout').delete().in('id', originalIds);
             if(delError) return alert("순서 배치 마이그레이션 오류(삭제 단계): " + delError.message);
             
-            // 3. 원하는 순차적 배열 형태 그대로 수지컬 INSERT (DB 엔진이 순서대로 정수 일련번호 자동 재배정 수행)
             const { error: insError } = await _db.schema('workout').from('active_workout').insert(payload);
             if(insError) return alert("순서 배치 마이그레이션 오류(재적재 단계): " + insError.message);
             
@@ -579,25 +585,76 @@
         function handleTouchStart(e) { touchStartX = e.touches[0].clientX; }
         function handleTouchMoveGroup(e, blockId) { const diffX = e.touches[0].clientX - touchStartX; if (diffX < 0) { document.getElementById(`group-content-${blockId}`).style.transform = `translateX(${Math.max(diffX, -100)}px)`; document.getElementById(`del-group-bg-${blockId}`).style.right = '0'; } }
         
+        // 고도화 명세: 가속 스와이프 이펙트를 통한 선행 DOM 삭제 기믹 (삭제 시 깜빡임 완전 소멸 파트)
         async function handleTouchEndGroup(e, blockId, label, isSuperset) { 
             const diffX = e.changedTouches[0].clientX - touchStartX; 
             if (diffX < -150) { 
                 if(confirm(isSuperset ? "이 수퍼세트 그룹 전체를 삭제할까요?" : "이 운동 전체를 삭제할까요?")) { 
+                    
+                    // 1 프레임 반응: 화면에서 카드를 즉시 좌측으로 날리고 높이를 차단해 위로 밀어올림
+                    const cardEl = document.getElementById(`block-card-${blockId}`);
+                    if(cardEl) {
+                        cardEl.style.transition = "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)";
+                        cardEl.style.transform = "translateX(-100%)";
+                        cardEl.style.opacity = "0";
+                        setTimeout(() => {
+                            cardEl.style.maxHeight = "0";
+                            cardEl.style.margin = "0";
+                            cardEl.style.padding = "0";
+                        }, 150);
+                        setTimeout(() => cardEl.remove(), 400);
+                    }
+
+                    // 2단계: 백엔드 동기화 쿼리 사일런트 런칭
                     if(isSuperset) {
                         await _db.schema('workout').from('active_workout').delete().eq('program_id', blockId);
                     } else {
                         const originName = blockId.replace('single_', '');
                         await _db.schema('workout').from('active_workout').delete().eq('display_name', originName);
                     }
-                    await refreshActiveList(); 
+
+                    // 3단계: 화면 가림 없이 내부 상태 룩업 업데이트
+                    const { data } = await _db.schema('workout').from('active_workout').select('*').order('id');
+                    ACTIVE_SETS = data || [];
+                    updateProgress(); 
+                    updateSupersetDropdown();
                 } else resetSwipeGroup(blockId); 
             } else resetSwipeGroup(blockId); 
         }
         
         function resetSwipeGroup(blockId) { document.getElementById('group-content-' + blockId).style.transform = 'translateX(0)'; document.getElementById('del-group-bg-' + blockId).style.right = '-100%'; }
         function handleTouchMoveSet(e, id) { const diffX = e.touches[0].clientX - touchStartX; if (diffX < 0) { document.getElementById(`set-row-content-${id}`).style.transform = `translateX(${Math.max(diffX, -80)}px)`; document.getElementById(`del-set-bg-${id}`).style.right = '0'; } }
-        async function handleTouchEndSet(e, id, exName) { const diffX = e.changedTouches[0].clientX - touchStartX; if (diffX < -120) { if(confirm("이 세트를 삭제할까요?")) { await _db.schema('workout').from('active_workout').delete().eq('id', id); await refreshActiveList(); } else resetSwipeSet(id); } else resetSwipeSet(id); }
-        function resetSwipeSet(id) { document.getElementById(`set-row-content-${id}`).style.transform = 'translateX(0)'; document.getElementById(`del-set-bg-${id}`).style.right = '-100%'; }
+        
+        // 고도화 명세: 단일 세트 열 스와이프 아웃 연동 가속화 기믹
+        async function handleTouchEndSet(e, id, exName) { 
+            const diffX = e.changedTouches[0].clientX - touchStartX; 
+            if (diffX < -120) { 
+                if(confirm("이 세트를 삭제할까요?")) { 
+                    
+                    // 프론트엔드 실시간 감축 처리 개시
+                    const rowContent = document.getElementById(`set-row-content-${id}`);
+                    const swipeWrapper = rowContent?.closest('.swipe-wrapper');
+                    if(swipeWrapper) {
+                        swipeWrapper.style.transition = "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)";
+                        swipeWrapper.style.transform = "translateX(-100%)";
+                        swipeWrapper.style.opacity = "0";
+                        setTimeout(() => {
+                            swipeWrapper.style.maxHeight = "0";
+                            swipeWrapper.style.margin = "0";
+                            swipeWrapper.style.padding = "0";
+                        }, 150);
+                        setTimeout(() => swipeWrapper.remove(), 400);
+                    }
+
+                    await _db.schema('workout').from('active_workout').delete().eq('id', id); 
+                    const { data } = await _db.schema('workout').from('active_workout').select('*').order('id');
+                    ACTIVE_SETS = data || [];
+                    updateProgress();
+                } else resetSwipeSet(id); 
+            } else resetSwipeSet(id); 
+        }
+        
+        function resetSwipeSet(id) { document.getElementById(`set-row-content-${id}`).style.transform = 'translateX(0)'; document.getElementById('del-set-bg-' + id).style.right = '-100%'; }
 
         function addSetEventListeners(id) { 
             const row = document.getElementById(`set-row-content-${id}`); 
