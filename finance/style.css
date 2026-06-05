@@ -1,0 +1,157 @@
+:root { 
+    --bp-pink: rgb(232, 142, 163); 
+    --bp-black: #000; 
+    --bp-dark-gray: #121212; 
+    --pink-light: #ffb6c1; 
+    --text-dim: #999; 
+    --asset-pink: #e83e8c; 
+    --neon-pink: #FF3F7E;
+}
+body { 
+    padding: 10px;
+    background-color: var(--bp-black); 
+    color: #fff; 
+    font-family: 'Pretendard', -apple-system, sans-serif; 
+    -webkit-tap-highlight-color: transparent; 
+    overflow-x: hidden; 
+}
+/* --- 보안 레이어 스타일 --- */
+#auth-overlay { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: var(--bp-black); z-index: 9999; 
+    display: flex; align-items: center; justify-content: center; 
+}
+.auth-box { width: 100%; max-width: 300px; text-align: center; }
+.auth-input {
+    max-width: 200px; font-size: 1.5rem; letter-spacing: 10px; 
+    background: #000 !important; border: 2px solid #333 !important;
+    text-align: center; margin: 20px auto; color: var(--bp-pink) !important;
+}
+
+/* --- 컨테이너 및 탭 --- */
+.container { 
+    width: 100%; max-width: 500px; 
+    background: var(--bp-dark-gray); 
+    padding: 15px; 
+    border-radius: 28px; 
+    border: 1px solid rgba(232, 142, 163, 0.2); 
+    margin-bottom: 30px; 
+    margin-left: auto; margin-right: auto; 
+}
+
+.nav-pills { background: #000; border-radius: 16px; padding: 4px; margin-bottom: 20px !important; display: flex; }
+.nav-pills .nav-link { 
+    border-radius: 12px; font-weight: 800; color: var(--bp-pink); font-size: 0.65rem; 
+    flex: 1; padding: 12px 2px; border: none; background: transparent; transition: 0.3s; 
+    text-align: center; text-decoration: none; display: block;
+}
+.nav-pills .nav-link.active { background-color: var(--bp-pink) !important; color: #000 !important; font-weight: 900; }
+
+/* --- 폼 요소 --- */
+.form-control, .form-select { 
+    background-color: #080808 !important; border: 1.5px solid #252525 !important; 
+    color: #fff !important; border-radius: 18px; padding: 12px 14px; font-size: 0.9rem;
+    font-weight: 600; transition: all 0.2s ease;
+}
+.form-control:focus, .form-select:focus { 
+    border-color: var(--bp-pink) !important; box-shadow: 0 0 8px rgba(232, 142, 163, 0.15) !important; outline: none; 
+}
+
+input[type="date"], input[type="month"] { color: var(--bp-pink) !important; font-weight: 900; }
+
+.btn-pink { 
+    width: 100%; padding: 18px; font-weight: 900; border-radius: 20px; border: none !important; 
+    background-color: var(--bp-pink) !important; color: #000 !important; font-size: 1.05rem; 
+    box-shadow: 0 6px 20px rgba(232, 142, 163, 0.2); margin-bottom: 25px; display: block; 
+    text-transform: uppercase; letter-spacing: 1px;
+}
+.btn-edit-save { background: var(--bp-pink) !important; color: #000 !important; flex: 1; border-radius: 15px; font-weight: 900; font-size: 0.85rem; padding: 14px; border: none !important; }
+.btn-edit-cancel { background: #252525 !important; color: #aaa !important; flex: 1; border-radius: 15px; font-weight: 900; font-size: 0.85rem; padding: 14px; border: none !important; }
+.btn-query { background: var(--bp-pink) !important; color: #000 !important; border: none; border-radius: 12px; padding: 0 12px; font-weight: 900; font-size: 0.7rem; height: 34px; flex-shrink: 0; }
+
+.slim-filter { 
+    background: #000; border-radius: 22px; padding: 8px; margin-bottom: 15px; 
+    border: 1px solid #222; display: flex; align-items: center; gap: 5px; 
+}
+.slim-filter input { background: #0a0a0a !important; border: 1px solid #333 !important; color: var(--bp-pink) !important; border-radius: 12px; padding: 6px 2px; font-size: 0.7rem; flex: 1; text-align: center; font-weight: 800; }
+.total-summary-row { text-align: right; padding: 0 8px 12px 0; font-size: 0.8rem; font-weight: 900; color: var(--bp-pink); opacity: 0.9; }
+
+/* --- 카드 시스템 --- */
+.custom-card { 
+    position: relative; background: var(--bp-black); border-radius: 24px; padding: 18px; 
+    border-left: 6px solid var(--bp-pink); border-top: 1px solid #222; border-right: 1px solid #222; 
+    border-bottom: 1px solid #222; margin-bottom: 14px; transition: transform 0.3s ease; 
+    overflow: hidden; cursor: pointer; 
+}
+.card-refund { border-left-color: #fff !important; box-shadow: inset 0 0 15px rgba(232, 142, 163, 0.1); }
+.card-refund .val-amt { color: #fff !important; text-shadow: 0 0 8px var(--bp-pink); }
+.card-refund .acc-main { color: var(--bp-pink) !important; }
+
+.label-mini { font-size: 0.62rem; color: var(--text-dim) !important; font-weight: 900; margin-bottom: 4px; letter-spacing: 0.5px; }
+.acc-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.acc-main { color: #fff !important; font-weight: 700; font-size: 1.05rem; }
+.acc-amount { color: var(--pink-light) !important; font-weight: 900; font-size: 1.3rem; }
+.val-text { font-size: 0.82rem; font-weight: 700; color: #fff !important; min-height: 18px; }
+.val-amt { font-size: 1.1rem; font-weight: 900; color: var(--pink-light) !important; }
+.card-balance-badge { font-weight: 800; font-size: 0.6rem; color: var(--bp-pink) !important; opacity: 0.9; margin-top: 4px; text-align: right; display: block; }
+.card-note-area { font-size: 0.7rem; color: #aaa !important; border-top: 1px solid #222; margin-top: 8px; padding-top: 8px; }
+
+.loan-detail-box { 
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; 
+    background: rgba(232, 142, 163, 0.05); padding: 15px; 
+    border-radius: 18px; margin-top: 12px; border: 1px solid rgba(232, 142, 163, 0.15); 
+}
+.loan-item { display: flex; flex-direction: column; }
+.loan-label { font-size: 0.6rem; color: var(--text-dim); font-weight: 800; margin-bottom: 2px; }
+.loan-val { font-size: 0.85rem; font-weight: 900; color: var(--pink-light); }
+
+.tr-row-wrap { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #222; margin-top: 8px; padding: 10px 0 0 0; gap: 4px; }
+.tr-col { flex: 1; min-width: 0; }
+.tr-amt-col { flex: 1; text-align: center; min-width: 0; }
+
+.card-grid { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 10px; }
+.card-full { grid-column: span 2; }
+.edit-mode { border: 1.5px solid var(--bp-pink) !important; background: #050505 !important; cursor: default; }
+.edit-btn-group { display: flex; gap: 10px; margin-top: 18px; }
+.live-balance-box { font-size: 0.68rem; font-weight: 800; color: var(--bp-pink); margin-top: 4px; text-align: right; }
+
+/* --- 확장 영역 및 히스토리 --- */
+.expand-container { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
+.expand-container.expanded { max-height: 5000px; padding-bottom: 10px; }
+.ah-row { 
+    display: flex; flex-direction: column; 
+    padding: 10px; background: #0a0a0a; border-radius: 12px; margin-bottom: 8px; 
+    border: 1px solid #222; border-left: 3px solid var(--bp-pink);
+    cursor: pointer; transition: 0.2s;
+}
+.ah-main { display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.ah-date { font-size: 0.65rem; color: var(--bp-pink); font-weight: 800; width: 40px; }
+.ah-note { font-size: 0.75rem; color: #fff; flex: 1; margin: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ah-amt { font-size: 0.8rem; font-weight: 900; color: var(--pink-light); }
+.ah-balance { font-size: 0.6rem; color: var(--text-dim); text-align: right; margin-top: 2px; }
+
+/* --- 통계 --- */
+.stats-stack { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.stats-card { background: var(--bp-black); border-radius: 20px; padding: 20px; border: 1px solid #222; border-top: 4px solid var(--bp-pink); cursor: pointer; }
+.stats-label { font-size: 0.7rem; color: var(--text-dim); font-weight: 800; letter-spacing: 1.5px; }
+.stats-val { font-size: 1.7rem; font-weight: 900; color: var(--pink-light); }
+.stat-item-card { background: #0a0a0a; border-radius: 18px; padding: 15px; border: 1px solid #222; margin-top: 10px; cursor: pointer; }
+.progress { background-color: #1a1a1a; height: 6px !important; border-radius: 10px; }
+.bar-income { background: #fff !important; }
+.bar-asset { background: var(--asset-pink) !important; }
+.bar-expense { background: var(--bp-pink) !important; }
+.fixed-chip { background: rgba(232, 142, 163, 0.1); padding: 6px 12px; border-radius: 12px; font-size: 0.65rem; border: 1px solid rgba(232, 142, 163, 0.2); color: var(--pink-light); display: inline-block; margin: 3px; font-weight: 700; }
+
+/* --- 스와이프 개선 --- */
+.swipe-container { position: relative; overflow: hidden; border-radius: 20px; margin-bottom: 12px; background: #000; display: flex; align-items: stretch; }
+.swipe-actions-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; z-index: 1; }
+.actions-left { justify-content: flex-end; background: #300; }
+.actions-right { justify-content: flex-start; background: #1a1a1a; }
+.swipe-btn { height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.75rem; width: 100px; }
+.btn-delete { color: #f88; }
+.btn-cancel-tx { color: var(--bp-pink); }
+
+.swipe-target { z-index: 2; position: relative; width: 100%; margin-bottom: 0 !important; transition: transform 0.2s ease-out; }
+
+.loading-inline { text-align: center; padding: 40px 0; color: var(--bp-pink); font-weight: 900; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
