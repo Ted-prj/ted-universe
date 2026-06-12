@@ -52,7 +52,9 @@
                         <label class="form-label-custom">🏋️‍♂️ 운동 가능 시간 (분)</label>
                         <input type="number" id="form-workout-min" class="form-control form-control-sm bg-dark text-white border-secondary mb-2" min="0" value="60" inputmode="numeric" pattern="[0-9]*">
                         
+                        <!-- 0분 버튼이 추가된 고성능 프리셋 버튼 레이아웃 -->
                         <div class="d-flex gap-1">
+                            <button type="button" class="btn-outline flex-fill py-1" style="font-size: 0.65rem;" onclick="setPresetMinutes(0)">0분</button>
                             <button type="button" class="btn-outline flex-fill py-1" style="font-size: 0.65rem;" onclick="setPresetMinutes(30)">30분</button>
                             <button type="button" class="btn-outline flex-fill py-1" style="font-size: 0.65rem;" onclick="setPresetMinutes(60)">60분</button>
                             <button type="button" class="btn-outline flex-fill py-1" style="font-size: 0.65rem;" onclick="setPresetMinutes(90)">90분</button>
@@ -75,6 +77,23 @@
                                 <label class="form-check-label small text-dim" for="form-alcohol-possible">POSSIBLE</label>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- 🏠 확장 컬럼: 본가 방문 예고 플래그 스위치 -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <label class="form-label-custom">🏠 본가 방문 예고 플래그</label>
+                            <div class="form-check form-switch pt-1">
+                                <input class="form-check-input" type="checkbox" id="form-home-visit">
+                                <label class="form-check-label small text-dim" for="form-home-visit">HOME VISIT</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 🎁 확장 컬럼: 계획된 합법적 전리품/치팅 메뉴 입력창 -->
+                    <div class="mb-3">
+                        <label class="form-label-custom">🎁 계획된 전리품 및 치팅 메뉴</label>
+                        <input type="text" id="form-reward-menu" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="불닭, 만두, 라멘 등">
                     </div>
                     
                     <div class="mb-2">
@@ -110,7 +129,6 @@
             }
         }
 
-        // 프리셋 버튼 터치 시 입력창 값 즉시 변경 엔진
         function setPresetMinutes(mins) {
             document.getElementById('form-workout-min').value = mins;
         }
@@ -187,6 +205,8 @@
                     let cellHtml = `<div class="cal-num">${targetDateNum}</div><div class="cal-badges">`;
                     if (scheduleMap[formattedDate]) {
                         const sch = scheduleMap[formattedDate];
+                        
+                        // 운동 시간 배지 렌더링 (0분일 때는 굳이 안 띄우고 빈 공간 최적화)
                         if (sch.workout_available_min > 0) {
                             cellHtml += `<span class="cal-badge badge-workout">💪 ${sch.workout_available_min}분</span>`;
                         }
@@ -195,6 +215,16 @@
                         } else if (sch.is_alcohol_possible) {
                             cellHtml += `<span class="cal-badge badge-alcohol-possible">🍷 음주가능</span>`;
                         }
+                        
+                        // 🏠 신규 인디케이터 기믹: 본가 방문 플래그 온 시 민트/블루 계열 배지 로출
+                        if (sch.is_home_visit) {
+                            cellHtml += `<span class="cal-badge" style="background:rgba(77, 166, 255, 0.15); color:#4da6ff; border:1px solid rgba(77, 166, 255, 0.3);">🏠 본가방문</span>`;
+                        }
+                        // 🎁 신규 인디케이터 기믹: 치팅 메뉴 존재 시 경고/보상 골드 배지 로출
+                        if (sch.planned_reward_menu) {
+                            cellHtml += `<span class="cal-badge" style="background:rgba(255, 193, 7, 0.15); color:#ffc107; border:1px solid rgba(255, 193, 7, 0.3);">🎁 ${sch.planned_reward_menu}</span>`;
+                        }
+                        
                         if (sch.description) {
                             cellHtml += `<span class="cal-desc text-truncate">${sch.description}</span>`;
                         }
@@ -223,12 +253,17 @@
                 document.getElementById('form-workout-min').value = sch.workout_available_min;
                 document.getElementById('form-alcohol-possible').checked = sch.is_alcohol_possible === true;
                 document.getElementById('form-alcohol-confirmed').checked = sch.is_alcohol_confirmed === true;
+                // 🛠️ 확장 컬럼 폼 바인딩 파트
+                document.getElementById('form-home-visit').checked = sch.is_home_visit === true;
+                document.getElementById('form-reward-menu').value = sch.planned_reward_menu || "";
                 document.getElementById('form-description').value = sch.description || "";
             } else {
-                // 데이터가 없는 완전 클린한 새 날짜를 누르면 기본 60분 자동 바인딩!
+                // 데이터가 없는 새 날짜 클릭 시 운동시간 60분 자동 바인딩 및 신규 필드 초기화
                 document.getElementById('form-workout-min').value = 60;
                 document.getElementById('form-alcohol-possible').checked = false;
                 document.getElementById('form-alcohol-confirmed').checked = false;
+                document.getElementById('form-home-visit').checked = false;
+                document.getElementById('form-reward-menu').value = "";
                 document.getElementById('form-description').value = "";
             }
             bModal.show();
@@ -239,6 +274,9 @@
             const workout_available_min = parseInt(document.getElementById('form-workout-min').value) || 0;
             const is_alcohol_possible = document.getElementById('form-alcohol-possible').checked;
             const is_alcohol_confirmed = document.getElementById('form-alcohol-confirmed').checked;
+            // 🛠️ 저장용 확장 페이로드 추출 파트
+            const is_home_visit = document.getElementById('form-home-visit').checked;
+            const planned_reward_menu = document.getElementById('form-reward-menu').value.trim() || null;
             const description = document.getElementById('form-description').value.trim();
             
             const payload = {
@@ -246,6 +284,8 @@
                 workout_available_min,
                 is_alcohol_possible,
                 is_alcohol_confirmed,
+                is_home_visit,
+                planned_reward_menu,
                 description,
                 updated_at: new Date().toISOString()
             };
