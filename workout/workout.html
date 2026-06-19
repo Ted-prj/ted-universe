@@ -9,8 +9,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* 스와이프 UI 스타일 */
-        .swipe-wrapper { position: relative; overflow: hidden; border-radius: 12px; margin-bottom: 5px; }
         .swipe-del-bg { 
+            .swipe-wrapper { position: relative; overflow: hidden; border-radius: 12px; margin-bottom: 5px; }
             position: absolute; right: -100%; top: 0; width: 100%; height: 100%; 
             background: linear-gradient(90deg, transparent, #ff2d55); 
             display: flex; align-items: center; justify-content: flex-end; 
@@ -36,6 +36,8 @@
         .reorder-modal-card { background: #111; border: 2px solid #222; border-radius: 24px; padding: 20px; width: 100%; max-width: 450px; max-height: 80vh; display: flex; flex-direction: column; }
         .reorder-list-scroll { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; padding-right: 5px; }
     </style>
+    <script src="config.js"></script>
+    <script src="../universe_core.js"></script>
 </head>
 <body>
     <div class="container-app">
