@@ -268,35 +268,34 @@ async function loadHistoryTab(type, isSearch = false) {
     const pre = type.toLowerCase(); const container = document.getElementById(pre + '-history-container'); if(!container) return; container.innerHTML = `<div class="loading-inline">...</div>`;
     const start = isSearch ? document.getElementById(pre + '-start').value : null; const end = isSearch ? document.getElementById(pre + '-end').value : null;
     let query;
-    if (type === 'TR') query = _supabase.from('transfer').select('*, from:accounts!from_account_code(name), to:accounts!to_account_code(name)');
+    
+    // 💡 핵심 변경: 가로채기 루프 제거! 새로 만든 고성능 뷰(v_transfer_history)로 원터치 다이렉트 쿼리
+    if (type === 'TR') query = _supabase.from('v_transfer_history').select('*');
     else query = _supabase.from('v_running_balance').select('*').eq('type_code', type === 'IN' ? 'TX_INCOME' : 'TX_EXPENSE');
+    
     if (start) query = query.gte('date', start); if (end) query = query.lte('date', end);
     const { data } = await query.order('date', { ascending: false }).order('id', { ascending: false }).limit(20);
     
-    if(type === 'TR' && data?.length) {
-        for(let item of data) {
-            const [{data:fb}, {data:tb}] = await Promise.all([
-                _supabase.from('v_running_balance').select('running_balance').eq('id', item.id).eq('account_code', item.from_account_code).maybeSingle(),
-                _supabase.from('v_running_balance').select('running_balance').eq('id', item.id).eq('account_code', item.to_account_code).maybeSingle()
-            ]);
-            item.from_bal = fb?.running_balance; item.to_bal = tb?.running_balance;
-        }
-    }
+    // ❌ 무겁게 폰을 뜨겁게 달구던 40번의 비동기 Promise.all 루프 구역 완전 소탕!
+    
     if (document.getElementById(pre + '-total-area')) { const total = (data || []).reduce((acc, curr) => acc + Number(curr.amount || 0), 0); document.getElementById(pre + '-total-area').innerText = `TOTAL: ${total.toLocaleString()}원`; }
     container.innerHTML = (data || []).map(i => type === 'TR' ? renderTrCardOriginal(i) : renderTxCardOriginal(i)).join('') || "<p class='text-center py-5 opacity-50'>No data</p>";
 }
 
-function renderTxCardOriginal(i) {
-    const isRefund = i.amount < 0;
+// 🛠️ DB 데이터 모델에 맞춘 렌더링 카드 규격화
+function renderTrCardOriginal(i) {
+    // i.from?.name 대신 DB 뷰가 바로 제공하는 i.from_account_name 변수를 매핑하여 바인딩 속도 가속화
     return `<div class="swipe-container">
-        <div class="swipe-actions-bg actions-left"><div class="swipe-btn btn-delete" onclick="deleteEntry('TX', '${i.id}')">DEL</div></div>
-        <div class="swipe-actions-bg actions-right"><div class="swipe-btn btn-cancel-tx" onclick="generateRefund('${i.id}')">취소</div></div>
-        <div class="custom-card swipe-target ${isRefund ? 'card-refund' : ''}" data-id="${i.id}" data-source="TX" onclick="handleMainEdit('${i.id}', 'TX', this, event)" ontouchstart="handleSwipeStart(event)" ontouchmove="handleSwipeMove(event)" ontouchend="handleSwipeEnd(event)">
+        <div class="swipe-actions-bg actions-left"><div class="swipe-btn btn-delete" onclick="deleteEntry('MOVE', '${i.id}')">DEL</div></div>
+        <div class="custom-card swipe-target" style="border-left-color:#fff" data-id="${i.id}" data-source="MOVE" onclick="handleMainEdit('${i.id}', 'MOVE', this, event)" ontouchstart="handleSwipeStart(event)" ontouchmove="handleSwipeMove(event)" ontouchend="handleSwipeEnd(event)">
             <div class="card-grid">
                 <div><div class="label-mini">DATE</div><div class="val-text">${i.date}</div></div>
-                <div class="text-end"><div class="label-mini">CAT</div><div class="val-text">${i.category_name || '기타'}</div></div>
-                <div class="card-full"><div class="label-mini">ACC</div><div class="val-text">${i.account_name}</div></div>
-                <div class="card-full text-end"><div class="val-amt">${Math.round(i.amount).toLocaleString()}원</div><div class="card-balance-badge">Bal: ${Math.round(i.running_balance).toLocaleString()}원</div></div>
+                <div class="text-end"><div class="label-mini">TYPE</div><div class="val-text">이체</div></div>
+                <div class="card-full tr-row-wrap">
+                    <div class="tr-col"><div class="label-mini">FROM</div><div class="val-text">${i.from_account_name || i.from_account_code}</div><div class="live-balance-box" style="text-align:left">Bal: ${Math.round(i.from_bal || 0).toLocaleString()}원</div></div>
+                    <div class="tr-amt-col"><div class="val-amt">${Math.round(i.amount).toLocaleString()}</div></div>
+                    <div class="tr-col text-end"><div class="label-mini">TO</div><div class="val-text">${i.to_account_name || i.to_account_code}</div><div class="live-balance-box">Bal: ${Math.round(i.to_bal || 0).toLocaleString()}원</div></div>
+                </div>
                 <div class="card-full card-note-area">${i.note || '-'}</div>
             </div>
         </div>
