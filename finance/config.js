@@ -17,14 +17,12 @@ const TAB_CONFIG = [
 ];
 
 /* ==========================================================================
-   📱 FINANCE 어드민 전역 모바일 하단 고정 탭바 & 드롭업 멀티 허브 엔진
+   📱 FINANCE 어드민 전역 모바일 하단 고정 탭바 & 드롭업 멀티 허브 엔진 (레이아웃 분리형)
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
     const navContainer = document.getElementById('global-nav');
     if (!navContainer) return;
 
-    // 위로 확장 팝업될 깃허브 독립 하브 프로젝트 리스트
-    // 부모 디렉토리 탈출 상대경로(../) 매핑 구조를 취해 로컬/배포 환경 무결성 완벽 사수!
     const HUB_PROJECTS = [
         { name: '🥗 DIET HUB', url: '../diet/index.html' },
         { name: '🏋️‍♂️ WORKOUT HUB', url: '../workout/index.html' },
@@ -33,59 +31,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const activeId = navContainer.getAttribute('data-active');
 
-    // 💡 팝업 UI 레이아웃 통제용 상디 커스텀 CSS 동적 캡슐화 인젝션
     const inlineStyle = document.createElement('style');
     inlineStyle.innerHTML = `
-        .dropup-wrapper { position: relative; flex: 1 0 auto; min-width: 85px; text-align: center; }
+        .bottom-nav-container {
+            display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 8px !important;
+        }
+        .nav-scroll-box { flex: 1 !important; overflow-x: auto !important; width: 100% !important; }
+        .nav-scroll-box::-webkit-scrollbar { display: none !important; }
+        .nav-scroll-box .nav-pills { flex-wrap: nowrap !important; display: flex !important; padding: 0 !important; margin: 0 !important; list-style: none !important; }
+        .nav-scroll-box .nav-item { flex: 1 0 auto !important; min-width: 85px !important; text-align: center !important; }
+        
+        .dropup-wrapper { position: relative !important; flex: 0 0 auto !important; z-index: 1060 !important; }
+        .hub-toggle-btn {
+            color: #ff3f7e !important; border: 1px dashed rgba(255, 63, 126, 0.6) !important;
+            background: rgba(255, 63, 126, 0.05) !important; font-weight: 900 !important; border-radius: 12px !important;
+            padding: 8px 12px !important; font-size: 0.72rem !important; white-space: nowrap !important; transition: 0.2s !important;
+        }
+        .hub-toggle-btn:active { background: rgba(255, 63, 126, 0.2) !important; }
+        
         .dropup-menu-container {
-            position: absolute; bottom: calc(100% + 14px); right: 6px;
-            background: rgba(18, 18, 18, 0.96); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid #282828; border-radius: 16px; min-width: 160px;
-            padding: 8px 0; opacity: 0; transform: translateY(10px); visibility: hidden;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); z-index: 1100;
+            position: absolute !important; bottom: calc(100% + 12px) !important; right: 0 !important;
+            background: rgba(18, 18, 18, 0.98) !important; backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid #282828 !important; border-radius: 16px !important; min-width: 160px !important;
+            padding: 8px 0 !important; opacity: 0 !important; transform: translateY(10px) !important; visibility: hidden !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7) !important; z-index: 1100 !important;
         }
-        .dropup-menu-container.show { opacity: 1; transform: translateY(0); visibility: visible; }
+        .dropup-menu-container.show { opacity: 1 !important; transform: translateY(0) !important; visibility: visible !important; }
         .dropup-item {
-            display: block; width: 100%; padding: 10px 16px; text-align: left;
-            color: #ccc; font-weight: 700; font-size: 0.75rem; border: none;
-            background: transparent; text-decoration: none; transition: 0.2s;
+            display: block !important; width: 100% !important; padding: 12px 16px !important; text-align: left !important;
+            color: #ccc !important; font-weight: 700 !important; font-size: 0.75rem !important; border: none !important;
+            background: transparent !important; text-decoration: none !important; transition: 0.2s !important;
         }
-        .dropup-item:hover, .dropup-item:active { background: rgba(232, 142, 163, 0.15); color: #e88ea3; }
-        .dropup-item:not(:last-child) { border-bottom: 1px solid #222; }
+        .dropup-item:hover, .dropup-item:active { background: rgba(232, 142, 163, 0.15) !important; color: #e88ea3 !important; }
+        .dropup-item:not(:last-child) { border-bottom: 1px solid #222 !important; }
     `;
     document.head.appendChild(inlineStyle);
 
-    // 모바일 하단 고정 탭바 및 드롭업 스위치 레이아웃 조립
     const navHtml = `
         <div class="bottom-nav-container">
-            <ul class="nav nav-pills" style="position: relative;">
-                ${TAB_CONFIG.map(menu => `
-                    <li class="nav-item">
-                        <button class="nav-link ${menu.id === activeId ? 'active' : ''}" 
-                                onclick="window.location.href='${menu.url}'">
-                            ${menu.label}
-                        </button>
-                    </li>
-                `).join('')}
-                
-                <li class="dropup-wrapper">
-                    <button class="nav-link" style="color: #ff3f7e; border: 1px dashed rgba(255, 63, 126, 0.4); background:transparent;" onclick="window.toggleProjectHub(event)">
-                        HUB 🚀
-                    </button>
-                    <div id="project-dropup-menu" class="dropup-menu-container">
-                        ${HUB_PROJECTS.map(proj => `
-                            <a href="${proj.url}" class="dropup-item">${proj.name}</a>
-                        `).join('')}
-                    </div>
-                </li>
-            </ul>
+            <div class="nav-scroll-box">
+                <ul class="nav nav-pills">
+                    ${TAB_CONFIG.map(menu => `
+                        <li class="nav-item">
+                            <button class="nav-link ${menu.id === activeId ? 'active' : ''}" 
+                                    onclick="window.location.href='${menu.url}'">
+                                ${menu.label}
+                            </button>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+            
+            <div class="dropup-wrapper">
+                <button class="hub-toggle-btn" onclick="window.toggleProjectHub(event)">
+                    HUB 🚀
+                </button>
+                <div id="project-dropup-menu" class="dropup-menu-container">
+                    ${HUB_PROJECTS.map(proj => `
+                        <a href="${proj.url}" class="dropup-item">${proj.name}</a>
+                    `).join('')}
+                </div>
+            </div>
         </div>
     `;
 
     navContainer.innerHTML = navHtml;
 
-    // 전역 팝업 토글 및 바깥 영역 터치 시 닫힘 처리 핸들러
     window.toggleProjectHub = (e) => {
         e.stopPropagation();
         const menu = document.getElementById('project-dropup-menu');
@@ -99,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 활성 탭 자동 정렬 가로 스크롤 포커싱 기믹
     const activeBtn = navContainer.querySelector('.nav-link.active');
     if (activeBtn) {
         setTimeout(() => {
