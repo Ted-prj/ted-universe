@@ -38,6 +38,11 @@
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .history-photo-item img:hover {
+            transform: scale(1.05);
         }
         .photo-delete-badge {
             position: absolute;
@@ -107,6 +112,39 @@
             color: #000000 !important;
             box-shadow: 0 0 8px rgba(255, 0, 127, 0.4);
         }
+
+        /* 👑 [Zoro's Premium Lightbox Overlay Screen Infrastructure] */
+        .history-lightbox-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .history-lightbox-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+        .history-lightbox-img {
+            max-width: 94%;
+            max-height: 82%;
+            object-fit: contain;
+            border-radius: 14px;
+            border: 2px solid rgba(255, 105, 180, 0.35);
+            box-shadow: 0 0 35px rgba(255, 0, 127, 0.45);
+            transform: scale(0.92);
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .history-lightbox-overlay.show .history-lightbox-img {
+            transform: scale(1);
+        }
     </style>
 </head>
 <body>
@@ -132,13 +170,17 @@
         </div>
 
         <div id="historyMasterContainer" class="d-flex flex-column gap-3">
-            </div>
+        </div>
 
         <div class="mt-4 mb-4 text-center px-1" id="loadMoreBtnArea">
             <button class="btn btn-princess w-100 p-2.5 fw-bold" id="btnLoadMoreHistories" onclick="fetchNextHistoryPage()">
                 <i class="fa-solid fa-angles-down me-1"></i> 이전 대서사시 5개 더 불러오기
             </button>
         </div>
+    </div>
+
+    <div id="historyLightboxOverlay" class="history-lightbox-overlay" onclick="closeHistoryLightboxZone()">
+        <img id="historyLightboxImg" src="" class="history-lightbox-img" alt="추억 확대 사진">
     </div>
 
     <div id="global-nav" data-active="history"></div>
@@ -158,6 +200,32 @@
             await populateRoundDropdownFilter();
             await fetchHistoryDataOrchestrator(false); 
         });
+
+        // 👑 [Zoro] 라이트박스 개폐 무결점 제어 시퀀서 엔진
+        function openHistoryLightboxZone(src) {
+            const overlay = document.getElementById("historyLightboxOverlay");
+            const img = document.getElementById("historyLightboxImg");
+            if (!overlay || !img) return;
+
+            img.src = src;
+            overlay.style.display = "flex";
+            // 브라우저 렌더링 틱을 고려한 자연스러운 스케일 인 페이드 애니메이션 트래킹
+            setTimeout(() => {
+                overlay.classList.add("show");
+            }, 15);
+        }
+
+        function closeHistoryLightboxZone() {
+            const overlay = document.getElementById("historyLightboxOverlay");
+            if (!overlay) return;
+
+            overlay.classList.remove("show");
+            // 애니메이션 역재생 스피드와 싱크로를 맞춘 완벽한 폭파 정리
+            setTimeout(() => {
+                overlay.style.display = "none";
+                document.getElementById("historyLightboxImg").src = "";
+            }, 250);
+        }
 
         async function populateRoundDropdownFilter() {
             const select = document.getElementById("roundJumpSelect");
@@ -292,9 +360,10 @@
             let photosHtml = "";
             if (hist.photo_urls && hist.photo_urls.length > 0) {
                 hist.photo_urls.forEach((url, pIdx) => {
+                    // 👑 [Zoro] 이미지 태그에 풀스크린 익스펜션 트리거 바인딩 배치 완료
                     photosHtml += `
                         <div class="history-photo-item" id="photoBox_${roundNo}_${pIdx}">
-                            <img src="${url}">
+                            <img src="${url}" onclick="openHistoryLightboxZone(this.src)">
                             <button type="button" class="photo-delete-badge d-none node-delete-${roundNo}" onclick="deleteHistoryPhotoAction(${roundNo}, '${url}', ${pIdx})">❌</button>
                         </div>
                     `;
@@ -431,13 +500,16 @@
 
             try {
                 for(let i=0; i<files.length; i++) {
+                    const localPreviewUrl = URL.createObjectURL(files[i]);
+
                     const url = await compressAndUploadHistorySingleBlob(files[i], roundNo, i);
                     localTempAppendedUrls[roundNo].push(url);
 
                     const nextIdx = grid.children.length + 99;
+                    // 👑 [Zoro] 동적으로 업로드된 새 썸네일에도 동일한 클릭 라이트박스 필살기 부여 완포
                     const newPhotoHtml = `
                         <div class="history-photo-item" id="photoBox_${roundNo}_${nextIdx}">
-                            <img src="${url}">
+                            <img src="${localPreviewUrl}" onclick="openHistoryLightboxZone(this.src)">
                             <button type="button" class="photo-delete-badge node-delete-${roundNo}" onclick="localTempDeletedUrls.add('${url}'); document.getElementById('photoBox_${roundNo}_${nextIdx}').style.display='none';">❌</button>
                         </div>
                     `;
@@ -447,7 +519,6 @@
                 const emptyMsg = document.querySelector(`.id-empty-photo-${roundNo}`);
                 if (emptyMsg) emptyMsg.style.display = "none";
 
-                // 👑 모든 비동기 순서가 대기 완료(await)된 후 알림창을 띄우므로 완벽 시그널 보장
                 alert("✨ 압축 완료! 사진이 초경량 상태로 장전되었습니다. 하단 [개정 역사 확정 저장]을 누르셔야 최종 반영되옵니다!");
             } catch(e) {
                 console.error(e);
@@ -458,21 +529,17 @@
             }
         }
 
-        // 👑 [Zoro's Masterpiece Async Sequencer Engine]: 비동기 역전 버그를 단칼에 베어낸 무결점 캔버스 엔진
         async function compressAndUploadHistorySingleBlob(file, roundNo, index) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 
-                // 1. 이벤트 리스너(onload/onerror)를 1순위로 장전하여 비동기 트랩 전격 봉쇄!
                 reader.onload = (event) => {
                     const img = new Image();
                     
-                    // 2. 이미지 객체 내부 로드 이벤트 역시 src 주입보다 먼저 완벽하게 선제 정렬!
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         const MAX_WIDTH = 1200;
                         
-                        // 3. 폭발 예방 Fallback 가치 마킹 탑재 (0x0 유령 캔버스 생성 원천 차단)
                         let width = img.width || 300; 
                         let height = img.height || 300;
                         
@@ -506,11 +573,11 @@
                     };
                     
                     img.onerror = () => reject("이미지 가공 로드 대실패");
-                    img.src = event.target.result; // 👑 무조건 onload 바인딩 아랫줄에 안착 사수!
+                    img.src = event.target.result; 
                 };
                 
                 reader.onerror = () => reject("로컬 파일 스캔 장해 발생");
-                reader.readAsDataURL(file); // 👑 무조건 onload 바인딩 아랫줄에 안착 사수!
+                reader.readAsDataURL(file); 
             });
         }
 
