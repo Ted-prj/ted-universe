@@ -66,7 +66,8 @@
         .app-title { font-size: 1.4rem; font-weight: 900; letter-spacing: 2px; }
         .app-desc { font-size: 0.75rem; color: var(--text-dim); font-weight: 700; margin-top: 2px; }
 
-        .auth-section {
+        /* 🛠️ 사파리 추론 차단: AUTH 단어 적출 후 명칭 세탁 정렬 */
+        .gate-expand-zone {
             max-height: 0;
             opacity: 0;
             overflow: hidden;
@@ -81,7 +82,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        .app-card.active .auth-section {
+        .app-card.active .gate-expand-zone {
             max-height: 150px;
             opacity: 1;
             margin-top: 25px;
@@ -89,7 +90,8 @@
             border-top: 1px solid #222;
         }
 
-        .auth-input {
+        /* 🛠️ 사파리 추론 차단: 클래스 이름에서 auth를 배제하고 pass-digit 시스템으로 갱신 */
+        .pass-digit-input {
             width: 100%;
             max-width: 220px;
             background: #000 !important;
@@ -103,14 +105,14 @@
             padding: 10px;
             font-weight: 900;
             
-            /* 🔒 iOS 사파리 암호 제안 팝업을 무력화하면서 도트 마스킹 유지 */
+            /* iOS 사파리 팝업 무력화 전용 특수 마스킹 스트림 */
             -webkit-text-security: disc !important;
             text-security: disc !important;
         }
         
-        .auth-input:focus { outline: none; box-shadow: none !important; }
+        .pass-digit-input:focus { outline: none; box-shadow: none !important; }
 
-        .auth-msg {
+        .gate-status-msg {
             font-size: 0.75rem;
             font-weight: 800;
             margin-top: 12px;
@@ -123,6 +125,13 @@
     </style>
 </head>
 <body>
+
+    <!-- 🎯 [사파리 저격수 트릭 1] Autofill Honey Pot (가짜 미끼 레이어) 
+         사파리가 자동완성을 시도하려다 이 가짜 인풋창에 갇혀 혼자 방전되게 만듭니다. -->
+    <div style="position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; overflow: hidden;">
+        <input type="text" name="decoy_user" autocomplete="username" value="ted_universe" playbook="-1">
+        <input type="password" name="decoy_pass" autocomplete="current-password" value="1234" playbook="-1">
+    </div>
 
     <div class="gateway-title">TED'S UNIVERSE</div>
 
@@ -137,11 +146,10 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZhYW1pZnF6anNyZmxtcHJpaGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzODc2NzksImV4cCI6MjA5MTk2MzY3OX0.qUUs3aoWQMEVjTQkYTZtA8CMjMF_MrgBFa4UfiiEWzI';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // DOM이 로드되면 설정을 읽어들여 화면을 동적으로 생성
         document.addEventListener('DOMContentLoaded', () => {
             const container = document.getElementById('app-container');
             
-            // 공통 설정을 한 바퀴 돌며 HTML 카드 빌드 및 주입
+            // 🛠️ [사파리 저격수 트릭 2] 클래스 명세 및 ID 바인딩 명사 대세탁 연출
             container.innerHTML = GATEWAY_APPS.map(app => `
                 <div class="app-card" id="card-${app.id}" onclick="activateApp('${app.id}')" style="border-left: 6px solid ${app.color};">
                     <div class="card-header">
@@ -151,20 +159,18 @@
                             <div class="app-desc">${app.desc}</div>
                         </div>
                     </div>
-                    <div class="auth-section" onclick="event.stopPropagation()">
-                        <!-- 📱 [CORS & Heuristic 완벽 분쇄] id 규격 스위칭 + 애플 공식 원타임코드 속성 인젝션 -->
-                        <input type="tel" class="form-control auth-input" 
+                    <div class="gate-expand-zone" onclick="event.stopPropagation()">
+                        <input type="tel" class="form-control pass-digit-input" 
                                id="code-${app.id}" data-id="${app.id}" 
                                maxlength="4" inputmode="numeric" pattern="[0-9]*" 
                                autocomplete="one-time-code"
-                               oninput="handlePinInput(this)">
-                        <div class="auth-msg" id="msg-${app.id}"></div>
+                               autocorrect="off" autocapitalize="none">
+                        <div class="gate-status-msg" id="msg-${app.id}"></div>
                     </div>
                 </div>
             `).join('');
         });
 
-        // 카드 탭 인터랙션 제어
         function activateApp(appId) {
             document.querySelectorAll('.app-card').forEach(card => {
                 const currentId = card.id.replace('card-', '');
@@ -173,7 +179,7 @@
                     const input = document.getElementById(`code-${currentId}`);
                     if(input) input.value = '';
                     const msg = document.getElementById(`msg-${currentId}`);
-                    if(msg) { msg.innerText = ''; msg.className = 'auth-msg'; }
+                    if(msg) { msg.innerText = ''; msg.className = 'gate-status-msg'; }
                 }
             });
 
@@ -181,7 +187,6 @@
             if (!targetCard.classList.contains('active')) {
                 targetCard.classList.add('active');
                 
-                // 카드 인라인 포커스 연동 시 색상 스타일 실시간 동기화
                 const app = GATEWAY_APPS.find(a => a.id === appId);
                 const input = document.getElementById(`code-${appId}`);
                 if (input) {
@@ -198,33 +203,35 @@
             }
         }
 
-        // 설정(Metadata) 기반의 동적 토큰 발행 및 라우팅 허브
         async function verifyAppAccess(appId, pin) {
             const msgEl = document.getElementById(`msg-${appId}`);
             const inputEl = document.getElementById(`code-${appId}`);
             const app = GATEWAY_APPS.find(a => a.id === appId);
             
-            msgEl.className = 'auth-msg msg-loading';
-            msgEl.innerText = "VERIFYING...";
+            msgEl.className = 'gate-status-msg msg-loading';
+            
+            // 🛠️ [사파리 저격수 트릭 3] VERIFYING 단어를 CONFIRMING으로 치환해 사파리 감지 회피
+            msgEl.innerText = "CONFIRMING...";
 
             try {
-                // 공통 스키마 검증
                 const { data, error } = await _supabase.from('settings').select('value').eq('code', 'ACCESS_PW').single();
                 if (error) throw error;
                 
                 if (data.value === pin) {
-                    msgEl.innerText = "ACCESS GRANTED";
+                    // 🛠️ [사파리 저격수 트릭 4] ACCESS 단어를 VALID CODE로 정화
+                    msgEl.innerText = "VALID CODE";
                     msgEl.style.color = app.color;
                     
-                    // 🌟 아키텍처의 핵심: 하드코딩 없이 설정에 명시된 고유 키와 패스로 토큰 배인딩 및 직행!
                     sessionStorage.setItem(app.sessionKey, 'true');
                     setTimeout(() => location.href = app.targetUrl, 300);
                 } else {
-                    throw new Error("WRONG PASSWORD");
+                    throw new Error("INVALID");
                 }
             } catch (err) {
-                msgEl.className = 'auth-msg msg-error';
-                msgEl.innerText = "WRONG PASSWORD";
+                msgEl.className = 'gate-status-msg msg-error';
+                
+                // 🛠️ [사파리 저격수 트릭 5] PASSWORD 단어를 완벽 배제하고 DENIED 표기법으로 전향
+                msgEl.innerText = "DENIED";
                 setTimeout(() => {
                     inputEl.value = "";
                     msgEl.innerText = "";
