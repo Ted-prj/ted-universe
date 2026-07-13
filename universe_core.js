@@ -34,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'export', name: 'EXPORT', url: 'export.html' },
             { id: 'view', name: 'VIEW & EDIT', url: 'view.html' },
             { id: 'schedule', name: 'SCHEDULE', url: 'schedule.html' },
-            { id: 'import', name: 'IMPORT', url: 'import.html' }
+            { id: 'import', name: 'IMPORT', url: 'import.html' },
+            { id: 'prompt', name: 'PROMPT', url: 'prompt.html' }
         ];
     } else if (currentApp === 'WORKOUT') {
         localMenus = [
