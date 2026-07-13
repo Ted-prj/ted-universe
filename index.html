@@ -102,6 +102,10 @@
             border-radius: 16px;
             padding: 10px;
             font-weight: 900;
+            
+            /* 🔒 [치트키 우회 엔진] iOS 사파리 암호 제안 팝업을 무력화하면서 도트 마스킹 유지 */
+            -webkit-text-security: disc !important;
+            text-security: disc !important;
         }
         
         .auth-input:focus { outline: none; box-shadow: none !important; }
@@ -148,7 +152,8 @@
                         </div>
                     </div>
                     <div class="auth-section" onclick="event.stopPropagation()">
-                        <input type="password" class="form-control auth-input" 
+                        <!-- 📱 [치트키 우회] type="password"를 type="tel"로 변환하여 사파리의 지독한 암호 저장 Heuristic 차단 -->
+                        <input type="tel" class="form-control auth-input" 
                                id="input-${app.id}" data-id="${app.id}" 
                                maxlength="4" inputmode="numeric" pattern="[0-9]*" 
                                oninput="handlePinInput(this)">
