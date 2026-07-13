@@ -66,7 +66,6 @@
         .app-title { font-size: 1.4rem; font-weight: 900; letter-spacing: 2px; }
         .app-desc { font-size: 0.75rem; color: var(--text-dim); font-weight: 700; margin-top: 2px; }
 
-        /* 🛠️ 사파리 추론 차단: AUTH 단어 적출 후 명칭 세탁 정렬 */
         .gate-expand-zone {
             max-height: 0;
             opacity: 0;
@@ -90,7 +89,6 @@
             border-top: 1px solid #222;
         }
 
-        /* 🛠️ 사파리 추론 차단: 클래스 이름에서 auth를 배제하고 pass-digit 시스템으로 갱신 */
         .pass-digit-input {
             width: 100%;
             max-width: 220px;
@@ -105,7 +103,7 @@
             padding: 10px;
             font-weight: 900;
             
-            /* iOS 사파리 팝업 무력화 전용 특수 마스킹 스트림 */
+            /* iOS 사파리 암호 제안 팝업 무력화용 마스킹 스트림 */
             -webkit-text-security: disc !important;
             text-security: disc !important;
         }
@@ -126,8 +124,7 @@
 </head>
 <body>
 
-    <!-- 🎯 [사파리 저격수 트릭 1] Autofill Honey Pot (가짜 미끼 레이어) 
-         사파리가 자동완성을 시도하려다 이 가짜 인풋창에 갇혀 혼자 방전되게 만듭니다. -->
+    <!-- 🎯 Autofill Honey Pot (사파리 포획용 유령 미끼 레이어) -->
     <div style="position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; overflow: hidden;">
         <input type="text" name="decoy_user" autocomplete="username" value="ted_universe" playbook="-1">
         <input type="password" name="decoy_pass" autocomplete="current-password" value="1234" playbook="-1">
@@ -149,7 +146,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             const container = document.getElementById('app-container');
             
-            // 🛠️ [사파리 저격수 트릭 2] 클래스 명세 및 ID 바인딩 명사 대세탁 연출
             container.innerHTML = GATEWAY_APPS.map(app => `
                 <div class="app-card" id="card-${app.id}" onclick="activateApp('${app.id}')" style="border-left: 6px solid ${app.color};">
                     <div class="card-header">
@@ -160,11 +156,13 @@
                         </div>
                     </div>
                     <div class="gate-expand-zone" onclick="event.stopPropagation()">
+                        <!-- ⚙️ 완벽 복구 완료: 누락되었던 핵심 입력 탐지 엔진 oninput 속성을 정교하게 원상 복귀! -->
                         <input type="tel" class="form-control pass-digit-input" 
                                id="code-${app.id}" data-id="${app.id}" 
                                maxlength="4" inputmode="numeric" pattern="[0-9]*" 
                                autocomplete="one-time-code"
-                               autocorrect="off" autocapitalize="none">
+                               autocorrect="off" autocapitalize="none"
+                               oninput="handlePinInput(this)">
                         <div class="gate-status-msg" id="msg-${app.id}"></div>
                     </div>
                 </div>
@@ -209,8 +207,6 @@
             const app = GATEWAY_APPS.find(a => a.id === appId);
             
             msgEl.className = 'gate-status-msg msg-loading';
-            
-            // 🛠️ [사파리 저격수 트릭 3] VERIFYING 단어를 CONFIRMING으로 치환해 사파리 감지 회피
             msgEl.innerText = "CONFIRMING...";
 
             try {
@@ -218,7 +214,6 @@
                 if (error) throw error;
                 
                 if (data.value === pin) {
-                    // 🛠️ [사파리 저격수 트릭 4] ACCESS 단어를 VALID CODE로 정화
                     msgEl.innerText = "VALID CODE";
                     msgEl.style.color = app.color;
                     
@@ -229,8 +224,6 @@
                 }
             } catch (err) {
                 msgEl.className = 'gate-status-msg msg-error';
-                
-                // 🛠️ [사파리 저격수 트릭 5] PASSWORD 단어를 완벽 배제하고 DENIED 표기법으로 전향
                 msgEl.innerText = "DENIED";
                 setTimeout(() => {
                     inputEl.value = "";
