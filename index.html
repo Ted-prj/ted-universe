@@ -82,38 +82,52 @@
         }
 
         .app-card.active .gate-expand-zone {
-            max-height: 150px;
+            max-height: 380px; /* 🛠️ 가상 핀패드가 밀림 없이 정갈하게 들어서도록 뷰포트 볼륨 확장 */
             opacity: 1;
             margin-top: 25px;
             padding-top: 25px;
             border-top: 1px solid #222;
         }
 
-        .pass-digit-input {
-            width: 100%;
-            max-width: 220px;
-            background: #000 !important;
-            border: 2px solid #333 !important;
-            color: #fff !important;
-            text-align: center;
-            font-size: 1.5rem;
-            letter-spacing: 12px;
-            margin: 0 auto;
-            border-radius: 16px;
-            padding: 10px;
-            font-weight: 900;
-            
-            /* 🔒 PWA 모드 전용 특수 마스킹 스트림 (사파리/크롬 공용 교란 작전) */
-            -webkit-text-security: disc !important;
-            text-security: disc !important;
+        /* 🔒 가상 핀패드 도트 및 버튼 전용 하이테크 스타일 아키텍처 */
+        .pin-dot {
+            width: 14px;
+            height: 14px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            transition: all 0.15s ease-in-out;
+            background: transparent;
         }
-        
-        .pass-digit-input:focus { outline: none; box-shadow: none !important; }
+
+        .pin-btn {
+            background: #111;
+            border: 1px solid #222;
+            color: #fff;
+            font-size: 1.25rem;
+            font-weight: 800;
+            border-radius: 16px;
+            padding: 10px 0;
+            transition: all 0.1s ease;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .pin-btn:active {
+            transform: scale(0.92);
+            background: #222;
+            border-color: #444;
+        }
+
+        .gate-output-box {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 5px;
+        }
 
         .gate-status-msg {
             font-size: 0.75rem;
             font-weight: 800;
-            margin-top: 12px;
+            margin-top: 15px;
             min-height: 18px;
         }
         .msg-error { color: #ff4d4d; }
@@ -123,8 +137,6 @@
     </style>
 </head>
 <body>
-
-    <!-- 🎯 [PWA 긴급 조치] 대시보드 전체 스캔을 유도하던 유령 비밀번호 미끼 레이어 완전 박멸! -->
 
     <div class="gateway-title">TED'S UNIVERSE</div>
 
@@ -139,9 +151,13 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZhYW1pZnF6anNyZmxtcHJpaGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzODc2NzksImV4cCI6MjA5MTk2MzY3OX0.qUUs3aoWQMEVjTQkYTZtA8CMjMF_MrgBFa4UfiiEWzI';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // 🧠 가상 메모리 보안 버퍼: 각 앱카드별 PIN 코드 실시간 매핑 분리 제어
+        let v_buffer_pins = {};
+
         document.addEventListener('DOMContentLoaded', () => {
             const container = document.getElementById('app-container');
             
+            // 🛠️ Golden Version 규격 사수: 인풋 태그를 완벽하게 배제한 순수 그리드 핀패드 인터페이스 주입[cite: 11]
             container.innerHTML = GATEWAY_APPS.map(app => `
                 <div class="app-card" id="card-${app.id}" onclick="activateApp('${app.id}')" style="border-left: 6px solid ${app.color};">
                     <div class="card-header">
@@ -152,26 +168,45 @@
                         </div>
                     </div>
                     <div class="gate-expand-zone" onclick="event.stopPropagation()">
-                        <!-- ⚙️ [PWA 무결성 패치] type="text" + inputmode="numeric" + name="safe_code" 조합으로 변경하여 
-                             홈 화면 앱 버전 OS 레이어의 오토필 스캐너를 완벽하게 무력화 시킵니다. -->
-                        <input type="text" class="form-control pass-digit-input" 
-                               id="code-${app.id}" name="safe_code_digit" data-id="${app.id}" 
-                               maxlength="4" inputmode="numeric"
-                               autocomplete="off" autocorrect="off" autocapitalize="none"
-                               oninput="handlePinInput(this)">
+                        
+                        <!-- 🎯 비밀번호 상태를 가시화해 줄 마스킹 도트 인디케이터 구역 -->
+                        <div class="gate-output-box">
+                            <div class="pin-dot" id="dot-${app.id}-0"></div>
+                            <div class="pin-dot" id="dot-${app.id}-1"></div>
+                            <div class="pin-dot" id="dot-${app.id}-2"></div>
+                            <div class="pin-dot" id="dot-${app.id}-3"></div>
+                        </div>
+                        
+                        <!-- 🎹 사파리가 죽었다 깨어나도 오토필을 소환할 수 없는 순수 가상 버튼 행렬 패드 -->
+                        <div class="pinpad-grid d-grid gap-2 mx-auto" style="grid-template-columns: repeat(3, 1fr); max-width: 230px; margin-top: 15px;">
+                            <button type="button" class="pin-btn" onclick="pressVirtualKey('${app.id}', '1')">1</button>
+                            <button type="button" class="pin-btn" onclick="pressVirtualKey('${app.id}', '2')">2</button>
+                            <button type="button" class="pin-btn" onclick="pressVirtualKey('${app.id}', '3')">3</button>
+                            <button type="button" class="pin-btn" onclick="pressVirtualKey('${app.id}', '4')">4</button>
+                            <button type="button" class="pin-btn" onclick="pressVirtualKey('${app.id}', '5')">5</button>
+                            <button type="button" class="pin-btn" onclick="pressVirtualKey('${app.id}', '6')">6</button>
+                            <button type="button" class="pin-btn" onclick="pressVirtualKey('${app.id}', '7')">7</button>
+                            <button type="button" class="pin-btn" onclick="pressVirtualKey('${app.id}', '8')">8</button>
+                            <button type="button" class="pin-btn" onclick="pressVirtualKey('${app.id}', '9')">9</button>
+                            <button type="button" class="pin-btn text-danger" style="font-size: 0.75rem;" onclick="pressVirtualKey('${app.id}', 'CLR')">CLR</button>
+                            <button type="button" class="pin-btn" onclick="pressVirtualKey('${app.id}', '0')">0</button>
+                            <button type="button" class="pin-btn text-secondary" style="font-size: 0.9rem;" onclick="pressVirtualKey('${app.id}', 'BACK')">⌫</button>
+                        </div>
+                        
                         <div class="gate-status-msg" id="msg-${app.id}"></div>
                     </div>
                 </div>
             `).join('');
         });
 
+        // 카드 활성화 및 메모리 스위칭 제어
         function activateApp(appId) {
             document.querySelectorAll('.app-card').forEach(card => {
                 const currentId = card.id.replace('card-', '');
                 if (currentId !== appId) {
                     card.classList.remove('active');
-                    const input = document.getElementById(`code-${currentId}`);
-                    if(input) input.value = '';
+                    v_buffer_pins[currentId] = '';
+                    refreshPinDots(currentId);
                     const msg = document.getElementById(`msg-${currentId}`);
                     if(msg) { msg.innerText = ''; msg.className = 'gate-status-msg'; }
                 }
@@ -180,35 +215,64 @@
             const targetCard = document.getElementById(`card-${appId}`);
             if (!targetCard.classList.contains('active')) {
                 targetCard.classList.add('active');
-                
-                const app = GATEWAY_APPS.find(a => a.id === appId);
-                const input = document.getElementById(`code-${appId}`);
-                if (input) {
-                    input.onfocus = () => { input.style.borderColor = app.color; input.style.color = app.color; };
-                    setTimeout(() => input.focus(), 350);
+                v_buffer_pins[appId] = '';
+                refreshPinDots(appId);
+                // 🔒 인풋이 소멸되었으므로 번거롭던 가상 키보드 초점(focus) 강제 연동부 완전 증발 조치!
+            }
+        }
+
+        // ⚡ 가상 핀패드 입력 조율 매니지먼트 엔진
+        function pressVirtualKey(appId, key) {
+            if (!v_buffer_pins[appId]) v_buffer_pins[appId] = '';
+
+            if (key === 'CLR') {
+                v_buffer_pins[appId] = '';
+            } else if (key === 'BACK') {
+                v_buffer_pins[appId] = v_buffer_pins[appId].slice(0, -1);
+            } else {
+                if (v_buffer_pins[appId].length < 4) {
+                    v_buffer_pins[appId] += key;
+                }
+            }
+
+            refreshPinDots(appId);
+
+            // 4자리가 완벽하게 들어차는 순간 딜레이 없이 다이렉트로 승인 검증대로 특송 발송!
+            if (v_buffer_pins[appId].length === 4) {
+                verifyAppAccess(appId, v_buffer_pins[appId]);
+            }
+        }
+
+        // 입력 카운트에 맞춘 핑키 도트 하이라이팅 실시간 동기화
+        function refreshPinDots(appId) {
+            const pinLength = v_buffer_pins[appId] ? v_buffer_pins[appId].length : 0;
+            const app = GATEWAY_APPS.find(a => a.id === appId);
+            const appAccentColor = app ? app.color : 'var(--bp-pink)';
+
+            for (let i = 0; i < 4; i++) {
+                const dot = document.getElementById(`dot-${appId}-${i}`);
+                if (dot) {
+                    if (i < pinLength) {
+                        dot.style.background = appAccentColor;
+                        dot.style.borderColor = appAccentColor;
+                    } else {
+                        dot.style.background = 'transparent';
+                        dot.style.borderColor = '#333';
+                    }
                 }
             }
         }
 
-        function handlePinInput(inputEl) {
-            // 오직 숫자만 남기고 걸러내는 실시간 보정 필터 추가
-            inputEl.value = inputEl.value.replace(/[^0-9]/g, '');
-            
-            if (inputEl.value.length === 4) {
-                inputEl.blur();
-                verifyAppAccess(inputEl.dataset.id, inputEl.value);
-            }
-        }
-
+        // 설정(Metadata) 기반의 동적 토큰 발행 및 라우팅 허브[cite: 11]
         async function verifyAppAccess(appId, pin) {
             const msgEl = document.getElementById(`msg-${appId}`);
-            const inputEl = document.getElementById(`code-${appId}`);
             const app = GATEWAY_APPS.find(a => a.id === appId);
             
             msgEl.className = 'gate-status-msg msg-loading';
             msgEl.innerText = "CONFIRMING...";
 
             try {
+                // 공통 스키마 검증
                 const { data, error } = await _supabase.from('settings').select('value').eq('code', 'ACCESS_PW').single();
                 if (error) throw error;
                 
@@ -224,10 +288,12 @@
             } catch (err) {
                 msgEl.className = 'gate-status-msg msg-error';
                 msgEl.innerText = "DENIED";
+                
+                // 패스워드 불일치 시 버퍼를 리셋하고 도트를 부드럽게 비워줌
                 setTimeout(() => {
-                    inputEl.value = "";
+                    v_buffer_pins[appId] = "";
+                    refreshPinDots(appId);
                     msgEl.innerText = "";
-                    inputEl.focus();
                 }, 1000);
             }
         }
