@@ -103,7 +103,7 @@
             padding: 10px;
             font-weight: 900;
             
-            /* iOS 사파리 암호 제안 팝업 무력화용 마스킹 스트림 */
+            /* 🔒 PWA 모드 전용 특수 마스킹 스트림 (사파리/크롬 공용 교란 작전) */
             -webkit-text-security: disc !important;
             text-security: disc !important;
         }
@@ -124,11 +124,7 @@
 </head>
 <body>
 
-    <!-- 🎯 Autofill Honey Pot (사파리 포획용 유령 미끼 레이어) -->
-    <div style="position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; overflow: hidden;">
-        <input type="text" name="decoy_user" autocomplete="username" value="ted_universe" playbook="-1">
-        <input type="password" name="decoy_pass" autocomplete="current-password" value="1234" playbook="-1">
-    </div>
+    <!-- 🎯 [PWA 긴급 조치] 대시보드 전체 스캔을 유도하던 유령 비밀번호 미끼 레이어 완전 박멸! -->
 
     <div class="gateway-title">TED'S UNIVERSE</div>
 
@@ -156,12 +152,12 @@
                         </div>
                     </div>
                     <div class="gate-expand-zone" onclick="event.stopPropagation()">
-                        <!-- ⚙️ 완벽 복구 완료: 누락되었던 핵심 입력 탐지 엔진 oninput 속성을 정교하게 원상 복귀! -->
-                        <input type="tel" class="form-control pass-digit-input" 
-                               id="code-${app.id}" data-id="${app.id}" 
-                               maxlength="4" inputmode="numeric" pattern="[0-9]*" 
-                               autocomplete="one-time-code"
-                               autocorrect="off" autocapitalize="none"
+                        <!-- ⚙️ [PWA 무결성 패치] type="text" + inputmode="numeric" + name="safe_code" 조합으로 변경하여 
+                             홈 화면 앱 버전 OS 레이어의 오토필 스캐너를 완벽하게 무력화 시킵니다. -->
+                        <input type="text" class="form-control pass-digit-input" 
+                               id="code-${app.id}" name="safe_code_digit" data-id="${app.id}" 
+                               maxlength="4" inputmode="numeric"
+                               autocomplete="off" autocorrect="off" autocapitalize="none"
                                oninput="handlePinInput(this)">
                         <div class="gate-status-msg" id="msg-${app.id}"></div>
                     </div>
@@ -195,6 +191,9 @@
         }
 
         function handlePinInput(inputEl) {
+            // 오직 숫자만 남기고 걸러내는 실시간 보정 필터 추가
+            inputEl.value = inputEl.value.replace(/[^0-9]/g, '');
+            
             if (inputEl.value.length === 4) {
                 inputEl.blur();
                 verifyAppAccess(inputEl.dataset.id, inputEl.value);
