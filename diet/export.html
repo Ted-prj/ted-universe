@@ -26,11 +26,11 @@
             gap: 8px;
             margin-bottom: 16px;
         }
-        /* 🌿 상큼한 민트 포인트가 결합된 프롬프트 구역 스타일 */
+        /* 🛠️ 색상 튜닝: 거슬리던 민트 대신 우아한 연핑크 보더와 글자색 매핑 */
         .prompt-select-box {
             background: #111 !important;
-            border: 1px solid #2da8c9 !important;
-            color: #20c997 !important;
+            border: 1px solid var(--bp-pink) !important;
+            color: var(--bp-pink) !important;
             font-weight: 800;
         }
     </style>
@@ -96,14 +96,14 @@
                 <button class="btn-outline flex-fill" style="padding: 10px 15px; font-weight:900; font-size:0.8rem;" onclick="downloadResult()">TXT 파일 다운로드 💾</button>
             </div>
             
-            <!-- ⚡ [치트키 개조] 상시 가동형 쵸파 결합용 저장된 AI 프롬프트 셀렉터 구역 -->
+            <!-- ⚡ 핑크 통합 개조 구역: 드롭다운 제어판 레이아웃 완전 동기화 -->
             <div style="border-top: 1px dashed #333; padding-top: 15px; margin-top: 15px; margin-bottom: 15px;">
-                <label class="label-small mb-2" style="color: #20c997; font-weight: 900;">⚡ SAVED AI PROMPTS COCKPIT</label>
+                <label class="label-small mb-2" style="color: var(--bp-pink); font-weight: 900;">⚡ SAVED AI PROMPTS COCKPIT</label>
                 <div class="d-flex gap-2">
                     <select id="export-prompt-select" class="form-select form-select-sm prompt-select-box" onchange="handlePromptSelect(this.value)">
                         <option value="">-- 불러온 프롬프트 없음 --</option>
                     </select>
-                    <button class="btn btn-sm btn-outline-info" style="border-color:#20c997; color:#20c997; font-weight: 800; font-size: 0.7rem; white-space: nowrap;" onclick="copySelectedPromptOnly()">프롬프트만 복사</button>
+                    <button class="btn btn-sm btn-outline-info" style="border-color:var(--bp-pink); color:var(--bp-pink); font-weight: 800; font-size: 0.7rem; white-space: nowrap;" onclick="copySelectedPromptOnly()">프롬프트만 복사</button>
                 </div>
                 <div id="export-prompt-desc" class="small text-secondary mt-1 px-1" style="font-size: 0.65rem; font-style: italic;"></div>
             </div>
@@ -115,7 +115,7 @@
                 
                 <label class="label-small text-pink mb-2" style="color:var(--neon-pink); border-top: 1px solid #222; padding-top: 10px;">CHOPPER MORNING RESET GUIDE (아침 히스토리 리셋용)</label>
                 <div class="small mb-3" style="font-size: 0.7rem; color: #aaa; line-height: 1.4;">
-                    "쵸파, 프로젝트 히스토리를 리셋하고, 이번 프롬프트에서 알려주는 CSV코드 형태의 프로젝트 히스토리를 기준으로 오늘의 코칭을 시작하자" 문장 뒤에 아래 추출된 CSV 데이터 본문 전체가 자동으로 결합되어 복사 또는 파일로 저장됩니다.
+                    "쵸파, 프로젝트 히스토리를 리셋하고, 이번 프롬프트에서 알려주는 CSV코드 형태의 프로젝트 히스토리를 기준으로 오늘의 코칭을 시작하자" 문장 뒤에 아래 추출된 CSV 데이터 본문 전체가 자동으로 결합되어 복사됩니다.
                 </div>
                 <div class="d-flex gap-2">
                     <button class="btn-outline flex-fill py-2" style="border-color: var(--neon-pink); color: var(--neon-pink);" onclick="copyMorningResetGuide()">모닝 가이드 복사 🌅</button>
@@ -127,7 +127,7 @@
 
     <script>
         let RAW_MEMORY_CSV_BUFFER = ""; 
-        let PROMPT_CACHE_MAP = {}; // 프롬프트 텍스트 다이렉트 맵핑 캐시
+        let PROMPT_CACHE_MAP = {}; 
 
         window.onload = () => {
             const masterTables = DIET_TABLES.filter(t => t.group === 'master');
@@ -152,7 +152,6 @@
             const todayStr = new Date().toISOString().split('T')[0];
             document.getElementById('export-end-date').value = todayStr;
 
-            // ⚡ 기획 명세 구현: 기동 시 저장된 프롬프트 목록 실시간 버퍼 바인딩
             fetchSavedPrompts();
         };
 
@@ -317,10 +316,8 @@
             alert("쵸파용 요청 가이드가 복사되었습니다! 🤖");
         }
 
-        // 🧠 [지능형 하이브리드 결합] 선택된 커스텀 프롬프트 문장 뒤에 추출된 백그라운드 CSV 데이터를 수포 결합!
         function copyMorningResetGuide() {
             if(!RAW_MEMORY_CSV_BUFFER) return alert("추출된 CSV 데이터가 없습니다. [칼럼&데이터 추출]을 완료해 주세요!");
-            
             const selectId = document.getElementById('export-prompt-select').value;
             let basePrompt = "쵸파, 프로젝트 히스토리를 리셋하고, 이번 프롬프트에서 알려주는 CSV코드 형태의 프로젝트 히스토리를 기준으로 오늘의 코칭을 시작하자";
             
@@ -330,12 +327,11 @@
             
             const fullPromptCombined = `${basePrompt}\n\n${RAW_MEMORY_CSV_BUFFER}`;
             executeOffscreenCopy(fullPromptCombined);
-            alert("지정한 AI 커스텀 프롬프트문과 CSV 데이터가 결합되어 완벽히 복사되었습니다! 🌅🦌");
+            alert("지정한 AI 커스텀 프롬프트문과 CSV 데이터가 결합되어 완벽히 복사되었습니다! 🌅 쵸파에게 슝 던져주세요!");
         }
 
         function downloadMorningResetGuide() {
             if(!RAW_MEMORY_CSV_BUFFER) return alert("추출된 CSV 데이터가 없습니다. 먼저 [칼럼&데이터 추출]을 완료해 주세요!");
-            
             const selectId = document.getElementById('export-prompt-select').value;
             let basePrompt = "쵸파, 프로젝트 히스토리를 리셋하고, 이번 프롬프트에서 알려주는 CSV코드 형태의 프로젝트 히스토리를 기준으로 오늘의 코칭을 시작하자";
             

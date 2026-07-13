@@ -9,12 +9,12 @@
     <link rel="stylesheet" href="style.css">
     <script src="config.js"></script>
     <style>
-        /* 🌿 상큼한 다이어트 민트 그린 악센트 토큰 가동 */
-        .mint-accent-border {
-            border: 1px solid #20c997 !important;
+        /* 💖 개조: 눈에 거슬리던 민트 그린을 완전히 소탕하고 블랙핑크 고유 핑크 보더 시스템 연동 */
+        .pink-accent-border {
+            border: 1px solid var(--bp-pink) !important;
         }
-        .btn-mint {
-            background: #20c997;
+        .btn-pink-custom {
+            background: var(--bp-pink);
             color: #000;
             border: none;
             border-radius: 10px;
@@ -23,13 +23,14 @@
             font-size: 0.78rem;
             transition: 0.2s;
         }
-        .btn-mint:hover {
-            background: #1baa81;
+        .btn-pink-custom:hover {
+            background: var(--neon-pink);
+            color: #fff;
         }
         .prompt-card-unit {
             background: #161616;
             border: 1px solid #252525;
-            border-left: 4px solid #20c997;
+            border-left: 4px solid var(--bp-pink);
             border-radius: 16px;
             padding: 15px;
             margin-bottom: 12px;
@@ -50,7 +51,7 @@
         <!-- 프롬프트 등록 및 수정 관제소 -->
         <div class="hub-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="small fw-bold mb-0" id="form-work-title" style="color:#20c997;">📝 NEW AI PROMPT REGISTER</h6>
+                <h6 class="small fw-bold mb-0" id="form-work-title" style="color:var(--bp-pink);">📝 NEW AI PROMPT REGISTER</h6>
                 <button class="btn btn-xs btn-outline-secondary" style="font-size:0.65rem;" onclick="clearPromptForm()">입력창 리셋</button>
             </div>
             
@@ -71,12 +72,12 @@
                 <textarea id="form-prompt-text" class="form-control csv-box" rows="5" placeholder="쵸파한테 던질 명령어 템플릿을 입력하세요."></textarea>
             </div>
             
-            <button id="btn-submit-action" class="btn-mint w-100" onclick="commitPromptForm()">AI 프롬프트 마스터 저장 💾</button>
+            <button id="btn-submit-action" class="btn-pink-custom w-100" onclick="commitPromptForm()">AI 프롬프트 마스터 저장 💾</button>
         </div>
 
         <!-- 실시간 적재된 프롬프트 인벤토리 리스트 -->
         <div class="hub-card">
-            <h6 class="small fw-bold mb-3">📋 SAVED PROMPT INVENTORY</h6>
+            <h6 class="small fw-bold mb-3" style="color: var(--bp-pink);">📋 SAVED PROMPT INVENTORY</h6>
             <div id="prompt-inventory-target"><p class="text-center opacity-50 my-4">로딩 중...</p></div>
         </div>
     </div>
@@ -110,7 +111,7 @@
                             </div>
                         </div>
                         <p class="small text-dim mb-2" style="font-size:0.7rem; color:#888;">${p.description || '지정된 설명 메모가 없습니다'}</p>
-                        <div style="background:#0a0a0a; padding:10px; border-radius:10px; font-size:0.68rem; color:#20c997; font-family:monospace; white-space:pre-wrap; max-height:100px; overflow-y:auto; border:1px solid #222;">${p.prompt_text}</div>
+                        <div style="background:#0a0a0a; padding:10px; border-radius:10px; font-size:0.68rem; color:var(--bp-pink); font-family:monospace; white-space:pre-wrap; max-height:100px; overflow-y:auto; border:1px solid #222;">${p.prompt_text}</div>
                     </div>
                 `).join('');
             } catch (e) {
@@ -142,9 +143,9 @@
             document.getElementById('form-prompt-text').value = "";
             
             document.getElementById('form-work-title').innerText = "📝 NEW AI PROMPT REGISTER";
-            document.getElementById('form-work-title').style.color = "#20c997";
+            document.getElementById('form-work-title').style.color = "var(--bp-pink)";
             document.getElementById('btn-submit-action').innerText = "AI 프롬프트 마스터 저장 💾";
-            document.getElementById('btn-submit-action').className = "btn-mint w-100";
+            document.getElementById('btn-submit-action').className = "btn-pink-custom w-100";
         }
 
         async function commitPromptForm() {
