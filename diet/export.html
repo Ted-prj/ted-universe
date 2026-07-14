@@ -106,22 +106,7 @@
                     <button class="btn btn-sm btn-outline-info" style="border-color:var(--bp-pink); color:var(--bp-pink); font-weight: 800; font-size: 0.7rem; white-space: nowrap;" onclick="copySelectedPromptOnly()">프롬프트만 복사</button>
                 </div>
                 <div id="export-prompt-desc" class="small text-secondary mt-1 px-1" style="font-size: 0.65rem; font-style: italic;"></div>
-            </div>
-
-            <div id="chopper-guide-area" class="guide-box" style="display:none;">
-                <label class="label-small text-pink mb-2" style="color:var(--bp-pink)">CHOPPER REQUEST GUIDE (업데이트 데이터 요청용)</label>
-                <div id="chopper-guide-text" class="small mb-3" style="font-size: 0.7rem; color: #aaa; line-height: 1.4; white-space: pre-wrap; word-break: break-all;"></div>
-                <button class="btn-outline w-100 mb-3" onclick="copyChopperGuide()">쵸파 데이터 요청 가이드 복사 🤖</button>
-                
-                <label class="label-small text-pink mb-2" style="color:var(--neon-pink); border-top: 1px solid #222; padding-top: 10px;">CHOPPER MORNING RESET GUIDE (아침 히스토리 리셋용)</label>
-                <div class="small mb-3" style="font-size: 0.7rem; color: #aaa; line-height: 1.4;">
-                    "쵸파, 프로젝트 히스토리를 리셋하고, 이번 프롬프트에서 알려주는 CSV코드 형태의 프로젝트 히스토리를 기준으로 오늘의 코칭을 시작하자" 문장 뒤에 아래 추출된 CSV 데이터 본문 전체가 자동으로 결합되어 복사됩니다.
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn-outline flex-fill py-2" style="border-color: var(--neon-pink); color: var(--neon-pink);" onclick="copyMorningResetGuide()">모닝 가이드 복사 🌅</button>
-                    <button class="btn-action flex-fill py-2" style="background: var(--neon-pink); color:#000;" onclick="downloadMorningResetGuide()">모닝 가이드 TXT 다운로드 💾🦌</button>
-                </div>
-            </div>
+            </div>         
         </div>
     </div>
 
@@ -314,34 +299,6 @@
             const guide = document.getElementById('chopper-guide-text').innerText;
             executeOffscreenCopy(guide);
             alert("쵸파용 요청 가이드가 복사되었습니다! 🤖");
-        }
-
-        function copyMorningResetGuide() {
-            if(!RAW_MEMORY_CSV_BUFFER) return alert("추출된 CSV 데이터가 없습니다. [칼럼&데이터 추출]을 완료해 주세요!");
-            const selectId = document.getElementById('export-prompt-select').value;
-            let basePrompt = "쵸파, 프로젝트 히스토리를 리셋하고, 이번 프롬프트에서 알려주는 CSV코드 형태의 프로젝트 히스토리를 기준으로 오늘의 코칭을 시작하자";
-            
-            if(selectId && PROMPT_CACHE_MAP[selectId]) {
-                basePrompt = PROMPT_CACHE_MAP[selectId].text;
-            }
-            
-            const fullPromptCombined = `${basePrompt}\n\n${RAW_MEMORY_CSV_BUFFER}`;
-            executeOffscreenCopy(fullPromptCombined);
-            alert("지정한 AI 커스텀 프롬프트문과 CSV 데이터가 결합되어 완벽히 복사되었습니다! 🌅 쵸파에게 슝 던져주세요!");
-        }
-
-        function downloadMorningResetGuide() {
-            if(!RAW_MEMORY_CSV_BUFFER) return alert("추출된 CSV 데이터가 없습니다. 먼저 [칼럼&데이터 추출]을 완료해 주세요!");
-            const selectId = document.getElementById('export-prompt-select').value;
-            let basePrompt = "쵸파, 프로젝트 히스토리를 리셋하고, 이번 프롬프트에서 알려주는 CSV코드 형태의 프로젝트 히스토리를 기준으로 오늘의 코칭을 시작하자";
-            
-            if(selectId && PROMPT_CACHE_MAP[selectId]) {
-                basePrompt = PROMPT_CACHE_MAP[selectId].text;
-            }
-            
-            const fullMorningPrompt = `${basePrompt}\n\n${RAW_MEMORY_CSV_BUFFER}`;
-            const todayStr = new Date().toISOString().split('T')[0];
-            triggerFileDownload(fullMorningPrompt, `chopper_morning_reset_${todayStr}.txt`);
         }
 
         function executeOffscreenCopy(text) {
