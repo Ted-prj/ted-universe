@@ -234,6 +234,7 @@
         let globalBooksData = [];
         let globalBookRatings = {};
         let globalBooksMap = {}; 
+        let globalReviewsData = []; // 👑 [Zoro] 각 도서에 종속된 멤버들의 세부 평점 데이터를 수집할 글로벌 탄창 확보
 
         document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("currentUserLabel").textContent = getLoggedInMember();
@@ -248,7 +249,7 @@
         }
 
         function toggleTooltipAction(event, el) {
-            event.stopPropagation(); 
+            event.stopPropagation(); // 👑 [Zoro] 툴팁 클릭 시 부모 <tr>의 아코디언 오픈 이벤트로 전파되는 길목을 완벽 봉쇄!
             const tooltip = el.querySelector('.custom-upward-tooltip');
             const isOpen = tooltip.classList.contains('show');
             
@@ -300,6 +301,13 @@
                         globalBookRatings[row.round_no] = row.avg_rating; 
                     });
                 }
+
+                // 👑 [Zoro's Perfect Review Loader Engine]: 도서별 평점 상세 내역 조회를 위한 리뷰 데이터 전격 병렬 스캔
+                const { data: revData } = await _db
+                    .from('reviews_ratings')
+                    .select('round_no, rating_before, rating_after, member_id, members(member_name, image_name)');
+                globalReviewsData = revData || [];
+
             } catch(e) { console.error("선행 데이터 스캔 실패:", e); }
 
             await Promise.all([
@@ -434,6 +442,8 @@
             } catch (err) { console.error(err); }
         }
 
+        // 👑 [Zoro's Masterpiece: Interactive Participant Ratings Dropdown]
+        // 명예의 도서별 별점 로그 행 클릭 시, 해당 도서의 참석 인원 및 각 인원이 하사한 점수 리스트를 아코디언으로 노출
         async function fetchBookStats() {
             try {
                 const { data, error } = await _db
@@ -451,11 +461,49 @@
                 data.forEach(row => {
                     const scoreVal = row.avg_rating ? row.avg_rating.toFixed(1) : '0.0';
                     const ratingHtml = row.avg_rating > 0 ? `<div class="rating-badge" style="background: transparent; border: 1px solid var(--neon-pink); color: var(--neon-pink); box-shadow: none;">★${scoreVal}</div>` : `<span class="text-muted">평가전</span>`;
+                    
+                    // 해당 차수에 등록된 리뷰들을 모아 공주별 참석 명단 및 별점 현황 렌더링
+                    const matchedReviews = globalReviewsData.filter(r => r.round_no === row.round_no);
+                    let attendeesHtml = "";
+                    
+                    if (matchedReviews.length > 0) {
+                        attendeesHtml = matchedReviews.map(r => {
+                            // 토론 후 별점 우선 배치, 없을 시 토론 전 별점 대체
+                            const score = r.rating_after !== null ? r.rating_after : (r.rating_before !== null ? r.rating_before : null);
+                            const scoreStr = score !== null ? `★${Number(score).toFixed(1)}` : '평가전';
+                            const memberName = r.members ? r.members.member_name : '알수없음';
+                            const imgName = r.members ? r.members.image_name : 'default_princess.png';
+                            
+                            return `
+                                <div class="d-flex justify-content-between align-items-center small py-1.5" style="border-bottom: 1px solid rgba(255,255,255,0.04); font-size:0.82rem; width:100%; min-width:0;">
+                                    <div class="text-white text-truncate me-2" style="flex-grow:1; min-width:0; text-align:left; display: flex; align-items: center; gap: 8px;">
+                                        <img src="images/${imgName}" class="princess-avatar-sm" onerror="this.src='images/default_princess.png'" style="width:24px; height:24px; border-radius:50%; border: 1.5px solid var(--neon-pink); object-fit: cover; flex-shrink:0;">
+                                        <span class="fw-bold text-pink">${escapeHtml(memberName)} 공주</span>
+                                    </div>
+                                    <span class="badge bg-dark border border-pink text-pink flex-shrink-0" style="font-size: 0.68rem;">${scoreStr}</span>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        attendeesHtml = `<div class="small text-muted text-center py-1.5">이 차수의 술타임 평가를 작성한 공주님이 아직 없사옵니다. 🥀</div>`;
+                    }
+
+                    const safeId = `book_round_${row.round_no}`;
+
                     tbody.innerHTML += `
-                        <tr>
+                        <tr onclick="toggleAccordion('panel_${safeId}', 'arrow_panel_${safeId}')" style="cursor: pointer; transition: background 0.2s;">
                             <td style="vertical-align: middle;"><span class="badge bg-dark border border-secondary">제 ${row.round_no}회차</span></td>
-                            <td class="text-start text-wrap" style="word-break: break-all; vertical-align: middle;">${renderBookNameWithTooltip(row.round_no, row.title)}</td>
+                            <td class="text-start text-wrap" style="word-break: break-all; vertical-align: middle; position: relative;">
+                                ${renderBookNameWithTooltip(row.round_no, row.title)}
+                                <i class="fa-solid fa-chevron-down ms-1 text-muted" id="arrow_panel_${safeId}" style="font-size:0.7rem; transition: transform 0.2s;"></i>
+                            </td>
                             <td style="vertical-align: middle;">${ratingHtml}</td>
+                        </tr>
+                        <tr id="panel_${safeId}" class="d-none" style="background-color: #190B13;">
+                            <td colspan="3" class="text-start px-3 py-2.5" style="border-bottom: 1px solid rgba(255,0,127,0.15) !important; max-width:0;">
+                                <div class="text-muted small mb-2" style="font-size:0.75rem; font-weight:700;"><i class="fa-solid fa-users"></i> 토론 참석 공주별 별점 현황</div>
+                                ${attendeesHtml}
+                            </td>
                         </tr>
                     `;
                 });
