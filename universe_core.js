@@ -60,8 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: '🥗 DIET HUB', url: `${pathPrefix}diet/export.html` },
         { name: '🏋️‍♂️ WORKOUT HUB', url: `${pathPrefix}workout/workout.html` },
         { name: '💰 FINANCE HUB', url: `${pathPrefix}finance/out.html` }
-        // 🚀 추후 프로젝트 확장 라인 예시
-        // ,{ name: '📚 BOOKCLUB HUB', url: `${pathPrefix}bookclub/index.html` }
     ];
 
     const activeId = navContainer.getAttribute('data-active');
@@ -128,3 +126,31 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }, 150);
     }
 });
+
+// 3. 🇰🇷 KST (Asia/Seoul) 타임존 동기화 유틸리티 함수 전역 서빙
+function getSmartDate() {
+    const curr = new Date();
+    const utc = curr.getTime() + (curr.getTimezoneOffset() * 60000);
+    const kstTime = new Date(utc + (9 * 60 * 60 * 1000));
+    let targetDate = new Date(kstTime); 
+    
+    if (targetDate.getHours() < 6) { 
+        if (confirm("새벽 6시 이전입니다. 어제 날짜로 기록하시겠습니까?")) { 
+            targetDate.setDate(targetDate.getDate() - 1); 
+        } 
+    }
+    
+    const yyyy = targetDate.getFullYear(); 
+    const mm = String(targetDate.getMonth() + 1).padStart(2, '0'); 
+    const dd = String(targetDate.getDate()).padStart(2, '0'); 
+    
+    const kstIsoString = targetDate.getFullYear() + '-' +
+        String(targetDate.getMonth() + 1).padStart(2, '0') + '-' +
+        String(targetDate.getDate()).padStart(2, '0') + 'T' +
+        String(targetDate.getHours()).padStart(2, '0') + ':' +
+        String(targetDate.getMinutes()).padStart(2, '0') + ':' +
+        String(targetDate.getSeconds()).padStart(2, '0') + '+09:00';
+        
+    return { idStr: `${yyyy}${mm}${dd}`, justDate: `${yyyy}-${mm}-${dd}`, full: kstIsoString };
+}
+window.getSmartDate = getSmartDate;
