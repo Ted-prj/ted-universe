@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.7.4</title>
+    <title>BLACKPINK WORKOUT v5.7.5</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -272,6 +272,42 @@
             </div>`;
         }
 
+        async function detachSuperset(ssId) {
+            if (!confirm("이 수퍼세트 구성을 해제하고 각각의 일반 운동 카드로 분리하시겠습니까?")) return;
+            const { error } = await _db.schema('workout').from('active_workout').update({ program_id: null }).eq('program_id', ssId);
+            if (error) alert("분리 실패: " + error.message); else await window.refreshActiveList();
+        }
+
+        async function saveSetRow(id) {
+            const btn = document.getElementById(`save-btn-${id}`);
+            const s = window.ACTIVE_SETS.find(x => x.id === id);
+            const ex = window.EX_MASTER.find(e => e.id === s.exercise_id);
+            const up = { 
+                status: 'SAVED', note: document.getElementById(`n-${id}`).value, 
+                equipment_type: document.getElementById('sel-equip-' + id)?.value ? Number(document.getElementById('sel-equip-' + id).value) : null, 
+                weight_type: document.getElementById('sel-weight-type-' + id)?.value ? Number(document.getElementById('sel-weight-type-' + id).value) : null, 
+                grip_type: document.getElementById('sel-grip-' + id)?.value ? Number(document.getElementById('sel-grip-' + id).value) : null, 
+                lying_type: document.getElementById('sel-lying-' + id)?.value ? Number(document.getElementById('sel-lying-' + id).value) : null 
+            };
+            
+            if (ex.use_weight) up.weight = Number(document.getElementById(`w-${id}`).value);
+            if (ex.use_reps) up.reps = Number(document.getElementById(`r-${id}`).value);
+            if (ex.use_set_time) up.set_time = Number(document.getElementById(`st-${id}`).value);
+            if (ex.use_exercise_time) up.workout_time = Number(document.getElementById('t-' + id).value);
+            if (ex.use_machine_lv) up.level = Number(document.getElementById(`ml-${id}`).value);
+            if (ex.use_machine_speed) up.machine_speed = Number(document.getElementById(`ms-${id}`).value);
+            if (ex.use_heart_rate) up.heart_rate = Number(document.getElementById(`hr-${id}`).value);
+            if (ex.use_pause_count) up.pause_count = Number(document.getElementById(`pc-${id}`).value);
+            
+            const { error } = await _db.schema('workout').from('active_workout').update(up).eq('id', id);
+            if (!error) {
+                btn.innerText = 'SAVED'; btn.classList.remove('st-update'); btn.classList.add('st-saved');
+                document.getElementById(`set-row-content-${id}`).classList.add('saved-row');
+                const ta = document.getElementById(`n-${id}`); if (ta) ta.style.height = '28px';
+                Object.assign(s, up); window.updateProgress(); 
+            } else { alert("저장 실패: " + error.message); }
+        }
+
         async function handleTypeChange(typeId) {
             const buwiWrapper = document.getElementById('q-buwi-wrapper');
             const exWrapper = document.getElementById('q-ex-wrapper');
@@ -321,6 +357,89 @@
         }
         window.handleBuwiChange = handleBuwiChange;
 
+        async function loadQuickExStats(exId) {
+            if (!exId) {
+                document.getElementById('last-date-ex').innerText = '(-)';
+                return;
+            }
+            const ex = window.EX_MASTER.find(e => e.id === exId);
+            const { best, bestLog, recentConfigs } = await getDetailedStats(exId);
+            
+            const { data: lastLogForDate } = await _db.schema('workout').from('logs').select('workout_date').eq('exercise_id', exId).order('workout_date', { ascending: false }).limit(1);
+            if (lastLogForDate && lastLogForDate.length > 0) {
+                document.getElementById('last-date-ex').innerText = `(${lastLogForDate[0].workout_date.split('T')[0].slice(5).replace('-', '.')})`;
+            } else {
+                document.getElementById('last-date-ex').innerText = '(-)';
+            }
+            
+            let bestFinalHtml = '';
+            if (bestLog) {
+                const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+                if (isCardio) {
+                    bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.65rem;">(강도: Lv.${bestLog.machine_lv || '-'} / 속도: ${bestLog.machine_speed || '-'}km/h)</span>`;
+                } else if (bestLog.weight) {
+                    let finalW = calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
+                    bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.65rem;">(최종 세트: ${bestLog.weight}kg x ${bestLog.reps}회 / 총합: ${finalW}kg)</span>`;
+                }
+            }
+
+            document.getElementById('q-stats-area').style.display = 'block';
+            document.getElementById('q-best-info').innerHTML = `
+                <b class="text-pink">🏆 BEST 볼륨: ${best}${bestFinalHtml}</b> 
+                <small style="color:#666">(${bestLog.date || '-'})</small>
+                ${bestLog.note ? `<div style="font-size:0.65rem; color:var(--bp-pink); margin-top:3px; font-style:italic;">📝 ${bestLog.note}</div>` : ''}
+            `;
+            document.getElementById('q-recent-configs').innerHTML = recentConfigs.map(c => `<span class="recent-config-item">${c}</span>`).join('');
+            renderQuickInputFields(ex, bestLog);
+        }
+        window.loadQuickExStats = loadQuickExStats;
+
+        function renderQuickInputFields(ex, best) {
+            let html = '';
+            if (ex.use_set_no) {
+                html += `<div class="col-3"><label class="label-small">세트수</label><input type="number" id="q-val-sets" class="form-control" value="3"></div>`;
+            }
+            if (ex.use_equipment) {
+                html += makeQField('col-4', '기구', makeQSelect('q-val-equip', window.SETTINGS_CODE['EQUIPMENT'], best.equip || ex.equipment_type));
+            }
+            if (ex.use_weight_type) {
+                html += makeQField('col-4', '무게타입', makeQSelect('q-val-weight-type', window.SETTINGS_CODE['WEIGHT_SUB_TYPE'], best.weight_type || ex.weight_type));
+            }
+            if (ex.use_grip) {
+                html += makeQField('col-4', '그립', makeQSelect('q-val-grip', window.SETTINGS_CODE['GRIP'], best.grip || ex.grip_type));
+            }
+            if (ex.use_lying) {
+                html += makeQField('col-4', '라잉', makeQSelect('q-val-lying', window.SETTINGS_CODE['LYING'], best.lying || ex.lying_type));
+            }
+            if (ex.use_weight) {
+                html += makeQField('col-4', '무게(kg)', `<input type="number" id="q-val-weight" class="form-control" value="${best.weight !== undefined ? best.weight : ''}">`);
+            }
+            if (ex.use_reps) {
+                html += makeQField('col-4', '횟수', `<input type="number" id="q-val-reps" class="form-control" value="${best.reps !== undefined ? best.reps : ''}">`);
+            }
+            if (ex.use_set_time) {
+                html += makeQField('col-4', '시간(s)', `<input type="number" id="q-val-set-time" class="form-control" value="${best.set_time !== undefined ? best.set_time : ''}">`);
+            }
+            if (ex.use_exercise_time) {
+                html += makeQField('col-4', '전체시간(m)', `<input type="number" id="q-val-time" class="form-control" value="${best.time !== undefined ? best.time : ''}">`);
+            }
+            if (ex.use_machine_lv) {
+                html += makeQField('col-4', '강도', `<input type="number" id="q-val-ml" class="form-control" value="${best.machine_lv !== undefined ? best.machine_lv : ''}">`);
+            }
+            if (ex.use_machine_speed) {
+                html += makeQField('col-4', '속도', `<input type="number" id="val-ms" class="form-control" value="${best.machine_speed !== undefined ? best.machine_speed : ''}">`);
+            }
+            if (ex.use_heart_rate) {
+                html += makeQField('col-4', '심박수', `<input type="number" id="q-val-hr" class="form-control" value="${best.heart_rate !== undefined ? best.heart_rate : ''}">`);
+            }
+            if (ex.use_pause_count) {
+                html += makeQField('col-4', '포즈 수', `<input type="number" id="q-val-pause" class="form-control" value="0" inputmode="numeric" pattern="[0-9]*">`);
+            }
+            
+            document.getElementById('q-inputs').innerHTML = html;
+            window.handleSupersetSelectChange(document.getElementById('q-superset').value);
+        }
+
         async function addWorkoutFromQuick() {
             const exId = document.getElementById('q-ex').value;
             if (!exId) return alert("종목을 선택하세요.");
@@ -359,6 +478,97 @@
             const { error } = await _db.schema('workout').from('active_workout').insert(payload);
             if (error) alert("추가 실패: " + error.message); 
             else { document.getElementById('q-superset').value = ''; const setsInput = document.getElementById('q-val-sets'); if (setsInput) setsInput.disabled = false; await window.refreshActiveList(); }
+        }
+
+        function openReorderModal() {
+            const blocks = []; const blockMap = {};
+            window.ACTIVE_SETS.forEach(s => {
+                const isSS = s.program_id && s.program_id.startsWith('ss_'); const key = isSS ? s.program_id : `single_${s.display_name}`;
+                if (!blockMap[key]) { blockMap[key] = { id: key, isSuperset: isSS, names: [], sets: [] }; blocks.push(blockMap[key]); }
+                blockMap[key].sets.push(s); if (!blockMap[key].names.includes(s.display_name)) blockMap[key].names.push(s.display_name);
+            });
+            window.CURRENT_REORDER_BLOCKS = blocks; renderReorderList();
+            document.getElementById('reorder-overlay').style.display = 'flex';
+        }
+
+        function renderReorderList() {
+            const container = document.getElementById('reorder-list-container');
+            if (window.CURRENT_REORDER_BLOCKS.length === 0) { container.innerHTML = '<div class="text-center text-secondary py-4">현재 추가된 운동 종목이 없습니다.</div>'; return; }
+            container.innerHTML = window.CURRENT_REORDER_BLOCKS.map((b, idx) => {
+                const title = b.isSuperset ? `🔗 수퍼세트 (${b.names.join(' + ')})` : b.names[0];
+                return `<div class="d-flex justify-content-between align-items-center mb-2 p-3" style="background:rgba(255,255,255,0.03); border-radius:14px; border:1px solid #222;"><span style="font-size:0.85rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%; color:#eee;">${title}</span><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-light px-2 py-1" style="font-size:0.75rem;" onclick="moveReorderBlock(${idx}, -1)">🔼</button><button class="btn btn-sm btn-outline-light px-2 py-1" style="font-size:0.75rem;" onclick="moveReorderBlock(${idx}, 1)">🔽</button></div></div>`;
+            }).join('');
+        }
+
+        function moveReorderBlock(idx, dir) {
+            const targetIdx = idx + dir; if (targetIdx < 0 || targetIdx >= window.CURRENT_REORDER_BLOCKS.length) return;
+            const temp = window.CURRENT_REORDER_BLOCKS[idx]; window.CURRENT_REORDER_BLOCKS[idx] = window.CURRENT_REORDER_BLOCKS[targetIdx]; window.CURRENT_REORDER_BLOCKS[targetIdx] = temp;
+            renderReorderList();
+        }
+
+        function closeReorderModal() { document.getElementById('reorder-overlay').style.display = 'none'; }
+
+        async function saveNewOrder() {
+            if (!window.CURRENT_REORDER_BLOCKS || window.CURRENT_REORDER_BLOCKS.length === 0) return;
+            const allSetsNewOrder = [];
+            window.CURRENT_REORDER_BLOCKS.forEach(b => {
+                if (b.isSuperset) b.sets.sort((a, b) => a.set_no - b.set_no || a.id - b.id); else b.sets.sort((a, b) => a.set_no - b.set_no);
+                allSetsNewOrder.push(...b.sets);
+            });
+            if (allSetsNewOrder.length === 0) return closeReorderModal();
+            const originalIds = window.ACTIVE_SETS.map(s => s.id);
+            const payload = allSetsNewOrder.map(s => { const { id, created_at, ...rest } = s; return rest; });
+            const { error: delError } = await _db.schema('workout').from('active_workout').delete().in('id', originalIds);
+            if (delError) return alert("순서 배치 마이그레이션 오류(삭제 단계): " + delError.message);
+            const { error: insError = null } = await _db.schema('workout').from('active_workout').insert(payload);
+            if (insError) return alert("순서 배치 마이그레이션 오류(재적재 단계): " + insError.message);
+            closeReorderModal(); await window.refreshActiveList(); 
+        }
+
+        function handleTouchStart(e) { touchStartX = e.touches[0].clientX; }
+        function handleTouchMoveGroup(e, blockId) { const diffX = e.touches[0].clientX - touchStartX; if (diffX < 0) { document.getElementById(`group-content-${blockId}`).style.transform = `translateX(${Math.max(diffX, -100)}px)`; document.getElementById(`del-group-bg-${blockId}`).style.right = '0'; } }
+        async function handleTouchEndGroup(e, blockId, label, isSuperset) { 
+            const diffX = e.changedTouches[0].clientX - touchStartX;
+            if (diffX < -150) { 
+                if (confirm(isSuperset ? "이 수퍼세트 그룹 전체를 삭제할까요?" : "이 운동 전체를 삭제할까요?")) { 
+                    const cardEl = document.getElementById(`block-card-${blockId}`);
+                    if (cardEl) {
+                        cardEl.style.transition = "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)"; cardEl.style.transform = "translateX(-100%)"; cardEl.style.opacity = "0";
+                        setTimeout(() => { cardEl.style.maxHeight = "0"; cardEl.style.margin = "0"; cardEl.style.padding = "0"; }, 150);
+                        setTimeout(() => { cardEl.remove(); }, 400);
+                    }
+                    if (isSuperset) await _db.schema('workout').from('active_workout').delete().eq('program_id', blockId);
+                    else { const originName = blockId.replace('single_', ''); await _db.schema('workout').from('active_workout').delete().eq('display_name', originName); }
+                    const { data } = await _db.schema('workout').from('active_workout').select('*').order('id'); window.ACTIVE_SETS = data || [];
+                    window.updateProgress(); window.updateSupersetDropdown();
+                } else { resetSwipeGroup(blockId); }
+            } else { resetSwipeGroup(blockId); }
+        }
+        function resetSwipeGroup(blockId) { document.getElementById('group-content-' + blockId).style.transform = 'translateX(0)'; document.getElementById('del-group-bg-' + blockId).style.right = '-100%'; }
+        function handleTouchMoveSet(e, id) { const diffX = e.touches[0].clientX - touchStartX; if (diffX < 0) { document.getElementById(`set-row-content-${id}`).style.transform = `translateX(${Math.max(diffX, -80)}px)`; document.getElementById(`del-set-bg-${id}`).style.right = '0'; } }
+        async function handleTouchEndSet(e, id, exName) { 
+            const diffX = e.changedTouches[0].clientX - touchStartX;
+            if (diffX < -120) { 
+                if (confirm("이 세트를 삭제할까요?")) { 
+                    const rowContent = document.getElementById(`set-row-content-${id}`); const swipeWrapper = rowContent?.closest('.swipe-wrapper');
+                    if (swipeWrapper) { swipeWrapper.style.transition = "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)"; swipeWrapper.style.transform = "translateX(-100%)"; swipeWrapper.style.opacity = "0"; setTimeout(() => { swipeWrapper.style.maxHeight = "0"; swipeWrapper.style.margin = "0"; swipeWrapper.style.padding = "0"; }, 150); setTimeout(() => { swipeWrapper.remove(); }, 400); }
+                    await _db.schema('workout').from('active_workout').delete().eq('id', id); 
+                    const { data } = await _db.schema('workout').from('active_workout').select('*').order('id'); window.ACTIVE_SETS = data || [];
+                    window.updateProgress();
+                } else { resetSwipeSet(id); }
+            } else { resetSwipeSet(id); }
+        }
+        function resetSwipeSet(id) { document.getElementById(`set-row-content-${id}`).style.transform = 'translateX(0)'; document.getElementById('del-set-bg-' + id).style.right = '-100%'; }
+
+        function addSetEventListeners(id) { 
+            const row = document.getElementById(`set-row-content-${id}`); if (!row) return; 
+            row.querySelectorAll(`.row-input-${id}, select`).forEach(el => { el.addEventListener('input', () => { const btn = document.getElementById(`save-btn-${id}`); if (btn && btn.innerText === 'SAVED') { btn.innerText = 'UPDATE'; btn.classList.add('st-update'); } }); }); 
+            const ta = document.getElementById(`n-${id}`);
+            if (ta) {
+                ta.addEventListener('focus', function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; });
+                ta.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; });
+                ta.addEventListener('blur', function() { const btn = document.getElementById(`save-btn-${id}`); if (btn && btn.innerText === 'SAVED') this.style.height = '28px'; });
+            }
         }
 
         function toggleFinishArea() {
