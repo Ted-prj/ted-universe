@@ -19,7 +19,8 @@ const DIET_TABLES = [
     { schema: 'diet', id: 'condition_logs', name: '12. 생활/컨디션', dateCol: 'log_date', group: 'daily' },
     { schema: 'diet', id: 'sleep_logs', name: '13. 수면 로그', dateCol: 'log_date', group: 'daily' },
     { schema: 'workout', id: 'session_logs', name: 'W1. 운동 세션 로그', dateCol: 'workout_date', group: 'workout' },
-    { schema: 'workout', id: 'logs', name: 'W2. 운동 상세 로그', dateCol: 'workout_date', group: 'workout' },
+    { schema: 'workout', id: 'session_exercises', name: 'W2. 운동 종목 로그', dateCol: false, group: 'workout' },
+    { schema: 'workout', id: 'logs', name: 'W3. 운동 세트 로그', dateCol: 'workout_date', group: 'workout' },
     { schema: 'workout', id: 'active_workout', name: 'W3. 오늘의 운동', dateCol: 'created_at', group: 'workout' }
 ];
 
