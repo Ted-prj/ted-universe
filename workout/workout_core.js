@@ -1,7 +1,7 @@
 /**
- * 🏋️‍♂️ BLACKPINK WORKOUT - Core Data Layer & Transaction Engine (v5.7.2)
+ * 🏋️‍♂️ BLACKPINK WORKOUT - Core Data Layer & Transaction Engine (v5.7.3)
  * Prepared by Chef Sanji for Ted's Universe
- * [BUGFIX]: 라이프사이클 레이스 컨디션 차단 및 함수 글로벌 동기화
+ * [BUGFIX]: window 전역 객체 스코프 완전 동기화 및 라이프사이클 안착
  */
 
 // 파일 간의 안전한 참조를 위해 전역 window 스펙으로 스페이스 확장
@@ -52,7 +52,7 @@ async function init() {
     }
 }
 
-// 최종 합산 중량 연산 엔진
+// 최종 합산 중량 연산 엔진 (덤벨 2배수 및 올림픽 바 20kg 보정 매퍼)
 function calculateFinalWeight(weight, weightTypeId, equipTypeId) {
     let multiplier = 1;
     if ([26, 28, 46].includes(Number(weightTypeId))) {

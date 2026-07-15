@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.7.2</title>
+    <title>BLACKPINK WORKOUT v5.7.3</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -358,6 +358,53 @@
         }
         window.loadQuickExStats = loadQuickExStats;
 
+        // 🌟 [그립/라잉 파라미터 긴급 정렬 완비]: list.map 크래시 원천 격파
+        function renderQuickInputFields(ex, best) {
+            let html = '';
+            if (ex.use_set_no) {
+                html += `<div class="col-3"><label class="label-small">세트수</label><input type="number" id="q-val-sets" class="form-control" value="3"></div>`;
+            }
+            if (ex.use_equipment) {
+                html += makeQField('col-4', '기구', makeQSelect('q-val-equip', window.SETTINGS_CODE['EQUIPMENT'], best.equip || ex.equipment_type));
+            }
+            if (ex.use_weight_type) {
+                html += makeQField('col-4', '무게타입', makeQSelect('q-val-weight-type', window.SETTINGS_CODE['WEIGHT_SUB_TYPE'], best.weight_type || ex.weight_type));
+            }
+            if (ex.use_grip) {
+                html += makeQField('col-4', '그립', makeQSelect('q-val-grip', window.SETTINGS_CODE['GRIP'], best.grip || ex.grip_type));
+            }
+            if (ex.use_lying) {
+                html += makeQField('col-4', '라잉', makeQSelect('q-val-lying', window.SETTINGS_CODE['LYING'], best.lying || ex.lying_type));
+            }
+            if (ex.use_weight) {
+                html += makeQField('col-4', '무게(kg)', `<input type="number" id="q-val-weight" class="form-control" value="${best.weight !== undefined ? best.weight : ''}">`);
+            }
+            if (ex.use_reps) {
+                html += makeQField('col-4', '횟수', `<input type="number" id="q-val-reps" class="form-control" value="${best.reps !== undefined ? best.reps : ''}">`);
+            }
+            if (ex.use_set_time) {
+                html += makeQField('col-4', '시간(s)', `<input type="number" id="q-val-set-time" class="form-control" value="${best.set_time !== undefined ? best.set_time : ''}">`);
+            }
+            if (ex.use_exercise_time) {
+                html += makeQField('col-4', '전체시간(m)', `<input type="number" id="q-val-time" class="form-control" value="${best.time !== undefined ? best.time : ''}">`);
+            }
+            if (ex.use_machine_lv) {
+                html += makeQField('col-4', '강도', `<input type="number" id="q-val-ml" class="form-control" value="${best.machine_lv !== undefined ? best.machine_lv : ''}">`);
+            }
+            if (ex.use_machine_speed) {
+                html += makeQField('col-4', '속도', `<input type="number" id="val-ms" class="form-control" value="${best.machine_speed !== undefined ? best.machine_speed : ''}">`);
+            }
+            if (ex.use_heart_rate) {
+                html += makeQField('col-4', '심박수', `<input type="number" id="q-val-hr" class="form-control" value="${best.heart_rate !== undefined ? best.heart_rate : ''}">`);
+            }
+            if (ex.use_pause_count) {
+                html += makeQField('col-4', '포즈 수', `<input type="number" id="q-val-pause" class="form-control" value="0" inputmode="numeric" pattern="[0-9]*">`);
+            }
+            
+            document.getElementById('q-inputs').innerHTML = html;
+            handleSupersetSelectChange(document.getElementById('q-superset').value);
+        }
+
         function openReorderModal() {
             const blocks = []; const blockMap = {};
             window.ACTIVE_SETS.forEach(s => {
@@ -454,7 +501,6 @@
         function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v.id}" ${v.id == current ? 'selected' : ''}>${v.name}</option>`).join('')}</select>`; }
         function handleRoutineChange(val) { console.log("루틴 바인딩 감지:", val); }
 
-        // 🌟 [핵심 수리 완료]: 동적으로 가동 세션지표 레이아웃을 주입하는 인젝터 부활
         function toggleFinishArea() {
             const area = document.getElementById('session-input-area');
             if (area.style.display === 'block') {
@@ -524,7 +570,6 @@
             area.style.display = 'block'; 
         }
 
-        // 전체 컨포넌트가 완벽 안착된 최하단에 안전한 레이트 바인딩 구동!
         window.init();
     </script>
 </body>
