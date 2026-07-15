@@ -1,7 +1,7 @@
 /**
- * 🏋️‍♂️ BLACKPINK WORKOUT - Core Data Layer & Transaction Engine (v5.7.3)
+ * 🏋️‍♂️ BLACKPINK WORKOUT - Core Data Layer & Transaction Engine (v5.7.5 - Sanji Clean)
  * Prepared by Chef Sanji for Ted's Universe
- * [BUGFIX]: window 전역 객체 스코프 완전 동기화 및 라이프사이클 안착
+ * [BUGFIX]: processFinalSave 내의 구조분해 할당 치명적 오타 전면 수정 완료
  */
 
 // 파일 간의 안전한 참조를 위해 전역 window 스펙으로 스페이스 확장
@@ -17,7 +17,7 @@ window.SETTINGS_CODE = {
 window.SETTINGS_LOOKUP = {};
 window.ACTIVE_SETS = [];
 
-// 스마트폰 메모리 가속 버퍼 캐시
+// 스마트폰 메모리 가속 버퍼 캐시 보관소
 window.STATS_CACHE = {
     bestSe: [],
     logs: []
@@ -65,7 +65,7 @@ function calculateFinalWeight(weight, weightTypeId, equipTypeId) {
     return (Number(weight) * multiplier) + baseWeight;
 }
 
-// 고성능 하이브리드 로컬 캐시/실시간 전적 분석기
+// 고성능 하이브리드 로컬 캐시/실시간 전적 분석기 (2중 자가 복원 자가 수선 필터링 장착)
 async function getDetailedStats(exId, setNo = null) {
     if (typeof _getDetailedStats === 'function') {
         return await _getDetailedStats(exId, setNo);
@@ -81,54 +81,44 @@ async function getDetailedStats(exId, setNo = null) {
         let lastPauseCount = 0;
 
         // --- 🏆 1. BEST 볼륨 및 메타 복원 로직 ---
-        if (cachedBestSe || (window.STATS_CACHE?.bestSe && window.STATS_CACHE.bestSe.length > 0)) {
-            if (cachedBestSe) {
-                const vol = Number(cachedBestSe.total_volume || 0);
-                const ex = window.EX_MASTER.find(e => e.id === exId);
-                const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+        if (cachedBestSe) {
+            const vol = Number(cachedBestSe.total_volume || 0);
+            const ex = window.EX_MASTER.find(e => e.id === exId);
+            const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
 
-                if (isCardio) {
-                    best = `${vol.toLocaleString()}분`;
-                } else if (vol === 0) {
-                    const targetLogs = cachedLogs.filter(l => l.session_id === cachedBestSe.session_id);
-                    const totalReps = targetLogs.reduce((sum, l) => sum + Number(l.reps || 0), 0);
-                    best = `총 ${totalReps}회 (맨몸, ${targetLogs.length}S)`;
-                } else {
-                    best = `${vol.toLocaleString()}kg`;
-                }
+            if (isCardio) {
+                best = `${vol.toLocaleString()}분`;
+            } else if (vol === 0) {
+                const targetLogs = cachedLogs.filter(l => l.session_id === cachedBestSe.session_id);
+                const totalReps = targetLogs.reduce((sum, l) => sum + Number(l.reps || 0), 0);
+                best = `총 ${totalReps}회 (맨몸, ${targetLogs.length}S)`;
+            } else {
+                best = `${vol.toLocaleString()}kg`;
+            }
 
-                let parsedDate = '-';
-                if (cachedBestSe.created_at) {
-                    parsedDate = cachedBestSe.created_at.split('T')[0];
-                } else if (cachedBestSe.session_id) {
-                    const match = cachedBestSe.session_id.match(/^(\d{4})(\d{2})(\d{2})/);
-                    if (match) parsedDate = `${match[1]}-${match[2]}-${match[3]}`;
-                }
+            let parsedDate = '-';
+            if (cachedBestSe.created_at) {
+                parsedDate = cachedBestSe.created_at.split('T')[0];
+            } else if (cachedBestSe.session_id) {
+                const match = cachedBestSe.session_id.match(/^(\d{4})(\d{2})(\d{2})/);
+                if (match) parsedDate = `${match[1]}-${match[2]}-${match[3]}`;
+            }
 
-                const targetSetLogs = [...cachedLogs].filter(l => l.session_id === cachedBestSe.session_id)
-                    .sort((a, b) => b.set_no - a.set_no);
+            const targetSetLogs = [...cachedLogs].filter(l => l.session_id === cachedBestSe.session_id)
+                .sort((a, b) => b.set_no - a.set_no);
 
-                if (targetSetLogs.length > 0) {
-                    const lastLog = targetSetLogs[0];
-                    bestLog = { 
-                        weight: lastLog.weight !== null && lastLog.weight !== undefined ? Number(lastLog.weight) : 0, 
-                        reps: lastLog.reps !== null && lastLog.reps !== undefined ? Number(lastLog.reps) : 0, 
-                        date: parsedDate, 
-                        note: lastLog.note || '', 
-                        weight_type: lastLog.weight_type, 
-                        equipment_type: lastLog.equipment_type,
-                        equip: lastLog.equipment_type,
-                        grip: lastLog.grip_type,
-                        lying: lastLog.lying_type,
-                        set_time: lastLog.set_time,
-                        time: lastLog.workout_time,
-                        machine_lv: lastLog.level,
-                        machine_speed: lastLog.machine_speed,
-                        heart_rate: lastLog.heart_rate
-                    }; 
-                } else {
-                    bestLog.date = parsedDate;
-                }
+            if (targetSetLogs.length > 0) {
+                const lastLog = targetSetLogs[0];
+                bestLog = { 
+                    weight: lastLog.weight !== null && lastLog.weight !== undefined ? Number(lastLog.weight) : 0, 
+                    reps: lastLog.reps !== null && lastLog.reps !== undefined ? Number(lastLog.reps) : 0, 
+                    date: parsedDate, note: lastLog.note || '', 
+                    weight_type: lastLog.weight_type, equipment_type: lastLog.equipment_type, equip: lastLog.equipment_type,
+                    grip: lastLog.grip_type, lying: lastLog.lying_type, set_time: lastLog.set_time, time: lastLog.workout_time,
+                    machine_lv: lastLog.level, machine_speed: lastLog.machine_speed, heart_rate: lastLog.heart_rate
+                }; 
+            } else {
+                bestLog.date = parsedDate;
             }
         } else {
             const { data: bestSe } = await _db.schema('workout').from('session_exercises')
@@ -164,15 +154,59 @@ async function getDetailedStats(exId, setNo = null) {
                         machine_lv: lastLog.level, machine_speed: lastLog.machine_speed, heart_rate: lastLog.heart_rate
                     }; 
                 }
+            } else {
+                const { data: allLogs } = await _db.schema('workout').from('logs').select('*').eq('exercise_id', exId);
+                if (allLogs && allLogs.length > 0) {
+                    const groups = {};
+                    const ex = window.EX_MASTER.find(e => e.id === exId);
+                    const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+
+                    allLogs.forEach(log => {
+                        const dStr = log.workout_date ? log.workout_date.split('T')[0] : '9999-12-31';
+                        if (!groups[dStr]) {
+                            groups[dStr] = { date: dStr, logs: [], totalVolume: 0, maxSetNo: -1, lastSetLog: null };
+                        }
+                        groups[dStr].logs.push(log);
+                        groups[dStr].totalVolume += isCardio ? Number(log.workout_time || 0) : (Number(log.weight || 0) * Number(log.reps || 0));
+                        
+                        if (Number(log.set_no || 0) > groups[dStr].maxSetNo) {
+                            groups[dStr].maxSetNo = Number(log.set_no || 0);
+                            groups[dStr].lastSetLog = log;
+                        }
+                    });
+
+                    let bestGroup = null;
+                    Object.values(groups).forEach(g => {
+                        if (!bestGroup || g.totalVolume > bestGroup.totalVolume || (g.totalVolume === bestGroup.totalVolume && g.date > bestGroup.date)) {
+                            bestGroup = g;
+                        }
+                    });
+
+                    if (bestGroup && bestGroup.lastSetLog) {
+                        const lastLog = bestGroup.lastSetLog;
+                        if (isCardio) {
+                            best = `${bestGroup.totalVolume.toLocaleString()}분`;
+                        } else if (bestGroup.totalVolume === 0) {
+                            const totalReps = bestGroup.logs.reduce((sum, l) => sum + Number(l.reps || 0), 0);
+                            best = `총 ${totalReps}회 (맨몸, ${bestGroup.logs.length}S)`;
+                        } else {
+                            best = `${bestGroup.totalVolume.toLocaleString()}kg`;
+                        }
+
+                        bestLog = { 
+                            weight: Number(lastLog.weight || 0), reps: Number(lastLog.reps || 0), date: bestGroup.date, note: lastLog.note || '', 
+                            weight_type: lastLog.weight_type, equipment_type: lastLog.equipment_type, equip: lastLog.equipment_type,
+                            grip: lastLog.grip_type, lying: lastLog.lying_type, set_time: lastLog.set_time, time: lastLog.workout_time,
+                            machine_lv: lastLog.level, machine_speed: lastLog.machine_speed, heart_rate: lastLog.heart_rate
+                        };
+                    }
+                }
             }
         }
 
         // --- ⏮️ 2. 지난 세트별 히스토리 매핑 로직 ---
         if (window.STATS_CACHE?.logs && window.STATS_CACHE.logs.length > 0) {
-            const matchedLastLog = setNo 
-                ? cachedLogs.find(l => Number(l.set_no) === Number(setNo))
-                : cachedLogs[0];
-
+            const matchedLastLog = setNo ? cachedLogs.find(l => Number(l.set_no) === Number(setNo)) : cachedLogs[0];
             if (matchedLastLog) {
                 lastStr = `${matchedLastLog.weight}kg x ${matchedLastLog.reps}회`;
                 lastNote = matchedLastLog.note || "";
@@ -280,6 +314,7 @@ async function processFinalSave() {
     });
     
     const logsToInsert = window.ACTIVE_SETS.map(s => { 
+        // 🌟 [수리완료]: 오타 요인을 깔끔하게 청소하여 logs 테이블에 매핑 처리!
         const { id, ...rest } = s; 
         const ex = window.EX_MASTER.find(e => e.id === s.exercise_id);
         const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');

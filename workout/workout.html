@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.7.3</title>
+    <title>BLACKPINK WORKOUT v5.7.5</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -55,7 +55,7 @@
                 <div id="q-best-info" class="mb-1"></div>
                 <div id="q-recent-configs"></div>
             </div>
-            <div id="q-inputs" class="row g-2 mb-3"></div>
+            <div class="row g-2 mb-3" id="q-inputs"></div>
             <div class="mb-3">
                 <label class="label-small">수퍼세트 설정</label>
                 <select id="q-superset" class="form-select form-select-sm" onchange="window.handleSupersetSelectChange(this.value)">
@@ -83,7 +83,6 @@
     <script>
         let touchStartX = 0;
 
-        // 🧠 진척도 트래커 전역 이식 보완
         function updateProgress() { 
             const saved = window.ACTIVE_SETS.filter(s => s.status === 'SAVED').length; 
             const pct = window.ACTIVE_SETS.length ? Math.round((saved / window.ACTIVE_SETS.length) * 100) : 0; 
@@ -94,7 +93,6 @@
         }
         window.updateProgress = updateProgress;
 
-        // 🧠 수퍼세트 드롭다운 색출 갱신 전역 이식 보완
         function updateSupersetDropdown() { 
             const standalones = window.ACTIVE_SETS.filter(s => !s.program_id || !s.program_id.startsWith('ss_')); 
             const names = [...new Set(standalones.map(s => s.display_name))]; 
@@ -105,7 +103,6 @@
         }
         window.updateSupersetDropdown = updateSupersetDropdown;
 
-        // 🧠 [유실 대성공 복구]: 사라져서 퀵카드를 마비시켰던 범인 전격 처리 완료
         function handleSupersetSelectChange(val) {
             const setsInput = document.getElementById('q-val-sets');
             if (!setsInput) return;
@@ -379,10 +376,10 @@
             if (bestLog) {
                 const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
                 if (isCardio) {
-                    bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.75rem;">(강도: Lv.${bestLog.machine_lv || '-'} / 속도: ${bestLog.machine_speed || '-'}km/h)</span>`;
+                    bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.65rem;">(강도: Lv.${bestLog.machine_lv || '-'} / 속도: ${bestLog.machine_speed || '-'}km/h)</span>`;
                 } else if (bestLog.weight) {
                     let finalW = calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
-                    bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.75rem;">(최종 세트: ${bestLog.weight}kg x ${bestLog.reps}회 / 총합: ${finalW}kg)</span>`;
+                    bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.65rem;">(최종 세트: ${bestLog.weight}kg x ${bestLog.reps}회 / 총합: ${finalW}kg)</span>`;
                 }
             }
 
@@ -462,16 +459,10 @@
                 const setsInput = document.getElementById('q-val-sets'); sets = setsInput ? (parseInt(setsInput.value) || 1) : 1;
             }
             
-            let targetBodyPartId = ex.body_part;
-            if (currentTypeName === '유산소') {
-                const jeonshin = window.SETTINGS_CODE['BODY_PART'].find(b => b.name === '전신');
-                if (jeonshin) targetBodyPartId = jeonshin.id;
-            }
-            
             const payload = [];
             for (let i = 1; i <= sets; i++) {
                 payload.push({ 
-                    exercise_id: exId, display_name: ex.name, body_part: targetBodyPartId, set_no: i, status: 'TEMP', unit: ex.unit || 'kg',
+                    exercise_id: exId, display_name: ex.name, body_part: ex.body_part, set_no: i, status: 'TEMP', unit: ex.unit || 'kg',
                     weight: Number(document.getElementById('q-val-weight')?.value || 0), reps: Number(document.getElementById('q-val-reps')?.value || 0), 
                     set_time: Number(document.getElementById('q-val-set-time')?.value || 0), workout_time: Number(document.getElementById('q-val-time')?.value || 0),
                     level: Number(document.getElementById('q-val-ml')?.value || 0), machine_speed: Number(document.getElementById('val-ms')?.value || 0),
@@ -579,11 +570,6 @@
                 ta.addEventListener('blur', function() { const btn = document.getElementById(`save-btn-${id}`); if (btn && btn.innerText === 'SAVED') this.style.height = '28px'; });
             }
         }
-        
-        function makeQField(col, label, input) { return `<div class="${col} mb-2"><label class="label-small">${label}</label>${input}</div>`; }
-        function makeQSelect(id, list, def) { return `<select id="${id}" class="form-select">${list.map(v => `<option value="${v.id}" ${v.id == def ? 'selected' : ''}>${v.name}</option>`).join('')}</select>`; }
-        function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v.id}" ${v.id == current ? 'selected' : ''}>${v.name}</option>`).join('')}</select>`; }
-        function handleRoutineChange(val) { console.log("루틴 바인딩 감지:", val); }
 
         function toggleFinishArea() {
             const area = document.getElementById('session-input-area');
