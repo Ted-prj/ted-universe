@@ -15,12 +15,12 @@
     <div class="container-app">
         <div class="sticky-top-group">
             <div class="d-flex justify-content-between align-items-center">
-                <select id="routine-select" class="form-select form-select-sm" style="width:115px;" onchange="handleRoutineChange(this.value)">
+                <select id="routine-select" class="form-select form-select-sm" style="width:115px;" onchange="window.handleRoutineChange(this.value)">
                     <option value="자유운동">자유운동</option>
                 </select>
                 <div class="d-flex gap-1">
-                    <button type="button" class="btn-cancel" style="padding:6px 12px; font-size:0.75rem; border-radius:10px;" onclick="openReorderModal()">순서 변경</button>
-                    <button type="button" class="btn-pink" style="padding:6px 14px; font-size:0.75rem;" onclick="toggleFinishArea()">운동 완료</button>
+                    <button type="button" class="btn-cancel" style="padding:6px 12px; font-size:0.75rem; border-radius:10px;" onclick="window.openReorderModal()">순서 변경</button>
+                    <button type="button" class="btn-pink" style="padding:6px 14px; font-size:0.75rem;" onclick="window.toggleFinishArea()">운동 완료</button>
                 </div>
             </div>
             <div id="progress-text" class="mt-3" style="font-size:0.7rem; font-weight:800; color:var(--bp-pink);">0 / 0 SAVED (0%)</div>
@@ -62,7 +62,7 @@
                     <option value="">N/A</option>
                 </select>
             </div>
-            <button class="btn-pink w-100" onclick="addWorkoutFromQuick()">리스트 추가하기</button>
+            <button class="btn-pink w-100" onclick="window.addWorkoutFromQuick()">리스트 추가하기</button>
         </div>
 
         <div id="reorder-overlay" class="reorder-overlay">
@@ -71,8 +71,8 @@
                 <p class="text-secondary mb-3" style="font-size:0.7rem;">🔼/🔽 버튼을 눌러 종목 순서를 변경하세요.</p>
                 <div id="reorder-list-container" class="reorder-list-scroll"></div>
                 <div class="d-flex gap-2">
-                    <button class="btn-pink w-100 py-2 fw-bold" onclick="saveNewOrder()">순서 저장</button>
-                    <button class="btn btn-outline-light w-100 py-2" onclick="closeReorderModal()">취소</button>
+                    <button class="btn-pink w-100 py-2 fw-bold" onclick="window.saveNewOrder()">순서 저장</button>
+                    <button class="btn btn-outline-light w-100 py-2" onclick="window.closeReorderModal()">취소</button>
                 </div>
             </div>
         </div>
@@ -157,13 +157,13 @@
             for (const block of blocks) {
                 const card = document.createElement('div');
                 card.id = `block-card-${block.id}`;
-                card.className = `workout-card border-${getPartKey(window.SETTINGS_LOOKUP[block.sets[0].body_part])}`;
+                card.className = `workout-card border-${window.getPartKey(window.SETTINGS_LOOKUP[block.sets[0].body_part])}`;
                 tempContainer.appendChild(card);
-                await renderBlockCard(card, block);
+                await window.renderBlockCard(card, block);
             }
             
             area.innerHTML = tempContainer.innerHTML;
-            window.ACTIVE_SETS.forEach(s => { addSetEventListeners(s.id); });
+            window.ACTIVE_SETS.forEach(s => { window.addSetEventListeners(s.id); });
             window.updateProgress(); 
             window.updateSupersetDropdown();
         }
@@ -186,7 +186,7 @@
             let bestInfoHtml = '';
             if (!block.isSuperset) {
                 const ex = window.EX_MASTER.find(e => e.id === block.sets[0].exercise_id);
-                const { best, bestLog } = await getDetailedStats(block.sets[0].exercise_id);
+                const { best, bestLog } = await window.getDetailedStats(block.sets[0].exercise_id);
                 
                 let bestFinalHtml = '';
                 if (bestLog) {
@@ -194,42 +194,43 @@
                     if (isCardio) {
                         bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.65rem;">(강도: Lv.${bestLog.machine_lv || '-'} / 속도: ${bestLog.machine_speed || '-'}km/h)</span>`;
                     } else if (bestLog.weight) {
-                        let finalW = calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
+                        let finalW = window.calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
                         bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.65rem;">(최종 세트: ${bestLog.weight}kg x ${bestLog.reps}회 / 총합: ${finalW}kg)</span>`;
                     }
                 }
                 bestInfoHtml = `<small class="text-pink" style="font-size:0.6rem;">🏆 BEST 볼륨: ${best}${bestFinalHtml}</small>`;
             } else {
-                bestInfoHtml = `<button class="btn btn-xs py-0 px-2" style="font-size:0.6rem; color:var(--neon-pink); border:1px solid rgba(255,63,126,0.4); border-radius:6px; background:rgba(255,63,126,0.05);" onclick="detachSuperset('${block.ssId}')">🔓 그룹 분리하기</button>`;
+                bestInfoHtml = `<button class="btn btn-xs py-0 px-2" style="font-size:0.6rem; color:var(--neon-pink); border:1px solid rgba(255,63,126,0.4); border-radius:6px; background:rgba(255,63,126,0.05);" onclick="window.detachSuperset('${block.ssId}')">🔓 그룹 분리하기</button>`;
             }
             
             let html = `
                 <div class="swipe-wrapper ex-header-wrapper">
                     <div class="swipe-del-bg" id="del-group-bg-${block.id}">ALL DELETE 🗑️</div>
                     <div class="card-header swipe-content" id="group-content-${block.id}"
-                         ontouchstart="handleTouchStart(event)" ontouchmove="handleTouchMoveGroup(event, '${block.id}')" ontouchend="handleTouchEndGroup(event, '${block.id}', '${block.id}', ${block.isSuperset})">
+                         ontouchstart="window.handleTouchStart(event)" ontouchmove="window.handleTouchMoveGroup(event, '${block.id}')" ontouchend="window.handleTouchEndGroup(event, '${block.id}', '${block.id}', ${block.isSuperset})">
                         <div><b>${titleText}</b><br>${bestInfoHtml}</div>
                         <small class="text-dim">${bodyParts}</small>
                     </div>
                 </div>
                 <div class="sets-container">`;
                 
-            for (const s of block.sets) { html += await renderSetRowHtml(s, block.isSuperset); }
+            for (const s of block.sets) { html += await window.renderSetRowHtml(s, block.isSuperset); }
             html += `</div>`;
             card.innerHTML = html;
         }
+        window.renderBlockCard = renderBlockCard;
 
         async function renderSetRowHtml(s, isSuperset) {
             const ex = window.EX_MASTER.find(e => e.id === s.exercise_id);
-            const { lastStr, lastNote, lastPauseCount } = await getDetailedStats(s.exercise_id, s.set_no);
+            const { lastStr, lastNote, lastPauseCount } = await window.getDetailedStats(s.exercise_id, s.set_no);
             const isSaved = s.status === 'SAVED';
             const exLabelText = isSuperset ? `<div class="mb-1 fw-bold" style="font-size:0.65rem; color:var(--bp-pink); opacity:0.9;">[ ${s.display_name} ]</div>` : '';
             
             let selects = '';
-            if (ex.use_equipment) selects += makeRowSelect(s.id, 'equip', window.SETTINGS_CODE['EQUIPMENT'], s.equipment_type);
-            if (ex.use_weight_type) selects += makeRowSelect(s.id, 'weight-type', window.SETTINGS_CODE['WEIGHT_SUB_TYPE'], s.weight_type || ex.weight_type);
-            if (ex.use_grip) selects += makeRowSelect(s.id, 'grip', window.SETTINGS_CODE['GRIP'], s.grip_type);
-            if (ex.use_lying) selects += makeRowSelect(s.id, 'lying', window.SETTINGS_CODE['LYING'], s.lying_type);
+            if (ex.use_equipment) selects += window.makeRowSelect(s.id, 'equip', window.SETTINGS_CODE['EQUIPMENT'], s.equipment_type);
+            if (ex.use_weight_type) selects += window.makeRowSelect(s.id, 'weight-type', window.SETTINGS_CODE['WEIGHT_SUB_TYPE'], s.weight_type || ex.weight_type);
+            if (ex.use_grip) selects += window.makeRowSelect(s.id, 'grip', window.SETTINGS_CODE['GRIP'], s.grip_type);
+            if (ex.use_lying) selects += window.makeRowSelect(s.id, 'lying', window.SETTINGS_CODE['LYING'], s.lying_type);
 
             let inputsHtml = '';
             if (ex.use_weight) inputsHtml += `<input type="number" id="w-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.weight || ''}" placeholder="kg" inputmode="numeric" pattern="[0-9]*">`;
@@ -253,7 +254,7 @@
             <div class="swipe-wrapper">
                 <div class="swipe-del-bg" id="del-set-bg-${s.id}">DELETE 🗑️</div>
                 <div id="set-row-content-${s.id}" class="set-row swipe-content ${isSaved ? 'saved-row' : ''}" 
-                     ontouchstart="handleTouchStart(event)" ontouchmove="handleTouchMoveSet(event, ${s.id})" ontouchend="handleTouchEndSet(event, ${s.id}, '${s.display_name}')">
+                     ontouchstart="window.handleTouchStart(event)" ontouchmove="window.handleTouchMoveSet(event, ${s.id})" ontouchend="window.handleTouchEndSet(event, ${s.id}, '${s.display_name}')">
                     <div class="row align-items-center g-2">
                         <div class="col-2 fw-bold text-pink text-center set-no-label">${s.set_no}S</div>
                         <div class="col-7">
@@ -266,17 +267,19 @@
                                 <textarea id="n-${s.id}" class="form-control form-control-sm row-input-${s.id}" style="font-size:0.65rem; resize:none; overflow-y:hidden; background:#1c1c1c; border:1px solid #333; color:white; height:${isSaved ? '28px' : 'auto'};" placeholder="노트 입력..." rows="1">${s.note || ''}</textarea>
                             </div>
                         </div>
-                        <div class="col-3"><button id="save-btn-${s.id}" class="btn-save ${isSaved ? 'st-saved' : ''}" onclick="saveSetRow(${s.id})">${isSaved ? 'SAVED' : 'SAVE'}</button></div>
+                        <div class="col-3"><button id="save-btn-${s.id}" class="btn-save ${isSaved ? 'st-saved' : ''}" onclick="window.saveSetRow(${s.id})">${isSaved ? 'SAVED' : 'SAVE'}</button></div>
                     </div>
                 </div>
             </div>`;
         }
+        window.renderSetRowHtml = renderSetRowHtml;
 
         async function detachSuperset(ssId) {
             if (!confirm("이 수퍼세트 구성을 해제하고 각각의 일반 운동 카드로 분리하시겠습니까?")) return;
             const { error } = await _db.schema('workout').from('active_workout').update({ program_id: null }).eq('program_id', ssId);
             if (error) alert("분리 실패: " + error.message); else await window.refreshActiveList();
         }
+        window.detachSuperset = detachSuperset;
 
         async function saveSetRow(id) {
             const btn = document.getElementById(`save-btn-${id}`);
@@ -307,6 +310,7 @@
                 Object.assign(s, up); window.updateProgress(); 
             } else { alert("저장 실패: " + error.message); }
         }
+        window.saveSetRow = saveSetRow;
 
         async function handleTypeChange(typeId) {
             const buwiWrapper = document.getElementById('q-buwi-wrapper');
@@ -363,7 +367,7 @@
                 return;
             }
             const ex = window.EX_MASTER.find(e => e.id === exId);
-            const { best, bestLog, recentConfigs } = await getDetailedStats(exId);
+            const { best, bestLog, recentConfigs } = await window.getDetailedStats(exId);
             
             const { data: lastLogForDate } = await _db.schema('workout').from('logs').select('workout_date').eq('exercise_id', exId).order('workout_date', { ascending: false }).limit(1);
             if (lastLogForDate && lastLogForDate.length > 0) {
@@ -378,7 +382,7 @@
                 if (isCardio) {
                     bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.65rem;">(강도: Lv.${bestLog.machine_lv || '-'} / 속도: ${bestLog.machine_speed || '-'}km/h)</span>`;
                 } else if (bestLog.weight) {
-                    let finalW = calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
+                    let finalW = window.calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
                     bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.65rem;">(최종 세트: ${bestLog.weight}kg x ${bestLog.reps}회 / 총합: ${finalW}kg)</span>`;
                 }
             }
@@ -390,7 +394,7 @@
                 ${bestLog.note ? `<div style="font-size:0.65rem; color:var(--bp-pink); margin-top:3px; font-style:italic;">📝 ${bestLog.note}</div>` : ''}
             `;
             document.getElementById('q-recent-configs').innerHTML = recentConfigs.map(c => `<span class="recent-config-item">${c}</span>`).join('');
-            renderQuickInputFields(ex, bestLog);
+            window.renderQuickInputFields(ex, bestLog);
         }
         window.loadQuickExStats = loadQuickExStats;
 
@@ -400,45 +404,46 @@
                 html += `<div class="col-3"><label class="label-small">세트수</label><input type="number" id="q-val-sets" class="form-control" value="3"></div>`;
             }
             if (ex.use_equipment) {
-                html += makeQField('col-4', '기구', makeQSelect('q-val-equip', window.SETTINGS_CODE['EQUIPMENT'], best.equip || ex.equipment_type));
+                html += window.makeQField('col-4', '기구', window.makeQSelect('q-val-equip', window.SETTINGS_CODE['EQUIPMENT'], best.equip || ex.equipment_type));
             }
             if (ex.use_weight_type) {
-                html += makeQField('col-4', '무게타입', makeQSelect('q-val-weight-type', window.SETTINGS_CODE['WEIGHT_SUB_TYPE'], best.weight_type || ex.weight_type));
+                html += window.makeQField('col-4', '무게타입', window.makeQSelect('q-val-weight-type', window.SETTINGS_CODE['WEIGHT_SUB_TYPE'], best.weight_type || ex.weight_type));
             }
             if (ex.use_grip) {
-                html += makeQField('col-4', '그립', makeQSelect('q-val-grip', window.SETTINGS_CODE['GRIP'], best.grip || ex.grip_type));
+                html += window.makeQField('col-4', '그립', window.makeQSelect('q-val-grip', window.SETTINGS_CODE['GRIP'], best.grip || ex.grip_type));
             }
             if (ex.use_lying) {
-                html += makeQField('col-4', '라잉', makeQSelect('q-val-lying', window.SETTINGS_CODE['LYING'], best.lying || ex.lying_type));
+                html += window.makeQField('col-4', '라잉', window.makeQSelect('q-val-lying', window.SETTINGS_CODE['LYING'], best.lying || ex.lying_type));
             }
             if (ex.use_weight) {
-                html += makeQField('col-4', '무게(kg)', `<input type="number" id="q-val-weight" class="form-control" value="${best.weight !== undefined ? best.weight : ''}">`);
+                html += window.makeQField('col-4', '무게(kg)', `<input type="number" id="q-val-weight" class="form-control" value="${best.weight !== undefined ? best.weight : ''}">`);
             }
             if (ex.use_reps) {
-                html += makeQField('col-4', '횟수', `<input type="number" id="q-val-reps" class="form-control" value="${best.reps !== undefined ? best.reps : ''}">`);
+                html += window.makeQField('col-4', '횟수', `<input type="number" id="q-val-reps" class="form-control" value="${best.reps !== undefined ? best.reps : ''}">`);
             }
             if (ex.use_set_time) {
-                html += makeQField('col-4', '시간(s)', `<input type="number" id="q-val-set-time" class="form-control" value="${best.set_time !== undefined ? best.set_time : ''}">`);
+                html += window.makeQField('col-4', '시간(s)', `<input type="number" id="q-val-set-time" class="form-control" value="${best.set_time !== undefined ? best.set_time : ''}">`);
             }
             if (ex.use_exercise_time) {
-                html += makeQField('col-4', '전체시간(m)', `<input type="number" id="q-val-time" class="form-control" value="${best.time !== undefined ? best.time : ''}">`);
+                html += window.makeQField('col-4', '전체시간(m)', `<input type="number" id="q-val-time" class="form-control" value="${best.time !== undefined ? best.time : ''}">`);
             }
             if (ex.use_machine_lv) {
-                html += makeQField('col-4', '강도', `<input type="number" id="q-val-ml" class="form-control" value="${best.machine_lv !== undefined ? best.machine_lv : ''}">`);
+                html += window.makeQField('col-4', '강도', `<input type="number" id="q-val-ml" class="form-control" value="${best.machine_lv !== undefined ? best.machine_lv : ''}">`);
             }
             if (ex.use_machine_speed) {
-                html += makeQField('col-4', '속도', `<input type="number" id="val-ms" class="form-control" value="${best.machine_speed !== undefined ? best.machine_speed : ''}">`);
+                html += window.makeQField('col-4', '속도', `<input type="number" id="val-ms" class="form-control" value="${best.machine_speed !== undefined ? best.machine_speed : ''}">`);
             }
             if (ex.use_heart_rate) {
-                html += makeQField('col-4', '심박수', `<input type="number" id="q-val-hr" class="form-control" value="${best.heart_rate !== undefined ? best.heart_rate : ''}">`);
+                html += window.makeQField('col-4', '심박수', `<input type="number" id="q-val-hr" class="form-control" value="${best.heart_rate !== undefined ? best.heart_rate : ''}">`);
             }
             if (ex.use_pause_count) {
-                html += makeQField('col-4', '포즈 수', `<input type="number" id="q-val-pause" class="form-control" value="0" inputmode="numeric" pattern="[0-9]*">`);
+                html += window.makeQField('col-4', '포즈 수', `<input type="number" id="q-val-pause" class="form-control" value="0" inputmode="numeric" pattern="[0-9]*">`);
             }
             
             document.getElementById('q-inputs').innerHTML = html;
             window.handleSupersetSelectChange(document.getElementById('q-superset').value);
         }
+        window.renderQuickInputFields = renderQuickInputFields;
 
         async function addWorkoutFromQuick() {
             const exId = document.getElementById('q-ex').value;
@@ -479,6 +484,7 @@
             if (error) alert("추가 실패: " + error.message); 
             else { document.getElementById('q-superset').value = ''; const setsInput = document.getElementById('q-val-sets'); if (setsInput) setsInput.disabled = false; await window.refreshActiveList(); }
         }
+        window.addWorkoutFromQuick = addWorkoutFromQuick;
 
         function openReorderModal() {
             const blocks = []; const blockMap = {};
@@ -487,26 +493,30 @@
                 if (!blockMap[key]) { blockMap[key] = { id: key, isSuperset: isSS, names: [], sets: [] }; blocks.push(blockMap[key]); }
                 blockMap[key].sets.push(s); if (!blockMap[key].names.includes(s.display_name)) blockMap[key].names.push(s.display_name);
             });
-            window.CURRENT_REORDER_BLOCKS = blocks; renderReorderList();
+            window.CURRENT_REORDER_BLOCKS = blocks; window.renderReorderList();
             document.getElementById('reorder-overlay').style.display = 'flex';
         }
+        window.openReorderModal = openReorderModal;
 
         function renderReorderList() {
             const container = document.getElementById('reorder-list-container');
             if (window.CURRENT_REORDER_BLOCKS.length === 0) { container.innerHTML = '<div class="text-center text-secondary py-4">현재 추가된 운동 종목이 없습니다.</div>'; return; }
             container.innerHTML = window.CURRENT_REORDER_BLOCKS.map((b, idx) => {
                 const title = b.isSuperset ? `🔗 수퍼세트 (${b.names.join(' + ')})` : b.names[0];
-                return `<div class="d-flex justify-content-between align-items-center mb-2 p-3" style="background:rgba(255,255,255,0.03); border-radius:14px; border:1px solid #222;"><span style="font-size:0.85rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%; color:#eee;">${title}</span><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-light px-2 py-1" style="font-size:0.75rem;" onclick="moveReorderBlock(${idx}, -1)">🔼</button><button class="btn btn-sm btn-outline-light px-2 py-1" style="font-size:0.75rem;" onclick="moveReorderBlock(${idx}, 1)">🔽</button></div></div>`;
+                return `<div class="d-flex justify-content-between align-items-center mb-2 p-3" style="background:rgba(255,255,255,0.03); border-radius:14px; border:1px solid #222;"><span style="font-size:0.85rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%; color:#eee;">${title}</span><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-light px-2 py-1" style="font-size:0.75rem;" onclick="window.moveReorderBlock(${idx}, -1)">🔼</button><button class="btn btn-sm btn-outline-light px-2 py-1" style="font-size:0.75rem;" onclick="window.moveReorderBlock(${idx}, 1)">🔽</button></div></div>`;
             }).join('');
         }
+        window.renderReorderList = renderReorderList;
 
         function moveReorderBlock(idx, dir) {
             const targetIdx = idx + dir; if (targetIdx < 0 || targetIdx >= window.CURRENT_REORDER_BLOCKS.length) return;
             const temp = window.CURRENT_REORDER_BLOCKS[idx]; window.CURRENT_REORDER_BLOCKS[idx] = window.CURRENT_REORDER_BLOCKS[targetIdx]; window.CURRENT_REORDER_BLOCKS[targetIdx] = temp;
-            renderReorderList();
+            window.renderReorderList();
         }
+        window.moveReorderBlock = moveReorderBlock;
 
         function closeReorderModal() { document.getElementById('reorder-overlay').style.display = 'none'; }
+        window.closeReorderModal = closeReorderModal;
 
         async function saveNewOrder() {
             if (!window.CURRENT_REORDER_BLOCKS || window.CURRENT_REORDER_BLOCKS.length === 0) return;
@@ -515,18 +525,23 @@
                 if (b.isSuperset) b.sets.sort((a, b) => a.set_no - b.set_no || a.id - b.id); else b.sets.sort((a, b) => a.set_no - b.set_no);
                 allSetsNewOrder.push(...b.sets);
             });
-            if (allSetsNewOrder.length === 0) return closeReorderModal();
+            if (allSetsNewOrder.length === 0) return window.closeReorderModal();
             const originalIds = window.ACTIVE_SETS.map(s => s.id);
             const payload = allSetsNewOrder.map(s => { const { id, created_at, ...rest } = s; return rest; });
             const { error: delError } = await _db.schema('workout').from('active_workout').delete().in('id', originalIds);
             if (delError) return alert("순서 배치 마이그레이션 오류(삭제 단계): " + delError.message);
             const { error: insError = null } = await _db.schema('workout').from('active_workout').insert(payload);
             if (insError) return alert("순서 배치 마이그레이션 오류(재적재 단계): " + insError.message);
-            closeReorderModal(); await window.refreshActiveList(); 
+            window.closeReorderModal(); await window.refreshActiveList(); 
         }
+        window.saveNewOrder = saveNewOrder;
 
         function handleTouchStart(e) { touchStartX = e.touches[0].clientX; }
+        window.handleTouchStart = handleTouchStart;
+        
         function handleTouchMoveGroup(e, blockId) { const diffX = e.touches[0].clientX - touchStartX; if (diffX < 0) { document.getElementById(`group-content-${blockId}`).style.transform = `translateX(${Math.max(diffX, -100)}px)`; document.getElementById(`del-group-bg-${blockId}`).style.right = '0'; } }
+        window.handleTouchMoveGroup = handleTouchMoveGroup;
+        
         async function handleTouchEndGroup(e, blockId, label, isSuperset) { 
             const diffX = e.changedTouches[0].clientX - touchStartX;
             if (diffX < -150) { 
@@ -541,11 +556,17 @@
                     else { const originName = blockId.replace('single_', ''); await _db.schema('workout').from('active_workout').delete().eq('display_name', originName); }
                     const { data } = await _db.schema('workout').from('active_workout').select('*').order('id'); window.ACTIVE_SETS = data || [];
                     window.updateProgress(); window.updateSupersetDropdown();
-                } else { resetSwipeGroup(blockId); }
-            } else { resetSwipeGroup(blockId); }
+                } else { window.resetSwipeGroup(blockId); }
+            } else { window.resetSwipeGroup(blockId); }
         }
+        window.handleTouchEndGroup = handleTouchEndGroup;
+        
         function resetSwipeGroup(blockId) { document.getElementById('group-content-' + blockId).style.transform = 'translateX(0)'; document.getElementById('del-group-bg-' + blockId).style.right = '-100%'; }
+        window.resetSwipeGroup = resetSwipeGroup;
+        
         function handleTouchMoveSet(e, id) { const diffX = e.touches[0].clientX - touchStartX; if (diffX < 0) { document.getElementById(`set-row-content-${id}`).style.transform = `translateX(${Math.max(diffX, -80)}px)`; document.getElementById(`del-set-bg-${id}`).style.right = '0'; } }
+        window.handleTouchMoveSet = handleTouchMoveSet;
+        
         async function handleTouchEndSet(e, id, exName) { 
             const diffX = e.changedTouches[0].clientX - touchStartX;
             if (diffX < -120) { 
@@ -555,10 +576,13 @@
                     await _db.schema('workout').from('active_workout').delete().eq('id', id); 
                     const { data } = await _db.schema('workout').from('active_workout').select('*').order('id'); window.ACTIVE_SETS = data || [];
                     window.updateProgress();
-                } else { resetSwipeSet(id); }
-            } else { resetSwipeSet(id); }
+                } else { window.resetSwipeSet(id); }
+            } else { window.resetSwipeSet(id); }
         }
+        window.handleTouchEndSet = handleTouchEndSet;
+        
         function resetSwipeSet(id) { document.getElementById(`set-row-content-${id}`).style.transform = 'translateX(0)'; document.getElementById('del-set-bg-' + id).style.right = '-100%'; }
+        window.resetSwipeSet = resetSwipeSet;
 
         function addSetEventListeners(id) { 
             const row = document.getElementById(`set-row-content-${id}`); if (!row) return; 
@@ -570,6 +594,19 @@
                 ta.addEventListener('blur', function() { const btn = document.getElementById(`save-btn-${id}`); if (btn && btn.innerText === 'SAVED') this.style.height = '28px'; });
             }
         }
+        window.addSetEventListeners = addSetEventListeners;
+        
+        function makeQField(col, label, input) { return `<div class="${col} mb-2"><label class="label-small">${label}</label>${input}</div>`; }
+        function makeQSelect(id, list, def) { return `<select id="${id}" class="form-select">${list.map(v => `<option value="${v.id}" ${v.id == def ? 'selected' : ''}>${v.name}</option>`).join('')}</select>`; }
+        function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v.id}" ${v.id == current ? 'selected' : ''}>${v.name}</option>`).join('')}</select>`; }
+        function getPartKey(b) { if (b && b.includes('가슴')) return 'chest'; if (b && b.includes('등')) return 'back'; if (b && b.includes('어깨')) return 'shoulder'; if (b && b.includes('하체')) return 'leg'; return 'etc'; }
+        function handleRoutineChange(val) { console.log("루틴 바인딩 감지:", val); }
+        
+        window.makeQField = makeQField;
+        window.makeQSelect = makeQSelect;
+        window.makeRowSelect = makeRowSelect;
+        window.getPartKey = getPartKey;
+        window.handleRoutineChange = handleRoutineChange;
 
         function toggleFinishArea() {
             const area = document.getElementById('session-input-area');
@@ -592,7 +629,9 @@
             html += `<button class="btn-pink w-100 mt-2" onclick="window.processFinalSave()">최종 로그 일괄 저장 & 리셋</button>`;
             area.innerHTML = html; area.style.display = 'block'; 
         }
+        window.toggleFinishArea = toggleFinishArea;
 
+        // 모든 UI 요소가 하이재킹 완료된 최종 스크립트 시점에 정밀 초기화 엔진 가동!
         window.init();
     </script>
 </body>
