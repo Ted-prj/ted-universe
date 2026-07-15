@@ -1,7 +1,7 @@
 /**
  * 🏋️‍♂️ BLACKPINK WORKOUT - Core Data Layer & Transaction Engine (v5.7.5 - Sanji Clean)
  * Prepared by Chef Sanji for Ted's Universe
- * [BUGFIX]: processFinalSave 내의 구조분해 할당 치명적 오타 전면 수정 완료
+ * [COMPLETE REFACTOR]: 글로벌 헬퍼 바인딩 참조 무결성 교정 완료
  */
 
 // 파일 간의 안전한 참조를 위해 전역 window 스펙으로 스페이스 확장
@@ -65,7 +65,7 @@ function calculateFinalWeight(weight, weightTypeId, equipTypeId) {
     return (Number(weight) * multiplier) + baseWeight;
 }
 
-// 고성능 하이브리드 로컬 캐시/실시간 전적 분석기 (2중 자가 복원 자가 수선 필터링 장착)
+// 고성능 하이브리드 로컬 캐시/실시간 전적 분석기 (2중 자가 복원 자가 수선 필터링 장착)[cite: 2]
 async function getDetailedStats(exId, setNo = null) {
     if (typeof _getDetailedStats === 'function') {
         return await _getDetailedStats(exId, setNo);
@@ -314,7 +314,6 @@ async function processFinalSave() {
     });
     
     const logsToInsert = window.ACTIVE_SETS.map(s => { 
-        // 🌟 [수리완료]: 오타 요인을 깔끔하게 청소하여 logs 테이블에 매핑 처리!
         const { id, ...rest } = s; 
         const ex = window.EX_MASTER.find(e => e.id === s.exercise_id);
         const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
