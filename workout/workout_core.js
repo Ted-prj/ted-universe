@@ -1,11 +1,12 @@
 /**
- * 🏋️‍♂️ BLACKPINK WORKOUT - Core Data Layer & Transaction Engine (v5.7.0)
+ * 🏋️‍♂️ BLACKPINK WORKOUT - Core Data Layer & Transaction Engine (v5.7.1)
  * Prepared by Chef Sanji for Ted's Universe
+ * [BUGFIX]: 복구 완료된 글로벌 init() 엔진 탑재
  */
 
-// 전역 데이터 마스터 상태 보관소 공용 바인딩
-let EX_MASTER = [];
-let SETTINGS_CODE = { 
+// 파일 간의 안전한 참조를 위해 전역 window 스펙으로 스페이스 확장
+window.EX_MASTER = [];
+window.SETTINGS_CODE = { 
     'EXERCISE_TYPE': [], 
     'BODY_PART': [], 
     'EQUIPMENT': [], 
@@ -13,16 +14,45 @@ let SETTINGS_CODE = {
     'GRIP': [], 
     'LYING': [] 
 };
-let SETTINGS_LOOKUP = {};
-let ACTIVE_SETS = [];
+window.SETTINGS_LOOKUP = {};
+window.ACTIVE_SETS = [];
 
-// 스마트폰 메모리 가속 버퍼 캐시 선언
+// 스마트폰 메모리 가속 버퍼 캐시
 window.STATS_CACHE = {
     bestSe: [],
     logs: []
 };
 
-// 최종 합산 중량 연산 엔진 (덤벨 2배수 및 올림픽 바 20kg 보정 매퍼)[cite: 2]
+// 🌟 [치명적 유실 복구]: 시스템 가동 및 Supabase 설정 메타 로드 핵심 엔진
+async function init() {
+    try {
+        const { data: sData } = await _db.schema('workout').from('settings').select('*');
+        if (sData) {
+            sData.forEach(s => { 
+                window.SETTINGS_LOOKUP[s.id] = s.name;
+                if (window.SETTINGS_CODE[s.category]) {
+                    window.SETTINGS_CODE[s.category].push({ id: s.id, name: s.name });
+                }
+            });
+        }
+        const { data: eData } = await _db.schema('workout').from('exercises').select('*').order('name');
+        window.EX_MASTER = eData || [];
+
+        document.getElementById('q-type').innerHTML = window.SETTINGS_CODE['EXERCISE_TYPE'].map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        document.getElementById('q-buwi').innerHTML = window.SETTINGS_CODE['BODY_PART'].map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+        
+        if (window.handleTypeChange) {
+            await window.handleTypeChange(document.getElementById('q-type').value);
+        }
+        if (window.refreshActiveList) {
+            await window.refreshActiveList();
+        }
+    } catch (err) {
+        console.error("상디의 주방 마스터 초기화 에러 터짐:", err);
+    }
+}
+
+// 최종 합산 중량 연산 엔진 (덤벨 2배수 및 올림픽 바 20kg 보정 매퍼)
 function calculateFinalWeight(weight, weightTypeId, equipTypeId) {
     let multiplier = 1;
     if ([26, 28, 46].includes(Number(weightTypeId))) {
@@ -35,13 +65,12 @@ function calculateFinalWeight(weight, weightTypeId, equipTypeId) {
     return (Number(weight) * multiplier) + baseWeight;
 }
 
-// 고성능 하이브리드 로컬 캐시/실시간 전적 분석기 (N+1 대폭발 원천 진압)[cite: 2]
+// 고성능 하이브리드 로컬 캐시/실시간 전적 분석기 (N+1 대폭발 원천 진압)
 async function getDetailedStats(exId, setNo = null) {
     if (typeof _getDetailedStats === 'function') {
         return await _getDetailedStats(exId, setNo);
     }
     try {
-        // [1단계] 스마트폰 전역 캐시에 해당 종목 데이터가 상주하는지 체크![cite: 2]
         const cachedBestSe = window.STATS_CACHE?.bestSe?.find(se => se.exercise_id === exId);
         const cachedLogs = window.STATS_CACHE?.logs?.filter(l => l.exercise_id === exId) || [];
 
@@ -55,8 +84,8 @@ async function getDetailedStats(exId, setNo = null) {
         if (cachedBestSe || (window.STATS_CACHE?.bestSe && window.STATS_CACHE.bestSe.length > 0)) {
             if (cachedBestSe) {
                 const vol = Number(cachedBestSe.total_volume || 0);
-                const ex = EX_MASTER.find(e => e.id === exId);
-                const isCardio = (ex && SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+                const ex = window.EX_MASTER.find(e => e.id === exId);
+                const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
 
                 if (isCardio) {
                     best = `${vol.toLocaleString()}분`;
@@ -76,7 +105,6 @@ async function getDetailedStats(exId, setNo = null) {
                     if (match) parsedDate = `${match[1]}-${match[2]}-${match[3]}`;
                 }
 
-                // 최고 세션의 마지막 세트 복원 (이미 내림차순 정렬된 캐시 활용)
                 const targetSetLogs = [...cachedLogs].filter(l => l.session_id === cachedBestSe.session_id)
                     .sort((a, b) => b.set_no - a.set_no);
 
@@ -103,15 +131,14 @@ async function getDetailedStats(exId, setNo = null) {
                 }
             }
         } else {
-            // [유연한 실시간 폴백] 캐시에 없는 종목(QUICK ADD 최초 탐색 등)은 실시간 단발 쿼리로 정합성 보장!
             const { data: bestSe } = await _db.schema('workout').from('session_exercises')
                 .select('*').eq('exercise_id', exId).eq('is_best_volume', true).limit(1);
 
             if (bestSe && bestSe.length > 0) {
                 const se = bestSe[0];
                 const vol = Number(se.total_volume || 0);
-                const ex = EX_MASTER.find(e => e.id === exId);
-                const isCardio = (ex && SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+                const ex = window.EX_MASTER.find(e => e.id === exId);
+                const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
 
                 if (isCardio) {
                     best = `${vol.toLocaleString()}분`;
@@ -170,9 +197,9 @@ async function getDetailedStats(exId, setNo = null) {
     }
 }
 
-// 3성급 멀티 세션 동시 트랜잭션 대용량 세이브 파이프라인 (Step 1 -> Step 2 -> Step 3 일괄 적재)[cite: 1, 2]
+// 3성급 멀티 세션 동시 트랜잭션 대용량 세이브 파이프라인
 async function processFinalSave() {
-    if (ACTIVE_SETS.some(s => s.status === 'TEMP')) {
+    if (window.ACTIVE_SETS.some(s => s.status === 'TEMP')) {
         return alert("저장 안 된 세트가 남아있어! (전부 SAVE 버튼을 눌러줘)");
     }
     
@@ -187,7 +214,6 @@ async function processFinalSave() {
     const weightDurEl = document.getElementById('s-duration-weight');
     const cardioDurEl = document.getElementById('s-duration-cardio');
 
-    // [1단계] 부모 테이블: session_logs 데이터 삽입[cite: 2]
     if (weightDurEl) {
         weightSessionId = `${smartDate.idStr}_S${sessionCounter++}`;
         sessionLogsToInsert.push({
@@ -221,12 +247,11 @@ async function processFinalSave() {
         if (sessError) return alert("세션 메타데이터 저장 실패: " + sessError.message);
     }
 
-    // [2단계] 중간 테이블: session_exercises (운동 종목별 요약 일지) 선제 등록 및 키맵 빌드[cite: 2]
-    const uniqueExercises = [...new Set(ACTIVE_SETS.map(s => s.exercise_id))];
+    const uniqueExercises = [...new Set(window.ACTIVE_SETS.map(s => s.exercise_id))];
     const sessionExPayload = uniqueExercises.map(exId => {
-        const sets = ACTIVE_SETS.filter(s => s.exercise_id === exId);
-        const ex = EX_MASTER.find(e => e.id === exId);
-        const isCardio = (ex && SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+        const sets = window.ACTIVE_SETS.filter(s => s.exercise_id === exId);
+        const ex = window.EX_MASTER.find(e => e.id === exId);
+        const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
         
         const totalVol = isCardio
             ? sets.reduce((sum, s) => sum + Number(s.workout_time || 0), 0)
@@ -254,11 +279,10 @@ async function processFinalSave() {
         exerciseToSessionExIdMap[se.exercise_id] = se.id;
     });
     
-    // [3단계] 자식 테이블: logs 상세 세트 데이터 등록 (session_exercise_id 연결고리 주입!)[cite: 2]
-    const logsToInsert = ACTIVE_SETS.map(s => { 
+    const logsToInsert = window.ACTIVE_SETS.map(s => { 
         const { id, ...rest } = s; 
-        const ex = EX_MASTER.find(e => e.id === s.exercise_id);
-        const isCardio = (ex && SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+        const ex = window.EX_MASTER.find(e => e.id === s.exercise_id);
+        const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
         const targetSessionId = isCardio ? (cardioSessionId || weightSessionId) : (weightSessionId || cardioSessionId);
         const targetSessionExId = exerciseToSessionExIdMap[s.exercise_id];
 
@@ -274,7 +298,6 @@ async function processFinalSave() {
     const { error: logError } = await _db.schema('workout').from('logs').insert(logsToInsert); 
     if (logError) return alert("세부 로그 저장 실패: " + logError.message);
 
-    // [4단계] 데이터 정합성 플래그 동적 리밸런싱 (최고 볼륨 & 최고 중량 실시간 판정)[cite: 2]
     for (const exId of uniqueExercises) {
         const { data: allSe } = await _db.schema('workout').from('session_exercises')
             .select('id, total_volume, created_at')
@@ -320,3 +343,9 @@ async function processFinalSave() {
     await _db.schema('workout').from('active_workout').delete().neq('id', -1); 
     location.reload();
 }
+
+// window 마스터 스코프 결합
+window.init = init;
+window.calculateFinalWeight = calculateFinalWeight;
+window.getDetailedStats = getDetailedStats;
+window.processFinalSave = processFinalSave;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>BLACKPINK WORKOUT v5.7.0</title>
+    <title>BLACKPINK WORKOUT v5.7.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -85,9 +85,9 @@
 
         async function refreshActiveList() {
             const { data } = await _db.schema('workout').from('active_workout').select('*').order('id');
-            ACTIVE_SETS = data || [];
+            window.ACTIVE_SETS = data || [];
 
-            const uniqueExIds = [...new Set(ACTIVE_SETS.map(s => s.exercise_id))];
+            const uniqueExIds = [...new Set(window.ACTIVE_SETS.map(s => s.exercise_id))];
             
             if (uniqueExIds.length > 0) {
                 const [bestSeRes, logsRes] = await Promise.all([
@@ -107,7 +107,7 @@
             const blocks = [];
             const blockMap = {};
             
-            ACTIVE_SETS.forEach(s => {
+            window.ACTIVE_SETS.forEach(s => {
                 const isSS = s.program_id && s.program_id.startsWith('ss_');
                 const key = isSS ? s.program_id : `single_${s.display_name}`;
                 if (!blockMap[key]) {
@@ -121,16 +121,17 @@
             for (const block of blocks) {
                 const card = document.createElement('div');
                 card.id = `block-card-${block.id}`;
-                card.className = `workout-card border-${getPartKey(SETTINGS_LOOKUP[block.sets[0].body_part])}`;
+                card.className = `workout-card border-${getPartKey(window.SETTINGS_LOOKUP[block.sets[0].body_part])}`;
                 tempContainer.appendChild(card);
                 await renderBlockCard(card, block);
             }
             
             area.innerHTML = tempContainer.innerHTML;
-            ACTIVE_SETS.forEach(s => { addSetEventListeners(s.id); });
+            window.ACTIVE_SETS.forEach(s => { addSetEventListeners(s.id); });
             updateProgress(); 
             updateSupersetDropdown();
         }
+        window.refreshActiveList = refreshActiveList;
 
         async function renderBlockCard(cardIdOrEl, block) {
             const card = typeof cardIdOrEl === 'string' ? document.getElementById(cardIdOrEl) : cardIdOrEl;
@@ -144,16 +145,16 @@
             
             const names = [...new Set(block.sets.map(s => s.display_name))];
             const titleText = block.isSuperset ? `🔗 수퍼세트 (${names.join(' + ')})` : names[0];
-            const bodyParts = [...new Set(block.sets.map(s => SETTINGS_LOOKUP[s.body_part] || '전신'))].join(', ');
+            const bodyParts = [...new Set(block.sets.map(s => window.SETTINGS_LOOKUP[s.body_part] || '전신'))].join(', ');
             
             let bestInfoHtml = '';
             if (!block.isSuperset) {
-                const ex = EX_MASTER.find(e => e.id === block.sets[0].exercise_id);
+                const ex = window.EX_MASTER.find(e => e.id === block.sets[0].exercise_id);
                 const { best, bestLog } = await getDetailedStats(block.sets[0].exercise_id);
                 
                 let bestFinalHtml = '';
                 if (bestLog) {
-                    const isCardio = (ex && SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+                    const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
                     if (isCardio) {
                         bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.65rem;">(강도: Lv.${bestLog.machine_lv || '-'} / 속도: ${bestLog.machine_speed || '-'}km/h)</span>`;
                     } else if (bestLog.weight) {
@@ -170,9 +171,7 @@
                 <div class="swipe-wrapper ex-header-wrapper">
                     <div class="swipe-del-bg" id="del-group-bg-${block.id}">ALL DELETE 🗑️</div>
                     <div class="card-header swipe-content" id="group-content-${block.id}"
-                         ontouchstart="handleTouchStart(event)" 
-                         ontouchmove="handleTouchMoveGroup(event, '${block.id}')" 
-                         ontouchend="handleTouchEndGroup(event, '${block.id}', '${block.id}', ${block.isSuperset})">
+                         ontouchstart="handleTouchStart(event)" ontouchmove="handleTouchMoveGroup(event, '${block.id}')" ontouchend="handleTouchEndGroup(event, '${block.id}', '${block.id}', ${block.isSuperset})">
                         <div><b>${titleText}</b><br>${bestInfoHtml}</div>
                         <small class="text-dim">${bodyParts}</small>
                     </div>
@@ -185,16 +184,16 @@
         }
 
         async function renderSetRowHtml(s, isSuperset) {
-            const ex = EX_MASTER.find(e => e.id === s.exercise_id);
+            const ex = window.EX_MASTER.find(e => e.id === s.exercise_id);
             const { lastStr, lastNote, lastPauseCount } = await getDetailedStats(s.exercise_id, s.set_no);
             const isSaved = s.status === 'SAVED';
             const exLabelText = isSuperset ? `<div class="mb-1 fw-bold" style="font-size:0.65rem; color:var(--bp-pink); opacity:0.9;">[ ${s.display_name} ]</div>` : '';
             
             let selects = '';
-            if (ex.use_equipment) selects += makeRowSelect(s.id, 'equip', SETTINGS_CODE['EQUIPMENT'], s.equipment_type);
-            if (ex.use_weight_type) selects += makeRowSelect(s.id, 'weight-type', SETTINGS_CODE['WEIGHT_SUB_TYPE'], s.weight_type || ex.weight_type);
-            if (ex.use_grip) selects += makeRowSelect(s.id, 'grip', SETTINGS_CODE['GRIP'], s.grip_type);
-            if (ex.use_lying) selects += makeRowSelect(s.id, 'lying', SETTINGS_CODE['LYING'], s.lying_type);
+            if (ex.use_equipment) selects += makeRowSelect(s.id, 'equip', window.SETTINGS_CODE['EQUIPMENT'], s.equipment_type);
+            if (ex.use_weight_type) selects += makeRowSelect(s.id, 'weight-type', window.SETTINGS_CODE['WEIGHT_SUB_TYPE'], s.weight_type || ex.weight_type);
+            if (ex.use_grip) selects += makeRowSelect(s.id, 'grip', window.SETTINGS_CODE['GRIP'], s.grip_type);
+            if (ex.use_lying) selects += makeRowSelect(s.id, 'lying', window.SETTINGS_CODE['LYING'], s.lying_type);
 
             let inputsHtml = '';
             if (ex.use_weight) inputsHtml += `<input type="number" id="w-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.weight || ''}" placeholder="kg" inputmode="numeric" pattern="[0-9]*">`;
@@ -207,9 +206,9 @@
             if (ex.use_pause_count) inputsHtml += `<input type="number" id="pc-${s.id}" class="form-control form-control-sm text-center row-input-${s.id}" value="${s.pause_count || '0'}" placeholder="포즈" inputmode="numeric" pattern="[0-9]*">`;
 
             let configTags = [];
-            if (ex.use_weight_type) { let wId = s.weight_type || ex.weight_type; if (wId && SETTINGS_LOOKUP[wId]) configTags.push(SETTINGS_LOOKUP[wId]); }
-            if (ex.use_grip) { let gId = s.grip_type || ex.grip_type; if (gId && SETTINGS_LOOKUP[gId]) configTags.push(SETTINGS_LOOKUP[gId]); }
-            if (ex.use_lying) { let lId = s.lying_type || ex.lying_type; if (lId && SETTINGS_LOOKUP[lId]) configTags.push(SETTINGS_LOOKUP[lId]); }
+            if (ex.use_weight_type) { let wId = s.weight_type || ex.weight_type; if (wId && window.SETTINGS_LOOKUP[wId]) configTags.push(window.SETTINGS_LOOKUP[wId]); }
+            if (ex.use_grip) { let gId = s.grip_type || ex.grip_type; if (gId && window.SETTINGS_LOOKUP[gId]) configTags.push(window.SETTINGS_LOOKUP[gId]); }
+            if (ex.use_lying) { let lId = s.lying_type || ex.lying_type; if (lId && window.SETTINGS_LOOKUP[lId]) configTags.push(window.SETTINGS_LOOKUP[lId]); }
             let metaDetails = configTags.length > 0 ? ` <span style="color:#888; font-weight:normal;">[${configTags.join('/')}]</span>` : '';
             let pauseDetails = ex.use_pause_count ? ` (포즈: ${lastPauseCount}회)` : '';
             let lastNoteHtml = lastNote ? `<div class="text-secondary mb-1" style="font-size:0.65rem; font-style:italic; color:#aaa; padding-left:2px;">⏮ 지난 노트: "${lastNote}"</div>` : '';
@@ -245,8 +244,8 @@
 
         async function saveSetRow(id) {
             const btn = document.getElementById(`save-btn-${id}`);
-            const s = ACTIVE_SETS.find(x => x.id === id);
-            const ex = EX_MASTER.find(e => e.id === s.exercise_id);
+            const s = window.ACTIVE_SETS.find(x => x.id === id);
+            const ex = window.EX_MASTER.find(e => e.id === s.exercise_id);
             const up = { 
                 status: 'SAVED', note: document.getElementById(`n-${id}`).value, 
                 equipment_type: document.getElementById(`sel-equip-${id}`)?.value ? Number(document.getElementById(`sel-equip-${id}`).value) : null, 
@@ -273,9 +272,58 @@
             } else { alert("저장 실패: " + error.message); }
         }
 
+        async function handleTypeChange(typeId) {
+            const buwiWrapper = document.getElementById('q-buwi-wrapper');
+            const exWrapper = document.getElementById('q-ex-wrapper');
+            const exSelect = document.getElementById('q-ex');
+            const typeName = window.SETTINGS_LOOKUP[typeId];
+            
+            const typeExIds = window.EX_MASTER.filter(e => Number(e.exercise_type) === Number(typeId)).map(e => e.id);
+            if (typeExIds.length > 0) {
+                const { data: tData } = await _db.schema('workout').from('logs').select('workout_date').in('exercise_id', typeExIds).order('workout_date', { ascending: false }).limit(1);
+                if (tData && tData.length > 0) {
+                    document.getElementById('last-date-type').innerText = `(${tData[0].workout_date.split('T')[0].slice(5).replace('-', '.')})`;
+                } else { document.getElementById('last-date-type').innerText = '(-)'; }
+            } else { document.getElementById('last-date-type').innerText = '(-)'; }
+
+            if (typeName === '유산소') {
+                if (buwiWrapper) buwiWrapper.style.display = 'none';
+                if (exWrapper) { exWrapper.classList.remove('col-4'); exWrapper.classList.add('col-8'); }
+                document.getElementById('last-date-buwi').innerText = '';
+                const filtered = window.EX_MASTER.filter(e => Number(e.exercise_type) === Number(typeId));
+                exSelect.innerHTML = filtered.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+                if (filtered.length > 0) loadQuickExStats(filtered[0].id);
+            } else {
+                if (buwiWrapper) buwiWrapper.style.display = 'block';
+                if (exWrapper) { exWrapper.classList.remove('col-8'); exWrapper.classList.add('col-4'); }
+                handleBuwiChange(document.getElementById('q-buwi').value);
+            }
+        }
+        window.handleTypeChange = handleTypeChange;
+
+        async function handleBuwiChange(buwiId) {
+            const currentTypeId = document.getElementById('q-type').value;
+            if (window.SETTINGS_LOOKUP[currentTypeId] === '유산소') {
+                document.getElementById('last-date-buwi').innerText = '';
+                return;
+            }
+            
+            const { data } = await _db.schema('workout').from('logs').select('workout_date').eq('body_part', buwiId).order('workout_date', { ascending: false }).limit(1);
+            if (data && data.length > 0) {
+                document.getElementById('last-date-buwi').innerText = `(${data[0].workout_date.split('T')[0].slice(5).replace('-', '.')})`;
+            } else { document.getElementById('last-date-buwi').innerText = '(-)'; }
+            
+            const filtered = window.EX_MASTER.filter(e => Number(e.body_part) === Number(buwiId) && Number(e.exercise_type) === Number(currentTypeId));
+            document.getElementById('q-ex').innerHTML = filtered.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+            
+            if (filtered.length > 0) { loadQuickExStats(filtered[0].id); } 
+            else { document.getElementById('q-stats-area').style.display = 'none'; document.getElementById('q-inputs').innerHTML = ''; document.getElementById('last-date-ex').innerText = '(-)'; }
+        }
+        window.handleBuwiChange = handleBuwiChange;
+
         function openReorderModal() {
             const blocks = []; const blockMap = {};
-            ACTIVE_SETS.forEach(s => {
+            window.ACTIVE_SETS.forEach(s => {
                 const isSS = s.program_id && s.program_id.startsWith('ss_'); const key = isSS ? s.program_id : `single_${s.display_name}`;
                 if (!blockMap[key]) { blockMap[key] = { id: key, isSuperset: isSS, names: [], sets: [] }; blocks.push(blockMap[key]); }
                 blockMap[key].sets.push(s); if (!blockMap[key].names.includes(s.display_name)) blockMap[key].names.push(s.display_name);
@@ -309,7 +357,7 @@
                 allSetsNewOrder.push(...b.sets);
             });
             if (allSetsNewOrder.length === 0) return closeReorderModal();
-            const originalIds = ACTIVE_SETS.map(s => s.id);
+            const originalIds = window.ACTIVE_SETS.map(s => s.id);
             const payload = allSetsNewOrder.map(s => { const { id, created_at, ...rest } = s; return rest; });
             const { error: delError } = await _db.schema('workout').from('active_workout').delete().in('id', originalIds);
             if (delError) return alert("순서 배치 마이그레이션 오류(삭제 단계): " + delError.message);
@@ -332,7 +380,7 @@
                     }
                     if (isSuperset) await _db.schema('workout').from('active_workout').delete().eq('program_id', blockId);
                     else { const originName = blockId.replace('single_', ''); await _db.schema('workout').from('active_workout').delete().eq('display_name', originName); }
-                    const { data } = await _db.schema('workout').from('active_workout').select('*').order('id'); ACTIVE_SETS = data || [];
+                    const { data } = await _db.schema('workout').from('active_workout').select('*').order('id'); window.ACTIVE_SETS = data || [];
                     updateProgress(); updateSupersetDropdown();
                 } else { resetSwipeGroup(blockId); }
             } else { resetSwipeGroup(blockId); }
@@ -346,7 +394,7 @@
                     const rowContent = document.getElementById(`set-row-content-${id}`); const swipeWrapper = rowContent?.closest('.swipe-wrapper');
                     if (swipeWrapper) { swipeWrapper.style.transition = "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)"; swipeWrapper.style.transform = "translateX(-100%)"; swipeWrapper.style.opacity = "0"; setTimeout(() => { swipeWrapper.style.maxHeight = "0"; swipeWrapper.style.margin = "0"; swipeWrapper.style.padding = "0"; }, 150); setTimeout(() => { swipeWrapper.remove(); }, 400); }
                     await _db.schema('workout').from('active_workout').delete().eq('id', id); 
-                    const { data } = await _db.schema('workout').from('active_workout').select('*').order('id'); ACTIVE_SETS = data || [];
+                    const { data } = await _db.schema('workout').from('active_workout').select('*').order('id'); window.ACTIVE_SETS = data || [];
                     updateProgress();
                 } else { resetSwipeSet(id); }
             } else { resetSwipeSet(id); }
@@ -363,12 +411,6 @@
                 ta.addEventListener('blur', function() { const btn = document.getElementById(`save-btn-${id}`); if (btn && btn.innerText === 'SAVED') this.style.height = '28px'; });
             }
         }
-        
-        function makeQField(col, label, input) { return `<div class="${col} mb-2"><label class="label-small">${label}</label>${input}</div>`; }
-        function makeQSelect(id, list, def) { return `<select id="${id}" class="form-select">${list.map(v => `<option value="${v.id}" ${v.id == def ? 'selected' : ''}>${v.name}</option>`).join('')}</select>`; }
-        function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v.id}" ${v.id == current ? 'selected' : ''}>${v.name}</option>`).join('')}</select>`; }
-        function handleRoutineChange(val) { console.log("루틴 바인딩 감지:", val); }
-        function toggleFinishArea() { const area = document.getElementById('session-input-area'); area.style.display = area.style.display === 'none' ? 'block' : 'none'; }
 
         init();
     </script>
