@@ -1,0 +1,322 @@
+/**
+ * 🏋️‍♂️ BLACKPINK WORKOUT - Core Data Layer & Transaction Engine (v5.7.0)
+ * Prepared by Chef Sanji for Ted's Universe
+ */
+
+// 전역 데이터 마스터 상태 보관소 공용 바인딩
+let EX_MASTER = [];
+let SETTINGS_CODE = { 
+    'EXERCISE_TYPE': [], 
+    'BODY_PART': [], 
+    'EQUIPMENT': [], 
+    'WEIGHT_SUB_TYPE': [], 
+    'GRIP': [], 
+    'LYING': [] 
+};
+let SETTINGS_LOOKUP = {};
+let ACTIVE_SETS = [];
+
+// 스마트폰 메모리 가속 버퍼 캐시 선언
+window.STATS_CACHE = {
+    bestSe: [],
+    logs: []
+};
+
+// 최종 합산 중량 연산 엔진 (덤벨 2배수 및 올림픽 바 20kg 보정 매퍼)[cite: 2]
+function calculateFinalWeight(weight, weightTypeId, equipTypeId) {
+    let multiplier = 1;
+    if ([26, 28, 46].includes(Number(weightTypeId))) {
+        multiplier = 2;
+    }
+    let baseWeight = 0;
+    if ([47, 48].includes(Number(equipTypeId))) {
+        baseWeight = 20;
+    }
+    return (Number(weight) * multiplier) + baseWeight;
+}
+
+// 고성능 하이브리드 로컬 캐시/실시간 전적 분석기 (N+1 대폭발 원천 진압)[cite: 2]
+async function getDetailedStats(exId, setNo = null) {
+    if (typeof _getDetailedStats === 'function') {
+        return await _getDetailedStats(exId, setNo);
+    }
+    try {
+        // [1단계] 스마트폰 전역 캐시에 해당 종목 데이터가 상주하는지 체크![cite: 2]
+        const cachedBestSe = window.STATS_CACHE?.bestSe?.find(se => se.exercise_id === exId);
+        const cachedLogs = window.STATS_CACHE?.logs?.filter(l => l.exercise_id === exId) || [];
+
+        let best = "볼륨 기록 없음"; 
+        let bestLog = { weight: 0, reps: 0, date: '-', note: '', weight_type: null, equipment_type: null, equip: null, grip: null, lying: null };
+        let lastStr = "이력 없음"; 
+        let lastNote = ""; 
+        let lastPauseCount = 0;
+
+        // --- 🏆 1. BEST 볼륨 및 메타 복원 로직 ---
+        if (cachedBestSe || (window.STATS_CACHE?.bestSe && window.STATS_CACHE.bestSe.length > 0)) {
+            if (cachedBestSe) {
+                const vol = Number(cachedBestSe.total_volume || 0);
+                const ex = EX_MASTER.find(e => e.id === exId);
+                const isCardio = (ex && SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+
+                if (isCardio) {
+                    best = `${vol.toLocaleString()}분`;
+                } else if (vol === 0) {
+                    const targetLogs = cachedLogs.filter(l => l.session_id === cachedBestSe.session_id);
+                    const totalReps = targetLogs.reduce((sum, l) => sum + Number(l.reps || 0), 0);
+                    best = `총 ${totalReps}회 (맨몸, ${targetLogs.length}S)`;
+                } else {
+                    best = `${vol.toLocaleString()}kg`;
+                }
+
+                let parsedDate = '-';
+                if (cachedBestSe.created_at) {
+                    parsedDate = cachedBestSe.created_at.split('T')[0];
+                } else if (cachedBestSe.session_id) {
+                    const match = cachedBestSe.session_id.match(/^(\d{4})(\d{2})(\d{2})/);
+                    if (match) parsedDate = `${match[1]}-${match[2]}-${match[3]}`;
+                }
+
+                // 최고 세션의 마지막 세트 복원 (이미 내림차순 정렬된 캐시 활용)
+                const targetSetLogs = [...cachedLogs].filter(l => l.session_id === cachedBestSe.session_id)
+                    .sort((a, b) => b.set_no - a.set_no);
+
+                if (targetSetLogs.length > 0) {
+                    const lastLog = targetSetLogs[0];
+                    bestLog = { 
+                        weight: lastLog.weight !== null && lastLog.weight !== undefined ? Number(lastLog.weight) : 0, 
+                        reps: lastLog.reps !== null && lastLog.reps !== undefined ? Number(lastLog.reps) : 0, 
+                        date: parsedDate, 
+                        note: lastLog.note || '', 
+                        weight_type: lastLog.weight_type, 
+                        equipment_type: lastLog.equipment_type,
+                        equip: lastLog.equipment_type,
+                        grip: lastLog.grip_type,
+                        lying: lastLog.lying_type,
+                        set_time: lastLog.set_time,
+                        time: lastLog.workout_time,
+                        machine_lv: lastLog.level,
+                        machine_speed: lastLog.machine_speed,
+                        heart_rate: lastLog.heart_rate
+                    }; 
+                } else {
+                    bestLog.date = parsedDate;
+                }
+            }
+        } else {
+            // [유연한 실시간 폴백] 캐시에 없는 종목(QUICK ADD 최초 탐색 등)은 실시간 단발 쿼리로 정합성 보장!
+            const { data: bestSe } = await _db.schema('workout').from('session_exercises')
+                .select('*').eq('exercise_id', exId).eq('is_best_volume', true).limit(1);
+
+            if (bestSe && bestSe.length > 0) {
+                const se = bestSe[0];
+                const vol = Number(se.total_volume || 0);
+                const ex = EX_MASTER.find(e => e.id === exId);
+                const isCardio = (ex && SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+
+                if (isCardio) {
+                    best = `${vol.toLocaleString()}분`;
+                } else if (vol === 0) {
+                    const { data: sets } = await _db.schema('workout').from('logs').select('reps').eq('session_id', se.session_id).eq('exercise_id', exId);
+                    const totalReps = sets ? sets.reduce((sum, l) => sum + Number(l.reps || 0), 0) : 0;
+                    best = `총 ${totalReps}회 (맨몸, ${sets?.length || 0}S)`;
+                } else {
+                    best = `${vol.toLocaleString()}kg`;
+                }
+
+                let parsedDate = se.created_at ? se.created_at.split('T')[0] : '-';
+
+                const { data: lastSetLogs } = await _db.schema('workout').from('logs')
+                    .select('*').eq('session_id', se.session_id).eq('exercise_id', exId).order('set_no', { ascending: false }).limit(1);
+
+                if (lastSetLogs && lastSetLogs.length > 0) {
+                    const lastLog = lastSetLogs[0];
+                    bestLog = { 
+                        weight: Number(lastLog.weight || 0), reps: Number(lastLog.reps || 0), date: parsedDate, note: lastLog.note || '', 
+                        weight_type: lastLog.weight_type, equipment_type: lastLog.equipment_type, equip: lastLog.equipment_type,
+                        grip: lastLog.grip_type, lying: lastLog.lying_type, set_time: lastLog.set_time, time: lastLog.workout_time,
+                        machine_lv: lastLog.level, machine_speed: lastLog.machine_speed, heart_rate: lastLog.heart_rate
+                    }; 
+                }
+            }
+        }
+
+        // --- ⏮️ 2. 지난 세트별 히스토리 매핑 로직 ---
+        if (window.STATS_CACHE?.logs && window.STATS_CACHE.logs.length > 0) {
+            const matchedLastLog = setNo 
+                ? cachedLogs.find(l => Number(l.set_no) === Number(setNo))
+                : cachedLogs[0];
+
+            if (matchedLastLog) {
+                lastStr = `${matchedLastLog.weight}kg x ${matchedLastLog.reps}회`;
+                lastNote = matchedLastLog.note || "";
+                lastPauseCount = matchedLastLog.pause_count || 0;
+            }
+        } else {
+            const query = _db.schema('workout').from('logs').select('*').eq('exercise_id', exId); 
+            if (setNo) query.eq('set_no', setNo);
+            
+            const { data: lastLogs } = await query.order('workout_date', { ascending: false }).limit(1);
+            if (lastLogs && lastLogs.length > 0) { 
+                lastStr = `${lastLogs[0].weight}kg x ${lastLogs[0].reps}회`; 
+                lastNote = lastLogs[0].note || ""; 
+                lastPauseCount = lastLogs[0].pause_count || 0; 
+            }
+        }
+
+        return { best, bestLog, recentConfigs: [], lastStr, lastNote, lastPauseCount };
+    } catch (e) { 
+        console.error("상디의 고성능 워프 스피드 분석기 구동 에러:", e);
+        return { best: "볼륨 기록 없음", bestLog: {}, recentConfigs: [], lastStr: "이력 없음", lastNote: "", lastPauseCount: 0 }; 
+    }
+}
+
+// 3성급 멀티 세션 동시 트랜잭션 대용량 세이브 파이프라인 (Step 1 -> Step 2 -> Step 3 일괄 적재)[cite: 1, 2]
+async function processFinalSave() {
+    if (ACTIVE_SETS.some(s => s.status === 'TEMP')) {
+        return alert("저장 안 된 세트가 남아있어! (전부 SAVE 버튼을 눌러줘)");
+    }
+    
+    const smartDate = window.getSmartDate(); 
+    const { data: existingSessions } = await _db.schema('workout').from('session_logs').select('id').like('id', `${smartDate.idStr}_%`); 
+    let sessionCounter = (existingSessions?.length || 0) + 1;
+    
+    const sessionLogsToInsert = [];
+    let weightSessionId = null;
+    let cardioSessionId = null;
+
+    const weightDurEl = document.getElementById('s-duration-weight');
+    const cardioDurEl = document.getElementById('s-duration-cardio');
+
+    // [1단계] 부모 테이블: session_logs 데이터 삽입[cite: 2]
+    if (weightDurEl) {
+        weightSessionId = `${smartDate.idStr}_S${sessionCounter++}`;
+        sessionLogsToInsert.push({
+            id: weightSessionId,
+            workout_date: smartDate.justDate,
+            duration_min: Number(weightDurEl.value || 0),
+            active_calories: Number(document.getElementById('s-active-cal-weight').value || 0),
+            total_calories: Number(document.getElementById('s-total-cal-weight').value || 0),
+            avg_heart_rate: Number(document.getElementById('s-avg-hr-weight').value || 0),
+            min_heart_rate: Number(document.getElementById('s-min-hr-weight').value || 0),
+            max_heart_rate: Number(document.getElementById('s-max-hr-weight').value || 0)
+        });
+    }
+
+    if (cardioDurEl) {
+        cardioSessionId = `${smartDate.idStr}_S${sessionCounter++}`;
+        sessionLogsToInsert.push({
+            id: cardioSessionId,
+            workout_date: smartDate.justDate,
+            duration_min: Number(cardioDurEl.value || 0),
+            active_calories: Number(document.getElementById('s-active-cal-cardio').value || 0),
+            total_calories: Number(document.getElementById('s-total-cal-cardio').value || 0),
+            avg_heart_rate: Number(document.getElementById('s-avg-hr-cardio').value || 0),
+            min_heart_rate: Number(document.getElementById('s-min-hr-cardio').value || 0),
+            max_heart_rate: Number(document.getElementById('s-max-hr-cardio').value || 0)
+        });
+    }
+
+    if (sessionLogsToInsert.length > 0) {
+        const { error: sessError } = await _db.schema('workout').from('session_logs').insert(sessionLogsToInsert);
+        if (sessError) return alert("세션 메타데이터 저장 실패: " + sessError.message);
+    }
+
+    // [2단계] 중간 테이블: session_exercises (운동 종목별 요약 일지) 선제 등록 및 키맵 빌드[cite: 2]
+    const uniqueExercises = [...new Set(ACTIVE_SETS.map(s => s.exercise_id))];
+    const sessionExPayload = uniqueExercises.map(exId => {
+        const sets = ACTIVE_SETS.filter(s => s.exercise_id === exId);
+        const ex = EX_MASTER.find(e => e.id === exId);
+        const isCardio = (ex && SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+        
+        const totalVol = isCardio
+            ? sets.reduce((sum, s) => sum + Number(s.workout_time || 0), 0)
+            : sets.reduce((sum, s) => sum + (Number(s.weight || 0) * Number(s.reps || 0)), 0);
+
+        const targetSessionId = isCardio ? (cardioSessionId || weightSessionId) : (weightSessionId || cardioSessionId);
+
+        return {
+            session_id: targetSessionId,
+            exercise_id: exId,
+            total_volume: totalVol,
+            is_best_volume: false,
+            is_best_weight: false
+        };
+    });
+
+    const { data: insertedSessionExs, error: seErr } = await _db.schema('workout').from('session_exercises')
+        .insert(sessionExPayload)
+        .select();
+
+    if (seErr) return alert("운동 종목 요약 저장 실패: " + seErr.message);
+
+    const exerciseToSessionExIdMap = {};
+    insertedSessionExs.forEach(se => {
+        exerciseToSessionExIdMap[se.exercise_id] = se.id;
+    });
+    
+    // [3단계] 자식 테이블: logs 상세 세트 데이터 등록 (session_exercise_id 연결고리 주입!)[cite: 2]
+    const logsToInsert = ACTIVE_SETS.map(s => { 
+        const { id, ...rest } = s; 
+        const ex = EX_MASTER.find(e => e.id === s.exercise_id);
+        const isCardio = (ex && SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+        const targetSessionId = isCardio ? (cardioSessionId || weightSessionId) : (weightSessionId || cardioSessionId);
+        const targetSessionExId = exerciseToSessionExIdMap[s.exercise_id];
+
+        return { 
+            ...rest, 
+            session_id: targetSessionId, 
+            session_exercise_id: targetSessionExId, 
+            status: 'FINAL', 
+            workout_date: smartDate.full 
+        }; 
+    });
+    
+    const { error: logError } = await _db.schema('workout').from('logs').insert(logsToInsert); 
+    if (logError) return alert("세부 로그 저장 실패: " + logError.message);
+
+    // [4단계] 데이터 정합성 플래그 동적 리밸런싱 (최고 볼륨 & 최고 중량 실시간 판정)[cite: 2]
+    for (const exId of uniqueExercises) {
+        const { data: allSe } = await _db.schema('workout').from('session_exercises')
+            .select('id, total_volume, created_at')
+            .eq('exercise_id', exId);
+
+        if (allSe && allSe.length > 0) {
+            let bestSe = allSe[0];
+            allSe.forEach(se => {
+                if (Number(se.total_volume) > Number(bestSe.total_volume)) {
+                    bestSe = se;
+                } else if (Number(se.total_volume) === Number(bestSe.total_volume)) {
+                    if (se.created_at > bestSe.created_at || (se.created_at === bestSe.created_at && se.id > bestSe.id)) {
+                        bestSe = se;
+                    }
+                }
+            });
+            await _db.schema('workout').from('session_exercises').update({ is_best_volume: false }).eq('exercise_id', exId);
+            await _db.schema('workout').from('session_exercises').update({ is_best_volume: true }).eq('id', bestSe.id);
+        }
+
+        const { data: maxWeightLog } = await _db.schema('workout').from('logs')
+            .select('session_id, weight, workout_date')
+            .eq('exercise_id', exId)
+            .order('weight', { ascending: false })
+            .order('workout_date', { ascending: false })
+            .limit(1);
+
+        if (maxWeightLog && maxWeightLog.length > 0) {
+            const bestSessionId = maxWeightLog[0].session_id;
+            const { data: targetSe } = await _db.schema('workout').from('session_exercises')
+                .select('id')
+                .eq('session_id', bestSessionId)
+                .eq('exercise_id', exId)
+                .limit(1);
+
+            if (targetSe && targetSe.length > 0) {
+                await _db.schema('workout').from('session_exercises').update({ is_best_weight: false }).eq('exercise_id', exId);
+                await _db.schema('workout').from('session_exercises').update({ is_best_weight: true }).eq('id', targetSe[0].id);
+            }
+        }
+    }
+
+    await _db.schema('workout').from('active_workout').delete().neq('id', -1); 
+    location.reload();
+}
