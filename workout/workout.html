@@ -248,10 +248,10 @@
             const ex = window.EX_MASTER.find(e => e.id === s.exercise_id);
             const up = { 
                 status: 'SAVED', note: document.getElementById(`n-${id}`).value, 
-                equipment_type: document.getElementById(`sel-equip-${id}`)?.value ? Number(document.getElementById(`sel-equip-${id}`).value) : null, 
-                weight_type: document.getElementById(`sel-weight-type-${id}`)?.value ? Number(document.getElementById(`sel-weight-type-${id}`).value) : null, 
-                grip_type: document.getElementById(`sel-grip-${id}`)?.value ? Number(document.getElementById(`sel-grip-${id}`).value) : null, 
-                lying_type: document.getElementById(`sel-lying-${id}`)?.value ? Number(document.getElementById(`sel-lying-${id}`).value) : null 
+                equipment_type: document.getElementById('sel-equip-' + id)?.value ? Number(document.getElementById('sel-equip-' + id).value) : null, 
+                weight_type: document.getElementById('sel-weight-type-' + id)?.value ? Number(document.getElementById('sel-weight-type-' + id).value) : null, 
+                grip_type: document.getElementById('sel-grip-' + id)?.value ? Number(document.getElementById('sel-grip-' + id).value) : null, 
+                lying_type: document.getElementById('sel-lying-' + id)?.value ? Number(document.getElementById('sel-lying-' + id).value) : null 
             };
             
             if (ex.use_weight) up.weight = Number(document.getElementById(`w-${id}`).value);
@@ -292,7 +292,7 @@
                 document.getElementById('last-date-buwi').innerText = '';
                 const filtered = window.EX_MASTER.filter(e => Number(e.exercise_type) === Number(typeId));
                 exSelect.innerHTML = filtered.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
-                if (filtered.length > 0) loadQuickExStats(filtered[0].id);
+                if (filtered.length > 0) window.loadQuickExStats(filtered[0].id);
             } else {
                 if (buwiWrapper) buwiWrapper.style.display = 'block';
                 if (exWrapper) { exWrapper.classList.remove('col-8'); exWrapper.classList.add('col-4'); }
@@ -316,10 +316,48 @@
             const filtered = window.EX_MASTER.filter(e => Number(e.body_part) === Number(buwiId) && Number(e.exercise_type) === Number(currentTypeId));
             document.getElementById('q-ex').innerHTML = filtered.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
             
-            if (filtered.length > 0) { loadQuickExStats(filtered[0].id); } 
+            if (filtered.length > 0) { window.loadQuickExStats(filtered[0].id); } 
             else { document.getElementById('q-stats-area').style.display = 'none'; document.getElementById('q-inputs').innerHTML = ''; document.getElementById('last-date-ex').innerText = '(-)'; }
         }
         window.handleBuwiChange = handleBuwiChange;
+
+        // 🌟 [유실 복구]: 누락되었던 핵심 QUICK ADD 프리필 가속 엔진 수입 조리 완료
+        async function loadQuickExStats(exId) {
+            if (!exId) {
+                document.getElementById('last-date-ex').innerText = '(-)';
+                return;
+            }
+            const ex = window.EX_MASTER.find(e => e.id === exId);
+            const { best, bestLog, recentConfigs } = await getDetailedStats(exId);
+            
+            const { data: lastLogForDate } = await _db.schema('workout').from('logs').select('workout_date').eq('exercise_id', exId).order('workout_date', { ascending: false }).limit(1);
+            if (lastLogForDate && lastLogForDate.length > 0) {
+                document.getElementById('last-date-ex').innerText = `(${lastLogForDate[0].workout_date.split('T')[0].slice(5).replace('-', '.')})`;
+            } else {
+                document.getElementById('last-date-ex').innerText = '(-)';
+            }
+            
+            let bestFinalHtml = '';
+            if (bestLog) {
+                const isCardio = (ex && window.SETTINGS_LOOKUP[ex.exercise_type] === '유산소');
+                if (isCardio) {
+                    bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.75rem;">(강도: Lv.${bestLog.machine_lv || '-'} / 속도: ${bestLog.machine_speed || '-'}km/h)</span>`;
+                } else if (bestLog.weight) {
+                    let finalW = calculateFinalWeight(bestLog.weight, bestLog.weight_type || ex.weight_type, ex.equipment_type);
+                    bestFinalHtml = ` <span style="color:var(--neon-pink); font-size:0.75rem;">(최종 세트: ${bestLog.weight}kg x ${bestLog.reps}회 / 총합: ${finalW}kg)</span>`;
+                }
+            }
+
+            document.getElementById('q-stats-area').style.display = 'block';
+            document.getElementById('q-best-info').innerHTML = `
+                <b class="text-pink">🏆 BEST 볼륨: ${best}${bestFinalHtml}</b> 
+                <small style="color:#666">(${bestLog.date || '-'})</small>
+                ${bestLog.note ? `<div style="font-size:0.65rem; color:var(--bp-pink); margin-top:3px; font-style:italic;">📝 ${bestLog.note}</div>` : ''}
+            `;
+            document.getElementById('q-recent-configs').innerHTML = recentConfigs.map(c => `<span class="recent-config-item">${c}</span>`).join('');
+            renderQuickInputFields(ex, bestLog);
+        }
+        window.loadQuickExStats = loadQuickExStats;
 
         function openReorderModal() {
             const blocks = []; const blockMap = {};
@@ -411,8 +449,15 @@
                 ta.addEventListener('blur', function() { const btn = document.getElementById(`save-btn-${id}`); if (btn && btn.innerText === 'SAVED') this.style.height = '28px'; });
             }
         }
+        
+        function makeQField(col, label, input) { return `<div class="${col} mb-2"><label class="label-small">${label}</label>${input}</div>`; }
+        function makeQSelect(id, list, def) { return `<select id="${id}" class="form-select">${list.map(v => `<option value="${v.id}" ${v.id == def ? 'selected' : ''}>${v.name}</option>`).join('')}</select>`; }
+        function makeRowSelect(id, type, list, current) { return `<select id="sel-${type}-${id}" class="form-select form-select-sm" style="font-size:0.6rem; height:24px;">${list.map(v => `<option value="${v.id}" ${v.id == current ? 'selected' : ''}>${v.name}</option>`).join('')}</select>`; }
+        function handleRoutineChange(val) { console.log("루틴 바인딩 감지:", val); }
+        function toggleFinishArea() { const area = document.getElementById('session-input-area'); area.style.display = area.style.display === 'none' ? 'block' : 'none'; }
 
-        init();
+        // ⚡ [정밀 세팅 완비]: 전체 UI 함수 및 DOM이 완벽히 바인딩된 최하단 시점에 안전하게 호출!
+        window.init();
     </script>
 </body>
 </html>

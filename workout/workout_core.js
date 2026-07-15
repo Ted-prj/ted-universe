@@ -1,7 +1,7 @@
 /**
- * 🏋️‍♂️ BLACKPINK WORKOUT - Core Data Layer & Transaction Engine (v5.7.1)
+ * 🏋️‍♂️ BLACKPINK WORKOUT - Core Data Layer & Transaction Engine (v5.7.2)
  * Prepared by Chef Sanji for Ted's Universe
- * [BUGFIX]: 복구 완료된 글로벌 init() 엔진 탑재
+ * [BUGFIX]: 라이프사이클 레이스 컨디션 차단 및 함수 글로벌 동기화
  */
 
 // 파일 간의 안전한 참조를 위해 전역 window 스펙으로 스페이스 확장
@@ -23,7 +23,7 @@ window.STATS_CACHE = {
     logs: []
 };
 
-// 🌟 [치명적 유실 복구]: 시스템 가동 및 Supabase 설정 메타 로드 핵심 엔진
+// Supabase 및 기초 코드 메타 로드 엔진 (호출은 HTML 내부 최하단에서 안전하게 진행)
 async function init() {
     try {
         const { data: sData } = await _db.schema('workout').from('settings').select('*');
@@ -52,7 +52,7 @@ async function init() {
     }
 }
 
-// 최종 합산 중량 연산 엔진 (덤벨 2배수 및 올림픽 바 20kg 보정 매퍼)
+// 최종 합산 중량 연산 엔진
 function calculateFinalWeight(weight, weightTypeId, equipTypeId) {
     let multiplier = 1;
     if ([26, 28, 46].includes(Number(weightTypeId))) {
@@ -65,7 +65,7 @@ function calculateFinalWeight(weight, weightTypeId, equipTypeId) {
     return (Number(weight) * multiplier) + baseWeight;
 }
 
-// 고성능 하이브리드 로컬 캐시/실시간 전적 분석기 (N+1 대폭발 원천 진압)
+// 고성능 하이브리드 로컬 캐시/실시간 전적 분석기
 async function getDetailedStats(exId, setNo = null) {
     if (typeof _getDetailedStats === 'function') {
         return await _getDetailedStats(exId, setNo);
