@@ -96,6 +96,13 @@
                 <button class="btn-outline flex-fill" style="padding: 10px 15px; font-weight:900; font-size:0.8rem;" onclick="downloadResult()">TXT 파일 다운로드 💾</button>
             </div>
             
+            <!-- 🤖 [선장 전용 일괄 지시 버퍼]: 쵸파 요청 명령어 생성 오케스트레이션 존 -->
+            <div id="chopper-guide-area" style="display:none; border-top: 1px dashed #333; padding-top: 15px; margin-top: 15px; margin-bottom: 15px;">
+                <label class="label-small mb-2" style="color: var(--bp-pink); font-weight: 900;">🤖 CHOPPER AI COACHING GUIDE BUFFER</label>
+                <div id="chopper-guide-text" style="background:#0a0a0a; border:1px solid #222; border-radius:12px; padding:12px; font-size:0.72rem; color:#ccc; white-space:pre-wrap; font-family: monospace; max-height:220px; overflow-y:auto; margin-bottom:10px;"></div>
+                <button class="btn-action w-100" onclick="copyChopperGuide()">🤖 쵸파 원터치 연동 명령어 복사하기</button>
+            </div>
+
             <!-- ⚡ 핑크 통합 개조 구역: 드롭다운 제어판 레이아웃 완전 동기화 -->
             <div style="border-top: 1px dashed #333; padding-top: 15px; margin-top: 15px; margin-bottom: 15px;">
                 <label class="label-small mb-2" style="color: var(--bp-pink); font-weight: 900;">⚡ SAVED AI PROMPTS COCKPIT</label>
@@ -242,7 +249,7 @@
                     query = query.gte('plan_date', customScheduleStart); 
                 } else {
                     if (tInfo.dateCol) { 
-                        if (startDate) query = query.gte(tInfo.dateCol, startDate); 
+                        if (startDate) query = query.gte(tInfo.gte(tInfo.dateCol, startDate); 
                         if (endDate) {
                             if (tInfo.dateCol === 'workout_date' || tInfo.dateCol === 'created_at') {
                                 query = query.lte(tInfo.dateCol, adjustedEnd); 
@@ -275,8 +282,16 @@
             RAW_MEMORY_CSV_BUFFER = finalCsv.trim();
             document.getElementById('export-csv-output').value = RAW_MEMORY_CSV_BUFFER;
             
+            // 🌟 [선장의 마스터 룰 주입 부전 구역]: 지시문 오차를 제로 영역으로 유도하는 정밀 조리대[cite: 9]
             if(guideInfo.length > 0) {
-                let guideText = `쵸파, 오늘 업데이트할 내용이 있는 기록을, 아래 양식에 맞춰서, CSV코드 형태로, 그대로 복사해서 쓸 수 있게, 한 블럭의 코드로 작성해줘. 테이블 제목은 [숫자. 이름] 형식을 지켜줘.\n\n`;
+                let guideText = `쵸파, 오늘 업데이트할 내용이 있는 기록을, 하루 마감용 데이터 작성 룰에 맞춰서 작성해줘\n\n`;
+                guideText += `[하루 마감용 데이터 작성 룰]\n`;
+                guideText += `1. CSV코드 형태로 한 블럭의 코드로 작성할 것\n`;
+                guideText += `2. 테이블 제목은 [숫자. 이름] 형식을 지킬것\n`;
+                guideText += `3. 데이터 값이 없는 빈 칸(Null)은 절대 단어 "NULL"이나 "null"을 문자로 기입하지 말고, 무조건 콤마 사이를 완전히 공백 처리해줘! (예시: 데이터 없음 -> , , 또는 ,,)\n`;
+                guideText += `4. 생성 날짜 및 시간 데이터(created_at 등)의 값은 순수 타임스탬프 문자가 아닌, 타임존 오프셋이 정밀 동기화된 ISO 8601 extended 'timestamptz' 포맷(예시: YYYY-MM-DDTHH:mm:ss+09:00) 규칙 엄수해서 작성.\n`;
+                guideText += `5. 순수 일자(log_date, plan_date 등 [date] 타입) 컬럼은 오직 YYYY-MM-DD 포맷 규격만 성실히 채워 넣어줘.\n\n`;
+                
                 guideInfo.forEach(g => { guideText += `[${g.name}]\n${g.cols.join(',')}\n(데이터 입력)\n\n`; });
                 document.getElementById('chopper-guide-text').innerText = guideText.trim();
                 document.getElementById('chopper-guide-area').style.display = 'block';
@@ -298,7 +313,7 @@
         function copyChopperGuide() {
             const guide = document.getElementById('chopper-guide-text').innerText;
             executeOffscreenCopy(guide);
-            alert("쵸파용 요청 가이드가 복사되었습니다! 🤖");
+            alert("쵸파용 일괄 마감 지시문 명령어가 클립보드에 복사되었습니다! 🤖⚡");
         }
 
         function executeOffscreenCopy(text) {
