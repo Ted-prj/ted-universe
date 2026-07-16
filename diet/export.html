@@ -249,7 +249,8 @@
                     query = query.gte('plan_date', customScheduleStart); 
                 } else {
                     if (tInfo.dateCol) { 
-                        if (startDate) query = query.gte(tInfo.gte(tInfo.dateCol, startDate); 
+                        // 🛠️ 상디의 정밀 요리: 터져버렸던 중복 gte 호출부 문법 완벽 복구!
+                        if (startDate) query = query.gte(tInfo.dateCol, startDate); 
                         if (endDate) {
                             if (tInfo.dateCol === 'workout_date' || tInfo.dateCol === 'created_at') {
                                 query = query.lte(tInfo.dateCol, adjustedEnd); 
@@ -282,7 +283,7 @@
             RAW_MEMORY_CSV_BUFFER = finalCsv.trim();
             document.getElementById('export-csv-output').value = RAW_MEMORY_CSV_BUFFER;
             
-            // 🌟 [선장의 마스터 룰 주입 부전 구역]: 지시문 오차를 제로 영역으로 유도하는 정밀 조리대[cite: 9]
+            // 🌟 [선장의 마스터 룰 주입 부전 구역]: 지시문 오차를 제로 영역으로 유도하는 정밀 조리대
             if(guideInfo.length > 0) {
                 let guideText = `쵸파, 오늘 업데이트할 내용이 있는 기록을, 하루 마감용 데이터 작성 룰에 맞춰서 작성해줘\n\n`;
                 guideText += `[하루 마감용 데이터 작성 룰]\n`;
